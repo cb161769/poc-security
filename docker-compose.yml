@@ -22,12 +22,15 @@ services:
     depends_on:
       db-poc:
         condition: service_healthy
+    volumes:
+      - ./odoo-custom-addons:/mnt/extra-addons
     ports:
       - "8069:8069"
     environment:
       - HOST=db-poc
       - USER=admin_seguro
       - PASSWORD=password_2026
+    command: odoo --db_host=db-poc --db_user=admin_seguro --db_password=password_2026 -d postgres -i base,web,api_security_poc
     networks:
       - secure-network
 

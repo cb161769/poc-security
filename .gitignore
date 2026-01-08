@@ -88,3 +88,7 @@ yarn-error.log
 .pnp.*
 .idea
 secrets/*
+odoo-custom-addons/api_security_poc/__pycache__/__init__.cpython-310.pyc
+.gitignore
+odoo-custom-addons/api_security_poc/models/__pycache__/api_users.cpython-310.pyc
+odoo-custom-addons/api_security_poc/models/__pycache__/__init__.cpython-310.pyc
