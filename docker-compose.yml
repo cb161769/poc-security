@@ -1,0 +1,85 @@
+services:
+  # --- BASE DE DATOS (Compartida para el POC) ---
+  db-poc:
+    image: postgres:15-alpine
+    container_name: db-poc
+    environment:
+      POSTGRES_USER: admin_seguro
+      POSTGRES_PASSWORD: password_2026
+      POSTGRES_DB: postgres
+    networks:
+      - secure-network # Keycloak y Odoo necesitan ver la DB
+    healthcheck: # Garantiza que la DB esté lista antes que los demás
+      test: ["CMD", "pg_isready", "-U", "admin_seguro"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- ODOO (Fuente de usuarios) ---
+  odoo:
+    image: odoo:17
+    container_name: odoo-server
+    depends_on:
+      db-poc:
+        condition: service_healthy
+    ports:
+      - "8069:8069"
+    environment:
+      - HOST=db-poc
+      - USER=admin_seguro
+      - PASSWORD=password_2026
+    networks:
+      - secure-network
+
+  # --- KEYCLOAK 26 (Cerebro de Identidad) ---
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: keycloak-server
+    command: start-dev --http-enabled=true --hostname-strict=false
+    environment:
+      # Credenciales de Admin para 2026
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Conexión a DB (Crítico para que no falle el login)
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db-poc:5432/postgres
+      KC_DB_USERNAME: admin_seguro
+      KC_DB_PASSWORD: password_2026
+    ports:
+      - "8080:8080"
+    networks:
+      - secure-network
+    depends_on:
+      db-poc:
+        condition: service_healthy
+
+  # --- KONG GATEWAY (Filtro JWE + JWT) ---
+  kong:
+    image: kong:3.5
+    container_name: kong-gateway
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+    volumes:
+      - ./kong.yml:/usr/local/kong/declarative/kong.yml:ro
+    ports:
+      - "8000:8000"
+    networks:
+      - public-net
+      - secure-network
+
+  # --- BACKEND NODE.JS (Hardened) ---
+  api-node:
+    build: ./api-node
+    container_name: api-node
+    networks:
+      - secure-network
+    depends_on:
+      - kong
+
+networks:
+  public-net: # Solo Kong expuesto al exterior
+  secure-network:
+    # Quitamos 'internal: true' temporalmente para facilitar la 
+    # descarga de imágenes y configuración inicial.

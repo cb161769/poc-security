@@ -1,0 +1,19 @@
+_format_version: "3.0"
+services:
+  - name: node-service
+    url: http://api-node:3000
+    routes:
+      - name: execute-route
+        paths:
+          - /api/v1/execute
+        plugins:
+          - name: jwt
+            config:
+              header_names: [Authorization]
+              key_claim_name: iss
+          - name: request-transformer
+            config:
+              add:
+                headers: 
+                  - "x-user-email:$(jwt_payload_email)"
+                  - "x-user-roles:$(jwt_payload_realm_access.roles)"
