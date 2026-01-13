@@ -1,5 +1,5 @@
 services:
-  # --- BASE DE DATOS (Compartida para el POC) ---
+  # --- BASE DE DATOS (Postgres 15 para estabilidad con Odoo 17) ---
   db-poc:
     image: postgres:15-alpine
     container_name: db-poc
@@ -7,15 +7,17 @@ services:
       POSTGRES_USER: admin_seguro
       POSTGRES_PASSWORD: password_2026
       POSTGRES_DB: postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
     networks:
-      - secure-network # Keycloak y Odoo necesitan ver la DB
-    healthcheck: # Garantiza que la DB esté lista antes que los demás
+      - secure-network
+    healthcheck:
       test: ["CMD", "pg_isready", "-U", "admin_seguro"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # --- ODOO (Fuente de usuarios) ---
+  # --- ODOO 17 (Backend & Source of Truth) ---
   odoo:
     image: odoo:17
     container_name: odoo-server
@@ -23,40 +25,44 @@ services:
       db-poc:
         condition: service_healthy
     volumes:
+      - odoo_data:/var/lib/odoo
       - ./odoo-custom-addons:/mnt/extra-addons
-    ports:
-      - "8069:8069"
+    # Puerto 8069 NO se mapea a host por seguridad (solo accesible via Kong)
     environment:
       - HOST=db-poc
       - USER=admin_seguro
       - PASSWORD=password_2026
-    command: odoo --db_host=db-poc --db_user=admin_seguro --db_password=password_2026 -d postgres -i base,web,api_security_poc
     networks:
       - secure-network
 
-  # --- KEYCLOAK 26 (Cerebro de Identidad) ---
+  # --- KEYCLOAK 26 (Identity Manager) ---
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
     container_name: keycloak-server
-    command: start-dev --http-enabled=true --hostname-strict=false
+    command: start-dev --http-enabled=true --import-realm
     environment:
-      # Credenciales de Admin para 2026
+      # Credenciales de inicio (Bootstrap admin)
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      # Conexión a DB (Crítico para que no falle el login)
+      # Configuración de base de datos
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://db-poc:5432/postgres
       KC_DB_USERNAME: admin_seguro
       KC_DB_PASSWORD: password_2026
+      # Seguridad y Hostname
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    volumes:
+      - ./keycloak-config:/opt/keycloak/data/import/
     ports:
-      - "8080:8080"
+      - "8080:8080" # Expuesto solo para configuración inicial del admin
     networks:
       - secure-network
     depends_on:
       db-poc:
         condition: service_healthy
 
-  # --- KONG GATEWAY (Filtro JWE + JWT) ---
+  # --- KONG GATEWAY (Terminación de JWE) ---
   kong:
     image: kong:3.5
     container_name: kong-gateway
@@ -67,22 +73,28 @@ services:
     volumes:
       - ./kong.yml:/usr/local/kong/declarative/kong.yml:ro
     ports:
-      - "8000:8000"
+      - "8000:8000" # Único punto de entrada para la App Mobile e Ionic
     networks:
       - public-net
       - secure-network
 
-  # --- BACKEND NODE.JS (Hardened) ---
+  # --- API NODE.JS (Microservicio de Negocio) ---
   api-node:
     build: ./api-node
     container_name: api-node
+    environment:
+      - ODOO_URL=http://odoo-server:8069
     networks:
       - secure-network
     depends_on:
       - kong
 
 networks:
-  public-net: # Solo Kong expuesto al exterior
+  public-net:
+    driver: bridge
   secure-network:
-    # Quitamos 'internal: true' temporalmente para facilitar la 
-    # descarga de imágenes y configuración inicial.
+    internal: false # Cambiar a 'true' una vez descargadas todas las dependencias
+
+volumes:
+  db_data:
+  odoo_data:

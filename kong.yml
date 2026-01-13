@@ -1,19 +1,44 @@
 _format_version: "3.0"
+_transform: true
+
 services:
-  - name: node-service
+  # Servicio para la lógica de negocio (Node.js)
+  - name: node-api-service
     url: http://api-node:3000
     routes:
-      - name: execute-route
+      - name: mobile-api-route
         paths:
-          - /api/v1/execute
-        plugins:
-          - name: jwt
-            config:
-              header_names: [Authorization]
-              key_claim_name: iss
-          - name: request-transformer
-            config:
-              add:
-                headers: 
-                  - "x-user-email:$(jwt_payload_email)"
-                  - "x-user-roles:$(jwt_payload_realm_access.roles)"
+          - /api/v1/mobile
+      - name: web-api-route
+        paths:
+          - /api/v1/web
+
+  # Servicio para Odoo (Solo ciertos endpoints permitidos)
+  - name: odoo-service
+    url: http://odoo-server:8069
+    routes:
+      - name: odoo-route
+        paths:
+          - /odoo-gate
+
+plugins:
+  # 1. Configuración Global de CORS (Vital para Ionic/Angular)
+  - name: cors
+    config:
+      origins: ["*"] # En producción, limita a tus dominios reales
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      headers: ["Accept", "Authorization", "Content-Type", "X-Requested-With", "X-App-Fingerprint"]
+      exposed_headers: ["X-Auth-Status"]
+      credentials: true
+
+  # 2. Terminación de JOSE / JWE (El núcleo de tu diagrama)
+  - name: openid-connect
+    config:
+      issuer: "http://keycloak-server:8080/realms/mobile-realm/.well-known/openid-configuration"
+      auth_methods: ["bearer"]
+      # Aquí es donde ocurre el descifrado JWE
+      id_token_encryption_jwe_alg: "RSA-OAEP"
+      id_token_encryption_jwe_enc: "A128GCM"
+      # Kong inyectará los datos del usuario ya descifrados en este header
+      upstream_headers_claims: ["sub", "email", "role"]
+      header_names: ["X-User-Sub", "X-User-Email", "X-User-Role"]
