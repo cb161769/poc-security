@@ -1,0 +1,32 @@
+{
+  "realm": "mobile-realm",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "mobile-app-client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "id.token.signed.response.alg": "RS256",
+        "id.token.encrypted.response.alg": "RSA-OAEP",
+        "id.token.encrypted.response.enc": "A128GCM",
+        "access.token.signed.response.alg": "RS256",
+        "access.token.encrypted.response.alg": "RSA-OAEP",
+        "access.token.encrypted.response.enc": "A128GCM",
+        "jwks.url": "http://kong-gateway:8000/servicios/jwks", 
+        "token.endpoint.auth.signing.alg": "RS256"
+      },
+      "webOrigins": ["*"]
+    }
+  ],
+  "roles": {
+    "realm": [
+      { "name": "user-api", "description": "Usuario estándar de Odoo" },
+      { "name": "admin-api", "description": "Administrador de Odoo" }
+    ]
+  }
+}

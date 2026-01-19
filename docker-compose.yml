@@ -1,5 +1,5 @@
 services:
-  # --- BASE DE DATOS (Postgres 15 para estabilidad con Odoo 17) ---
+  # --- CAPA DE DATOS (Aislada) ---
   db-poc:
     image: postgres:15-alpine
     container_name: db-poc
@@ -8,16 +8,16 @@ services:
       POSTGRES_PASSWORD: password_2026
       POSTGRES_DB: postgres
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     networks:
-      - secure-network
+      - secure-net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "admin_seguro"]
+      test: ["CMD", "pg_isready", "-U", "admin_seguro", "-d", "postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # --- ODOO 17 (Backend & Source of Truth) ---
+  # --- ODOO ERP (Core Business) ---
   odoo:
     image: odoo:17
     container_name: odoo-server
@@ -27,74 +27,127 @@ services:
     volumes:
       - odoo_data:/var/lib/odoo
       - ./odoo-custom-addons:/mnt/extra-addons
-    # Puerto 8069 NO se mapea a host por seguridad (solo accesible via Kong)
     environment:
       - HOST=db-poc
       - USER=admin_seguro
       - PASSWORD=password_2026
     networks:
-      - secure-network
+      - secure-net
 
-  # --- KEYCLOAK 26 (Identity Manager) ---
+  # --- KEYCLOAK 26 (Identidad Federada) ---
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
     container_name: keycloak-server
     command: start-dev --http-enabled=true --import-realm
     environment:
-      # Credenciales de inicio (Bootstrap admin)
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      # Configuración de base de datos
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://db-poc:5432/postgres
       KC_DB_USERNAME: admin_seguro
       KC_DB_PASSWORD: password_2026
-      # Seguridad y Hostname
       KC_HOSTNAME_STRICT: "false"
-      KC_HTTP_ENABLED: "true"
     volumes:
       - ./keycloak-config:/opt/keycloak/data/import/
-    ports:
-      - "8080:8080" # Expuesto solo para configuración inicial del admin
     networks:
-      - secure-network
+      - secure-net
     depends_on:
       db-poc:
         condition: service_healthy
 
-  # --- KONG GATEWAY (Terminación de JWE) ---
+  # --- KONG GATEWAY (Perímetro de Seguridad) ---
   kong:
-    image: kong:3.5
+    image: kong/kong-gateway:3.5
     container_name: kong-gateway
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
-      KONG_PROXY_LISTEN: 0.0.0.0:8000
+
+      # ✅ Enterprise plugin habilitado
+      KONG_PLUGINS: bundled,openid-connect
+
+      # LISTENERS
+      KONG_PROXY_LISTEN: 0.0.0.0:8000, 0.0.0.0:8443 ssl
+      KONG_ADMIN_LISTEN: 127.0.0.1:8001
+
+      # TLS servidor
+      KONG_SSL_CERT: /shared-keys/fullchain.pem
+      KONG_SSL_CERT_KEY: /shared-keys/kong.key
+
+      # mTLS
+      KONG_SSL_CLIENT_CERT: /shared-keys/ca.pem
+      KONG_SSL_VERIFY_CLIENT: on
+      KONG_SSL_VERIFY_DEPTH: 1
+
+      # LOGS
+      KONG_LOG_LEVEL: notice
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_LICENSE_DATA: YOUR_KONG_ENTERPRISE_LICENSE_HERE
+      # HARDENING TLS
+      KONG_SSL_PROTOCOLS: TLSv1.2 TLSv1.3
+      KONG_SSL_CIPHERS: TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+      KONG_NGINX_HTTP_SSL_SESSION_TICKETS: "off"
     volumes:
-      - ./kong.yml:/usr/local/kong/declarative/kong.yml:ro
+      - ./kong.yml:/usr/local/kong/declarative/kong.yml
+      - ./shared-keys:/shared-keys:ro
+      - ./certs:/etc/letsencrypt
     ports:
-      - "8000:8000" # Único punto de entrada para la App Mobile e Ionic
+      - "8000:8000"
+      - "8443:8443"           # Puerto para SSL Pinning
+      - "127.0.0.1:8001:8001" # Admin API Protegida
     networks:
       - public-net
-      - secure-network
+      - secure-net
 
-  # --- API NODE.JS (Microservicio de Negocio) ---
+  # --- CERTBOT (Renovación Automática de SSL) ---
+  certbot:
+    image: certbot/certbot
+    container_name: certbot-service
+    volumes:
+      - ./certs:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - public-net
+
+  # --- KEY-ROTATOR (Rotación de llaves RSA 24h) ---
+  key-rotator:
+    image: alpine:latest
+    container_name: key-rotator
+    volumes:
+      - ./shared-keys:/shared-keys
+    entrypoint: >
+      /bin/sh -c "while true; do 
+        echo '🔄 Rotando llaves...';
+        apk add --no-cache openssl;
+        openssl genrsa -out /shared-keys/priv.pem 2048;
+        openssl rsa -in /shared-keys/priv.pem -pubout -out /shared-keys/pub.pem;
+        date > /shared-keys/last_rotation.txt;
+        sleep 86400; 
+      done"
+
+  # --- API NODE.JS (Identity Bridge) ---
   api-node:
     build: ./api-node
     container_name: api-node
     environment:
       - ODOO_URL=http://odoo-server:8069
+      - INTERNAL_SECRET=mi_clave_secreta_2026
+    volumes:
+      - ./shared-keys:/shared-keys:ro
     networks:
-      - secure-network
+      - secure-net
     depends_on:
       - kong
 
 networks:
   public-net:
     driver: bridge
-  secure-network:
-    internal: false # Cambiar a 'true' una vez descargadas todas las dependencias
+  secure-net:
+    internal: false # Cambiar a true en producción total para aislar el backend del mundo
 
 volumes:
-  db_data:
+  postgres_data:
   odoo_data:

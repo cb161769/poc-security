@@ -1,0 +1,3 @@
+id,name,login,password_hash,rol_seguridad,active
+user_active_01,"Usuario Activo POC","activo@poc.com","$pbkdf2-sha512$600000$p6lD5X7/6W9.$8lO8B2YnF7Zp5N0m9R3qW1vA4xS6dD8fG9hJ0kL1mN2","admin-api",True
+user_inactive_01,"Usuario Bloqueado POC","bloqueado@poc.com","$pbkdf2-sha512$600000$p6lD5X7/6W9.$8lO8B2YnF7Zp5N0m9R3qW1vA4xS6dD8fG9hJ0kL1mN2","user-api",False

@@ -5,7 +5,10 @@
     'category': 'Tools',
     'author': 'Analista de Seguridad',
     'depends': ['base'],
-    'data': [],
+    'data': [
+        'security/ir.model.access.csv',
+        'data/x_api_usuarios.csv',
+    ],
     'installable': True,
-    'application': False,
+    'application': True,
 }
