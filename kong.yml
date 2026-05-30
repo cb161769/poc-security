@@ -11,7 +11,7 @@ services:
   # API NODE (LOCALHOST HOST)
   # ============================
   - name: node-api-service
-    url: http://host.docker.internal:3000
+    url: http://api-node:3000
     routes:
       - name: mobile-api-route
         paths:
@@ -48,27 +48,6 @@ plugins:
         - X-Request-Id
       credentials: false
       max_age: 3600
-
-  # ============================
-  # 2️⃣ OPENID CONNECT (JWT OFFLINE)
-  # ============================
-  - name: openid-connect
-    config:
-      issuer: "http://localhost:8080/realms/mobile-realm"
-      auth_methods: ["bearer"]
-      discovery: true
-
-      bearer_token_param_type:
-        - header
-
-      verify_claims:
-        iss: "http://localhost:8080/realms/mobile-realm"
-        aud: "mobile-api"
-
-      upstream_headers_claims: []
-      header_names: []
-
-      access_token_jwt_leeway: 30
 
   # ============================
   # 3️⃣ RATE LIMITING POR TOKEN

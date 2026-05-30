@@ -11,4 +11,4 @@ elif [ "$1" = "OFF" ]; then
     echo "✅ SERVICIOS RESTAURADOS"
     ID=$(docker exec kong-gateway curl -s http://localhost:8001/plugins | grep -oP '"id":"\K[^"]+(?=","name":"request-termination")')
     docker exec kong-gateway curl -s -X DELETE http://localhost:8001/plugins/$ID
-fiok
+fi

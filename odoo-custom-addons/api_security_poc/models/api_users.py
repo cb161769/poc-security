@@ -1,6 +1,8 @@
 from odoo import models, fields, api
-from odoo.addons.base.models.res_users import res_users # Importación clave para el motor de hash
+from passlib.context import CryptContext
 import logging
+
+_crypt_context = CryptContext(schemes=['pbkdf2_sha512'], deprecated='auto')
 
 _logger = logging.getLogger(__name__)
 
@@ -38,9 +40,7 @@ class ApiUsuarios(models.Model):
 
         # 2. Validación Criptográfica (Zero Trust: No confiamos en el texto plano)
         try:
-            # Obtenemos el contexto de hashing configurado en el Odoo (ej. PBKDF2-SHA512)
-            # verify() es resistente a ataques de tiempo (timing attacks)
-            is_valid = res_users._crypt_context().verify(password, user.password_hash)
+            is_valid = _crypt_context.verify(password, user.password_hash)
             
             if is_valid:
                 _logger.info(f"AUTH_SUCCESS: Usuario {username} validado via Identity Bridge")

@@ -21,6 +21,7 @@ services:
   odoo:
     image: odoo:17
     container_name: odoo-server
+    command: odoo --db-filter=pocdb
     depends_on:
       db-poc:
         condition: service_healthy
@@ -31,6 +32,7 @@ services:
       - HOST=db-poc
       - USER=admin_seguro
       - PASSWORD=password_2026
+      - INTERNAL_SECRET=mi_clave_secreta_2026
     networks:
       - secure-net
 
@@ -51,20 +53,21 @@ services:
       - ./keycloak-config:/opt/keycloak/data/import/
     networks:
       - secure-net
+    ports:
+      - "8080:8080"
     depends_on:
       db-poc:
         condition: service_healthy
 
   # --- KONG GATEWAY (Perímetro de Seguridad) ---
   kong:
-    image: kong/kong-gateway:3.5
+    image: kong:3.5
     container_name: kong-gateway
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
 
-      # ✅ Enterprise plugin habilitado
-      KONG_PLUGINS: bundled,openid-connect
+      KONG_PLUGINS: bundled
 
       # LISTENERS
       KONG_PROXY_LISTEN: 0.0.0.0:8000, 0.0.0.0:8443 ssl
@@ -85,7 +88,6 @@ services:
       KONG_PROXY_ERROR_LOG: /dev/stderr
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ERROR_LOG: /dev/stderr
-      KONG_LICENSE_DATA: YOUR_KONG_ENTERPRISE_LICENSE_HERE
       # HARDENING TLS
       KONG_SSL_PROTOCOLS: TLSv1.2 TLSv1.3
       KONG_SSL_CIPHERS: TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
@@ -135,6 +137,11 @@ services:
     environment:
       - ODOO_URL=http://odoo-server:8069
       - INTERNAL_SECRET=mi_clave_secreta_2026
+      - KEYCLOAK_ISSUER=http://localhost:8080/realms/mobile-realm
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/mobile-realm/protocol/openid-connect/certs
+      - JWT_AUDIENCE=mobile-api
+      - TZ=America/New_York
+      - NODE_ENV=production
     volumes:
       - ./shared-keys:/shared-keys:ro
     networks:
