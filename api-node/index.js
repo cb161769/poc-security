@@ -139,7 +139,7 @@ async function encryptJWE(payload, clientPubKeyB64, channel) {
   const publicKey = await importJWK(jwk, 'RSA-OAEP-256');
 
   return new CompactEncrypt(new TextEncoder().encode(JSON.stringify(payload)))
-    .setProtectedHeader({ alg: 'RSA-OAEP-256', enc: 'A256GCM', channel })
+    .setProtectedHeader({ alg: 'RSA-OAEP-256', enc: 'A256GCM', svc: 'data', channel })
     .encrypt(publicKey);
 }
 

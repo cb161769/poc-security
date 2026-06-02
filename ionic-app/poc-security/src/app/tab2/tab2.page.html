@@ -1,17 +1,87 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Tab 2
-    </ion-title>
+  <ion-toolbar [color]="channelColor">
+    <ion-title>💸 Transferencias</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="loadTransfers()" [disabled]="loading || !auth.isLoggedIn()">
+        <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 2</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content [fullscreen]="true" class="ion-padding">
 
-  <app-explore-container name="Tab 2 page"></app-explore-container>
+  <ion-card *ngIf="!auth.isLoggedIn()" class="ion-text-center">
+    <ion-card-content>
+      <ion-icon name="lock-closed-outline" size="large" color="medium"></ion-icon>
+      <p>Inicia sesión en la pestaña <strong>Identidad</strong> primero.</p>
+    </ion-card-content>
+  </ion-card>
+
+  <ng-container *ngIf="auth.isLoggedIn()">
+
+    <ion-button expand="block" [color]="channelColor" [disabled]="loading" (click)="loadTransfers()">
+      <ion-spinner *ngIf="loading" name="crescent" slot="start"></ion-spinner>
+      <ion-icon *ngIf="!loading" name="list-outline" slot="start"></ion-icon>
+      Cargar Transferencias
+    </ion-button>
+
+    <ion-text color="danger" *ngIf="error"><p class="ion-text-center">{{ error }}</p></ion-text>
+
+    <ion-note *ngIf="lastJwe" class="jwe-badge">
+      🔒 JWE: {{ lastJwe.substring(0, 60) }}…
+    </ion-note>
+
+    <ion-list *ngIf="transfers.length > 0" class="ion-margin-top" lines="full">
+      <ion-item *ngFor="let t of transfers">
+        <ion-icon name="arrow-forward-circle-outline" slot="start" [color]="statusColor(t.status)"></ion-icon>
+        <ion-label>
+          <h3>{{ t.id }}</h3>
+          <p>A: {{ t.to }} · {{ t.memo }}</p>
+        </ion-label>
+        <div slot="end" class="ion-text-end">
+          <strong>{{ t.amount | currency:'USD' }}</strong>
+          <ion-badge [color]="statusColor(t.status)" class="ion-margin-start">{{ t.status }}</ion-badge>
+        </div>
+      </ion-item>
+    </ion-list>
+
+    <ion-card class="ion-margin-top">
+      <ion-card-header>
+        <ion-card-title>Nueva Transferencia</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item>
+          <ion-label position="floating">Monto (USD)</ion-label>
+          <ion-input type="number" [(ngModel)]="amount" placeholder="0.00"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="floating">Cuenta destino</ion-label>
+          <ion-input type="text" [(ngModel)]="to" placeholder="ACC-XXXX"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="floating">Concepto</ion-label>
+          <ion-input type="text" [(ngModel)]="memo" placeholder="Descripción..."></ion-input>
+        </ion-item>
+
+        <ion-button expand="block" class="ion-margin-top" [color]="channelColor"
+                    [disabled]="sending || !amount || !to" (click)="submit()">
+          <ion-spinner *ngIf="sending" name="crescent" slot="start"></ion-spinner>
+          <ion-icon *ngIf="!sending" name="paper-plane-outline" slot="start"></ion-icon>
+          Enviar Transferencia
+        </ion-button>
+
+        <ion-card *ngIf="formResult" color="light" class="ion-margin-top">
+          <ion-card-content>
+            <ion-icon name="checkmark-circle-outline" color="success"></ion-icon>
+            <strong> Transferencia creada</strong>
+            <p><small>ID: {{ formResult.id }}</small></p>
+            <p><small>Estado: {{ formResult.status }}</small></p>
+            <p><small>{{ formResult.createdAt | date:'medium' }}</small></p>
+          </ion-card-content>
+        </ion-card>
+      </ion-card-content>
+    </ion-card>
+
+  </ng-container>
 </ion-content>

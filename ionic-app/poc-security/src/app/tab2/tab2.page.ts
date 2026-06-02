@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import { AuthService } from '../services/auth.service';
+import { ApiService } from '../services/api.service';
 
 @Component({
   selector: 'app-tab2',
@@ -7,7 +9,56 @@ import { Component } from '@angular/core';
   standalone: false,
 })
 export class Tab2Page {
+  transfers: any[] = [];
+  loading = false;
+  sending = false;
+  error: string | null = null;
+  lastJwe: string | null = null;
 
-  constructor() {}
+  // Formulario
+  amount: number | null = null;
+  to = '';
+  memo = '';
+  formResult: any = null;
 
+  constructor(public auth: AuthService, private api: ApiService) {}
+
+  get channelColor() { return this.auth.getChannel() === 'web' ? 'tertiary' : 'success'; }
+
+  async loadTransfers() {
+    if (!this.auth.isLoggedIn()) return;
+    this.loading = true;
+    this.error = null;
+    try {
+      const { jwe, data } = await this.api.getTransfers();
+      this.transfers = data.data ?? [];
+      this.lastJwe = jwe;
+    } catch (e: any) {
+      this.error = e?.error?.error ?? e?.message ?? 'Error al cargar transferencias';
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  async submit() {
+    if (!this.amount || !this.to) return;
+    this.sending = true;
+    this.error = null;
+    this.formResult = null;
+    try {
+      const { jwe, data } = await this.api.createTransfer(this.amount, this.to, this.memo);
+      this.lastJwe = jwe;
+      this.formResult = data.transfer;
+      this.transfers = [data.transfer, ...this.transfers];
+      this.amount = null; this.to = ''; this.memo = '';
+    } catch (e: any) {
+      this.error = e?.error?.error ?? e?.message ?? 'Error al crear transferencia';
+    } finally {
+      this.sending = false;
+    }
+  }
+
+  statusColor(s: string) {
+    return s === 'completed' ? 'success' : s === 'pending' ? 'warning' : 'danger';
+  }
 }

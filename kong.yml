@@ -12,7 +12,7 @@ services:
     url: http://api-node:3000
     routes:
       - name: web-data-route
-        paths: [/api/v1/web/data]
+        paths: [/api/v1/web]
         strip_path: true
         methods: ["GET", "POST", "OPTIONS"]
         plugins:
@@ -22,7 +22,7 @@ services:
             config: { add: { headers: ["X-Channel:web"] } }
 
       - name: mobile-data-route
-        paths: [/api/v1/mobile/data]
+        paths: [/api/v1/mobile]
         strip_path: true
         methods: ["GET", "POST", "OPTIONS"]
         plugins:
