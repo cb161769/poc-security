@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { ApiService } from '../services/api.service';
 import { CryptoService } from '../services/crypto.service';
+import { PlatformService, Channel } from '../services/platform.service';
 
 @Component({
   selector: 'app-tab1',
@@ -16,15 +17,32 @@ export class Tab1Page implements OnInit {
   error: string | null = null;
   data: any = null;
   rawJwe: string | null = null;
+  channel: Channel = 'web';
 
   constructor(
     public auth: AuthService,
     private api: ApiService,
-    private crypto: CryptoService
+    private crypto: CryptoService,
+    private platform: PlatformService
   ) {}
 
   async ngOnInit() {
-    await this.crypto.initialize();
+    this.channel = this.platform.getChannel();
+    await this.crypto.initialize(this.channel);
+  }
+
+  get channelLabel(): string {
+    return this.channel === 'web' ? '🖥️ Web' : '📱 Mobile';
+  }
+
+  get channelColor(): string {
+    return this.channel === 'web' ? 'tertiary' : 'success';
+  }
+
+  get jweStrategy(): string {
+    return this.channel === 'web'
+      ? 'Clave efímera no-extractable — forward secrecy por sesión'
+      : 'Clave extractable — persistible en Secure Storage del dispositivo';
   }
 
   async login() {

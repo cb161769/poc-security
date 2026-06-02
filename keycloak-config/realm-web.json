@@ -1,0 +1,26 @@
+{
+  "realm": "web-realm",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "web-app-client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "access.token.signed.response.alg": "RS256"
+      },
+      "webOrigins": ["http://localhost:4200", "http://localhost:8100"],
+      "redirectUris": ["http://localhost:4200/*", "http://localhost:8100/*"]
+    }
+  ],
+  "roles": {
+    "realm": [
+      { "name": "user-web",  "description": "Usuario web estándar" },
+      { "name": "admin-web", "description": "Administrador web" }
+    ]
+  }
+}

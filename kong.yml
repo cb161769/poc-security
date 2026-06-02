@@ -7,32 +7,62 @@ _transform: true
 
 services:
 
-  # ============================
-  # API NODE (LOCALHOST HOST)
-  # ============================
   - name: node-api-service
     url: http://api-node:3000
     routes:
-      - name: mobile-api-route
-        paths:
-          - /api/v1/mobile
-        strip_path: true
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 
+      # ============================
+      # CANAL WEB  — rate 60/min
+      # ============================
       - name: web-api-route
         paths:
           - /api/v1/web
         strip_path: true
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 60
+              policy: local
+              limit_by: header
+              header_name: Authorization
+              hide_client_headers: true
+          - name: request-transformer
+            config:
+              add:
+                headers:
+                  - X-Channel:web
+
+      # ============================
+      # CANAL MOBILE — rate 30/min
+      # ============================
+      - name: mobile-api-route
+        paths:
+          - /api/v1/mobile
+        strip_path: true
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 30
+              policy: local
+              limit_by: header
+              header_name: Authorization
+              hide_client_headers: true
+          - name: request-transformer
+            config:
+              add:
+                headers:
+                  - X-Channel:mobile
 
 #############################
-# PLUGINS (GLOBAL)
+# PLUGINS GLOBALES
 #############################
 
 plugins:
 
   # ============================
-  # 1️⃣ CORS – DEV LOCAL
+  # CORS — ambos canales
   # ============================
   - name: cors
     config:
@@ -51,18 +81,7 @@ plugins:
       max_age: 3600
 
   # ============================
-  # 3️⃣ RATE LIMITING POR TOKEN
-  # ============================
-  - name: rate-limiting
-    config:
-      minute: 120
-      policy: local
-      limit_by: header
-      header_name: Authorization
-      hide_client_headers: true
-
-  # ============================
-  # 4️⃣ REQUEST ID
+  # CORRELATION ID
   # ============================
   - name: correlation-id
     config:
@@ -71,7 +90,7 @@ plugins:
       echo_downstream: true
 
   # ============================
-  # 5️⃣ HEADERS DE SEGURIDAD
+  # SECURITY HEADERS
   # ============================
   - name: response-transformer
     config:

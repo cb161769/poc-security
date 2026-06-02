@@ -4,9 +4,14 @@
 
 export const environment = {
   production: false,
-  keycloakUrl: 'http://localhost:8080/realms/mobile-realm',
+  // mobile-realm
+  keycloakUrl:      'http://localhost:8080/realms/mobile-realm',
   keycloakClientId: 'mobile-app-client',
-  apiUrl: 'http://localhost:8000/api/v1/mobile',
+  mobileApiUrl:     'http://localhost:8000/api/v1/mobile',
+  // web-realm
+  webKeycloakUrl:      'http://localhost:8080/realms/web-realm',
+  webKeycloakClientId: 'web-app-client',
+  webApiUrl:           'http://localhost:8000/api/v1/web',
 };
 
 /*

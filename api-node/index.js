@@ -8,73 +8,95 @@ const app = express();
 app.use(express.json());
 
 /* ================================
-   CONFIG
+   CONFIG — dos reinos
 ================================ */
 const ODOO_URL = process.env.ODOO_URL || 'http://odoo-server:8069';
+const KEYCLOAK_BASE = process.env.KEYCLOAK_BASE || 'http://keycloak:8080';
 
-const KEYCLOAK_ISSUER =
-  process.env.KEYCLOAK_ISSUER ||
-  'https://keycloak.midominio.com/realms/mobile-realm';
-
-const KEYCLOAK_JWKS_URI =
-  process.env.KEYCLOAK_JWKS_URI ||
-  'https://keycloak.midominio.com/realms/mobile-realm/protocol/openid-connect/certs';
-
-const JWT_AUDIENCE =
-  process.env.JWT_AUDIENCE || 'mobile-api';
+const REALMS = {
+  web: {
+    issuer:  process.env.WEB_REALM_ISSUER  || 'http://localhost:8080/realms/web-realm',
+    jwksUri: process.env.WEB_REALM_JWKS   || `${KEYCLOAK_BASE}/realms/web-realm/protocol/openid-connect/certs`,
+    audience: 'web-api',
+  },
+  mobile: {
+    issuer:  process.env.MOBILE_REALM_ISSUER  || 'http://localhost:8080/realms/mobile-realm',
+    jwksUri: process.env.MOBILE_REALM_JWKS   || `${KEYCLOAK_BASE}/realms/mobile-realm/protocol/openid-connect/certs`,
+    audience: 'mobile-api',
+  },
+};
 
 /* ================================
-   JWKS CLIENT
+   JWKS CLIENTS — uno por reino
 ================================ */
-const jwks = jwksClient({
-  jwksUri: KEYCLOAK_JWKS_URI,
+const jwksOpts = {
   cache: true,
   cacheMaxEntries: 5,
   cacheMaxAge: 10 * 60 * 1000,
   rateLimit: true,
   jwksRequestsPerMinute: 10,
-});
+};
 
-function getKey(header, callback) {
-  jwks.getSigningKey(header.kid, function (err, key) {
-    if (err) return callback(err);
-    const signingKey = key.getPublicKey();
-    callback(null, signingKey);
-  });
+const jwksClients = {
+  web:    jwksClient({ jwksUri: REALMS.web.jwksUri,    ...jwksOpts }),
+  mobile: jwksClient({ jwksUri: REALMS.mobile.jwksUri, ...jwksOpts }),
+};
+
+/* ================================
+   DETECT CHANNEL — peek sin verificar
+================================ */
+function detectChannel(token) {
+  try {
+    const raw = Buffer.from(token.split('.')[1], 'base64url').toString('utf8');
+    const { iss } = JSON.parse(raw);
+    if (iss === REALMS.web.issuer)    return 'web';
+    if (iss === REALMS.mobile.issuer) return 'mobile';
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /* ================================
-   MIDDLEWARE: VALIDAR JWT
+   MIDDLEWARE: VALIDAR JWT (multi-realm)
 ================================ */
 async function validateJWT(req, res, next) {
   const authHeader = req.headers['authorization'];
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Token JWT requerido' });
   }
 
   const token = authHeader.replace('Bearer ', '');
+  const channel = req.headers['x-channel'] || detectChannel(token);
+
+  if (!channel || !REALMS[channel]) {
+    return res.status(401).json({ error: 'Canal o emisor JWT no reconocido' });
+  }
+
+  const realm = REALMS[channel];
+
+  function getKey(header, callback) {
+    jwksClients[channel].getSigningKey(header.kid, (err, key) => {
+      if (err) return callback(err);
+      callback(null, key.getPublicKey());
+    });
+  }
 
   jwt.verify(
     token,
     getKey,
-    {
-      issuer: KEYCLOAK_ISSUER,
-      audience: JWT_AUDIENCE,
-      algorithms: ['RS256'],
-      clockTolerance: 30,
-    },
+    { issuer: realm.issuer, audience: realm.audience, algorithms: ['RS256'], clockTolerance: 30 },
     (err, decoded) => {
       if (err) {
-        console.error('JWT inválido:', err.message);
+        console.error(`[${channel}] JWT inválido:`, err.message);
         return res.status(401).json({ error: 'JWT inválido' });
       }
 
-      // Adjuntamos claims seguros al request
+      req.channel = channel;
       req.jwt = {
-        sub: decoded.sub,
-        email: decoded.email,
-        roles: decoded.realm_access?.roles || [],
+        sub:       decoded.sub,
+        email:     decoded.email,
+        roles:     decoded.realm_access?.roles || [],
         client_id: decoded.azp,
       };
 
@@ -90,114 +112,82 @@ async function validateClientInOdoo(req, res, next) {
   try {
     const response = await axios.post(
       `${ODOO_URL}/api/validate-jwt-client`,
-      {
-        sub: req.jwt.sub,
-        email: req.jwt.email,
-        client_id: req.jwt.client_id,
-        roles: req.jwt.roles,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Internal-Secret': process.env.INTERNAL_SECRET || '',
-        },
-      }
+      { sub: req.jwt.sub, email: req.jwt.email, client_id: req.jwt.client_id, roles: req.jwt.roles },
+      { headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.INTERNAL_SECRET || '' } }
     );
 
     const result = response.data;
-
     if (!result || result.authorized !== true) {
-      return res.status(403).json({
-        error: 'Cliente no autorizado por Odoo',
-      });
+      return res.status(403).json({ error: 'Cliente no autorizado por Odoo' });
     }
 
-    // Cliente validado por negocio
     req.client = result.client;
     next();
-
   } catch (error) {
     console.error('Error Odoo:', error.message);
-    return res.status(502).json({
-      error: 'Error validando cliente en Odoo',
-    });
+    return res.status(502).json({ error: 'Error validando cliente en Odoo' });
   }
+}
+
+/* ================================
+   HELPER: CIFRAR CON JWE
+   Web:    clave efímera no-extractable en cliente → forward secrecy por sesión
+   Mobile: clave persistida en secure storage del dispositivo
+================================ */
+async function encryptJWE(payload, clientPubKeyB64, channel) {
+  const jwk = JSON.parse(Buffer.from(clientPubKeyB64, 'base64').toString('utf8'));
+  const publicKey = await importJWK(jwk, 'RSA-OAEP-256');
+
+  return new CompactEncrypt(new TextEncoder().encode(JSON.stringify(payload)))
+    .setProtectedHeader({ alg: 'RSA-OAEP-256', enc: 'A256GCM', channel })
+    .encrypt(publicKey);
 }
 
 /* ================================
    ENDPOINT PROTEGIDO
 ================================ */
-app.get(
-  '/api/v1/data',
-  validateJWT,
-  validateClientInOdoo,
-  async (req, res) => {
-    const clientPubKeyB64 = req.headers['x-client-public-key'];
+app.get('/api/v1/data', validateJWT, validateClientInOdoo, async (req, res) => {
+  const clientPubKeyB64 = req.headers['x-client-public-key'];
 
-    if (!clientPubKeyB64) {
-      return res.status(400).json({ error: 'X-Client-Public-Key requerido' });
-    }
-
-    const payload = {
-      message: 'Datos protegidos recuperados con éxito',
-      timestamp: new Date().toISOString(),
-      user: {
-        sub: req.jwt.sub,
-        email: req.jwt.email,
-        roles: req.jwt.roles,
-      },
-      client: req.client,
-    };
-
-    try {
-      const jwk = JSON.parse(Buffer.from(clientPubKeyB64, 'base64').toString('utf8'));
-      const publicKey = await importJWK(jwk, 'RSA-OAEP-256');
-
-      const jwe = await new CompactEncrypt(
-        new TextEncoder().encode(JSON.stringify(payload))
-      )
-        .setProtectedHeader({ alg: 'RSA-OAEP-256', enc: 'A256GCM' })
-        .encrypt(publicKey);
-
-      res.set('Content-Type', 'application/jose');
-      res.send(jwe);
-    } catch (err) {
-      console.error('JWE encrypt error:', err.message);
-      res.status(400).json({ error: 'Clave de cliente inválida' });
-    }
+  if (!clientPubKeyB64) {
+    return res.status(400).json({ error: 'X-Client-Public-Key requerido' });
   }
-);
+
+  const payload = {
+    message:   'Datos protegidos recuperados con éxito',
+    channel:   req.channel,
+    timestamp: new Date().toISOString(),
+    user:   { sub: req.jwt.sub, email: req.jwt.email, roles: req.jwt.roles },
+    client: req.client,
+  };
+
+  try {
+    const jwe = await encryptJWE(payload, clientPubKeyB64, req.channel);
+    res.set('Content-Type', 'application/jose');
+    res.send(jwe);
+  } catch (err) {
+    console.error('JWE encrypt error:', err.message);
+    res.status(400).json({ error: 'Clave de cliente inválida' });
+  }
+});
 
 /* ================================
-   ENDPOINT INTERNO (KEYCLOAK → ODOO)
+   ENDPOINT INTERNO
 ================================ */
 app.post('/internal/validate-user', async (req, res) => {
   const { username, password } = req.body;
-
   try {
     const response = await axios.post(`${ODOO_URL}/jsonrpc`, {
-      jsonrpc: '2.0',
-      method: 'call',
-      params: {
-        model: 'x_api_usuarios',
-        method: 'validate_external_credentials',
-        args: [username, password],
-      },
+      jsonrpc: '2.0', method: 'call',
+      params: { model: 'x_api_usuarios', method: 'validate_external_credentials', args: [username, password] },
     });
-
     if (response.data.result?.status === 'success') {
       res.json(response.data.result);
     } else {
-      res.status(401).json({
-        status: 'error',
-        message: 'Credenciales inválidas en Odoo',
-      });
+      res.status(401).json({ status: 'error', message: 'Credenciales inválidas en Odoo' });
     }
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: 'Error de conexión con Odoo',
-    });
+  } catch {
+    res.status(500).json({ status: 'error', message: 'Error de conexión con Odoo' });
   }
 });
 
@@ -206,4 +196,6 @@ app.post('/internal/validate-user', async (req, res) => {
 ================================ */
 app.listen(3000, () => {
   console.log('🚀 Backend API seguro escuchando en puerto 3000');
+  console.log(`   web-realm   → ${REALMS.web.issuer}`);
+  console.log(`   mobile-realm→ ${REALMS.mobile.issuer}`);
 });

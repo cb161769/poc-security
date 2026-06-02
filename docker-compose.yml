@@ -137,8 +137,11 @@ services:
     environment:
       - ODOO_URL=http://odoo-server:8069
       - INTERNAL_SECRET=mi_clave_secreta_2026
-      - KEYCLOAK_ISSUER=http://localhost:8080/realms/mobile-realm
-      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/mobile-realm/protocol/openid-connect/certs
+      - KEYCLOAK_BASE=http://keycloak:8080
+      - MOBILE_REALM_ISSUER=http://localhost:8080/realms/mobile-realm
+      - MOBILE_REALM_JWKS=http://keycloak:8080/realms/mobile-realm/protocol/openid-connect/certs
+      - WEB_REALM_ISSUER=http://localhost:8080/realms/web-realm
+      - WEB_REALM_JWKS=http://keycloak:8080/realms/web-realm/protocol/openid-connect/certs
       - JWT_AUDIENCE=mobile-api
       - TZ=America/New_York
       - NODE_ENV=production
