@@ -130,6 +130,36 @@ services:
         sleep 86400; 
       done"
 
+  # --- TRANSFERS SERVICE ---
+  transfers-service:
+    build: ./transfers-service
+    container_name: transfers-service
+    environment:
+      - MOBILE_REALM_ISSUER=http://localhost:8080/realms/mobile-realm
+      - MOBILE_REALM_JWKS=http://keycloak:8080/realms/mobile-realm/protocol/openid-connect/certs
+      - WEB_REALM_ISSUER=http://localhost:8080/realms/web-realm
+      - WEB_REALM_JWKS=http://keycloak:8080/realms/web-realm/protocol/openid-connect/certs
+      - NODE_ENV=production
+    networks:
+      - secure-net
+    depends_on:
+      - keycloak
+
+  # --- PAYMENTS SERVICE ---
+  payments-service:
+    build: ./payments-service
+    container_name: payments-service
+    environment:
+      - MOBILE_REALM_ISSUER=http://localhost:8080/realms/mobile-realm
+      - MOBILE_REALM_JWKS=http://keycloak:8080/realms/mobile-realm/protocol/openid-connect/certs
+      - WEB_REALM_ISSUER=http://localhost:8080/realms/web-realm
+      - WEB_REALM_JWKS=http://keycloak:8080/realms/web-realm/protocol/openid-connect/certs
+      - NODE_ENV=production
+    networks:
+      - secure-net
+    depends_on:
+      - keycloak
+
   # --- API NODE.JS (Identity Bridge) ---
   api-node:
     build: ./api-node

@@ -7,53 +7,77 @@ _transform: true
 
 services:
 
+  # ── IDENTITY BRIDGE (api-node) ─────────────────────
   - name: node-api-service
     url: http://api-node:3000
     routes:
-
-      # ============================
-      # CANAL WEB  — rate 60/min
-      # ============================
-      - name: web-api-route
-        paths:
-          - /api/v1/web
+      - name: web-data-route
+        paths: [/api/v1/web/data]
         strip_path: true
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        methods: ["GET", "POST", "OPTIONS"]
         plugins:
           - name: rate-limiting
-            config:
-              minute: 60
-              policy: local
-              limit_by: header
-              header_name: Authorization
-              hide_client_headers: true
+            config: { minute: 60, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
           - name: request-transformer
-            config:
-              add:
-                headers:
-                  - X-Channel:web
+            config: { add: { headers: ["X-Channel:web"] } }
 
-      # ============================
-      # CANAL MOBILE — rate 30/min
-      # ============================
-      - name: mobile-api-route
-        paths:
-          - /api/v1/mobile
+      - name: mobile-data-route
+        paths: [/api/v1/mobile/data]
         strip_path: true
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        methods: ["GET", "POST", "OPTIONS"]
         plugins:
           - name: rate-limiting
-            config:
-              minute: 30
-              policy: local
-              limit_by: header
-              header_name: Authorization
-              hide_client_headers: true
+            config: { minute: 30, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
           - name: request-transformer
-            config:
-              add:
-                headers:
-                  - X-Channel:mobile
+            config: { add: { headers: ["X-Channel:mobile"] } }
+
+  # ── TRANSFERS SERVICE ──────────────────────────────
+  - name: transfers-svc
+    url: http://transfers-service:3001
+    routes:
+      - name: web-transfers-route
+        paths: [/api/v1/web/transfers]
+        strip_path: true
+        methods: ["GET", "POST", "OPTIONS"]
+        plugins:
+          - name: rate-limiting
+            config: { minute: 60, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
+          - name: request-transformer
+            config: { add: { headers: ["X-Channel:web"] } }
+
+      - name: mobile-transfers-route
+        paths: [/api/v1/mobile/transfers]
+        strip_path: true
+        methods: ["GET", "POST", "OPTIONS"]
+        plugins:
+          - name: rate-limiting
+            config: { minute: 30, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
+          - name: request-transformer
+            config: { add: { headers: ["X-Channel:mobile"] } }
+
+  # ── PAYMENTS SERVICE ───────────────────────────────
+  - name: payments-svc
+    url: http://payments-service:3002
+    routes:
+      - name: web-payments-route
+        paths: [/api/v1/web/payments]
+        strip_path: true
+        methods: ["GET", "POST", "OPTIONS"]
+        plugins:
+          - name: rate-limiting
+            config: { minute: 60, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
+          - name: request-transformer
+            config: { add: { headers: ["X-Channel:web"] } }
+
+      - name: mobile-payments-route
+        paths: [/api/v1/mobile/payments]
+        strip_path: true
+        methods: ["GET", "POST", "OPTIONS"]
+        plugins:
+          - name: rate-limiting
+            config: { minute: 30, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
+          - name: request-transformer
+            config: { add: { headers: ["X-Channel:mobile"] } }
 
 #############################
 # PLUGINS GLOBALES
@@ -61,37 +85,21 @@ services:
 
 plugins:
 
-  # ============================
-  # CORS — ambos canales
-  # ============================
   - name: cors
     config:
-      origins:
-        - http://localhost:8100
-        - http://localhost:4200
+      origins: [http://localhost:8100, http://localhost:4200]
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-      headers:
-        - Authorization
-        - Content-Type
-        - X-App-Fingerprint
-        - X-Client-Public-Key
-      exposed_headers:
-        - X-Request-Id
+      headers: [Authorization, Content-Type, X-App-Fingerprint, X-Client-Public-Key]
+      exposed_headers: [X-Request-Id]
       credentials: false
       max_age: 3600
 
-  # ============================
-  # CORRELATION ID
-  # ============================
   - name: correlation-id
     config:
       header_name: X-Request-Id
       generator: uuid
       echo_downstream: true
 
-  # ============================
-  # SECURITY HEADERS
-  # ============================
   - name: response-transformer
     config:
       add:
@@ -100,7 +108,3 @@ plugins:
           - X-Frame-Options:DENY
           - Referrer-Policy:no-referrer
           - Permissions-Policy:geolocation=()
-
-#############################
-# FIN
-#############################
