@@ -44,6 +44,7 @@ plugins:
         - Authorization
         - Content-Type
         - X-App-Fingerprint
+        - X-Client-Public-Key
       exposed_headers:
         - X-Request-Id
       credentials: false

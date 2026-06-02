@@ -3,7 +3,10 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  keycloakUrl: 'http://localhost:8080/realms/mobile-realm',
+  keycloakClientId: 'mobile-app-client',
+  apiUrl: 'http://localhost:8000/api/v1/mobile',
 };
 
 /*

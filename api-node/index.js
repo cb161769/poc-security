@@ -2,6 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
+const { CompactEncrypt, importJWK } = require('jose');
 
 const app = express();
 app.use(express.json());
@@ -131,7 +132,13 @@ app.get(
   validateJWT,
   validateClientInOdoo,
   async (req, res) => {
-    res.json({
+    const clientPubKeyB64 = req.headers['x-client-public-key'];
+
+    if (!clientPubKeyB64) {
+      return res.status(400).json({ error: 'X-Client-Public-Key requerido' });
+    }
+
+    const payload = {
       message: 'Datos protegidos recuperados con éxito',
       timestamp: new Date().toISOString(),
       user: {
@@ -140,7 +147,24 @@ app.get(
         roles: req.jwt.roles,
       },
       client: req.client,
-    });
+    };
+
+    try {
+      const jwk = JSON.parse(Buffer.from(clientPubKeyB64, 'base64').toString('utf8'));
+      const publicKey = await importJWK(jwk, 'RSA-OAEP-256');
+
+      const jwe = await new CompactEncrypt(
+        new TextEncoder().encode(JSON.stringify(payload))
+      )
+        .setProtectedHeader({ alg: 'RSA-OAEP-256', enc: 'A256GCM' })
+        .encrypt(publicKey);
+
+      res.set('Content-Type', 'application/jose');
+      res.send(jwe);
+    } catch (err) {
+      console.error('JWE encrypt error:', err.message);
+      res.status(400).json({ error: 'Clave de cliente inválida' });
+    }
   }
 );
 
