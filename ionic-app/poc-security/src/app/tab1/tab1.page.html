@@ -66,6 +66,30 @@
       </ion-card-content>
     </ion-card>
 
+    <!-- TIMER DE EXPIRACIÓN -->
+    <ion-card *ngIf="timeRemaining" class="timer-card ion-margin-top">
+      <ion-card-content class="ion-text-center">
+        <ion-icon
+          [name]="timerColor === 'danger' ? 'alert-circle-outline' : 'time-outline'"
+          [color]="timerColor"
+          size="large">
+        </ion-icon>
+        <p class="timer-label">Sesión expira en</p>
+        <h1 class="timer-value" [class.timer-blink]="timerColor === 'danger'">
+          <ion-text [color]="timerColor">{{ timeRemaining }}</ion-text>
+        </h1>
+        <ion-progress-bar
+          [color]="timerColor"
+          [value]="auth.getSecondsRemaining() / 300">
+        </ion-progress-bar>
+        <p class="timer-hint ion-margin-top">
+          <ion-text color="medium">
+            <small>Web-realm TTL: 5 min · Mobile-realm TTL: 15 min</small>
+          </ion-text>
+        </p>
+      </ion-card-content>
+    </ion-card>
+
     <ion-button expand="block" [disabled]="loading" (click)="loadData()" [color]="channelColor">
       <ion-spinner *ngIf="loading" name="crescent" slot="start"></ion-spinner>
       Solicitar datos cifrados (JWE)

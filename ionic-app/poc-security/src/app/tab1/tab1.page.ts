@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription, interval } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { ApiService } from '../services/api.service';
 import { CryptoService } from '../services/crypto.service';
@@ -10,7 +11,7 @@ import { PlatformService, Channel } from '../services/platform.service';
   styleUrls: ['tab1.page.scss'],
   standalone: false,
 })
-export class Tab1Page implements OnInit {
+export class Tab1Page implements OnInit, OnDestroy {
   username = '';
   password = '';
   loading = false;
@@ -18,6 +19,10 @@ export class Tab1Page implements OnInit {
   data: any = null;
   rawJwe: string | null = null;
   channel: Channel = 'web';
+
+  // Timer
+  timeRemaining = '';
+  private timerSub: Subscription | null = null;
 
   constructor(
     public auth: AuthService,
@@ -29,15 +34,32 @@ export class Tab1Page implements OnInit {
   async ngOnInit() {
     this.channel = this.platform.getChannel();
     await this.crypto.initialize(this.channel);
+    this.timerSub = interval(1000).subscribe(() => this.updateTimer());
   }
 
-  get channelLabel(): string {
-    return this.channel === 'web' ? '🖥️ Web' : '📱 Mobile';
+  ngOnDestroy() {
+    this.timerSub?.unsubscribe();
   }
 
-  get channelColor(): string {
-    return this.channel === 'web' ? 'tertiary' : 'success';
+  private updateTimer() {
+    if (!this.auth.isLoggedIn()) { this.timeRemaining = ''; return; }
+    const secs = this.auth.getSecondsRemaining();
+    if (secs <= 0) { this.timeRemaining = 'Expirada'; return; }
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    this.timeRemaining = `${m}:${s.toString().padStart(2, '0')}`;
   }
+
+  get timerColor(): string {
+    const secs = this.auth.getSecondsRemaining();
+    if (secs <= 0)  return 'danger';
+    if (secs <= 30) return 'danger';
+    if (secs <= 60) return 'warning';
+    return 'success';
+  }
+
+  get channelLabel(): string { return this.channel === 'web' ? '🖥️ Web' : '📱 Mobile'; }
+  get channelColor(): string { return this.channel === 'web' ? 'tertiary' : 'success'; }
 
   get jweStrategy(): string {
     return this.channel === 'web'
@@ -50,6 +72,7 @@ export class Tab1Page implements OnInit {
     this.error = null;
     try {
       await this.auth.login(this.username, this.password);
+      this.updateTimer();
     } catch {
       this.error = 'Credenciales inválidas';
     } finally {
@@ -78,5 +101,6 @@ export class Tab1Page implements OnInit {
     this.data = null;
     this.rawJwe = null;
     this.error = null;
+    this.timeRemaining = '';
   }
 }
