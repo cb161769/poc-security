@@ -3,6 +3,15 @@
 Prueba de concepto de arquitectura de seguridad para APIs móviles y web.  
 Implementa autenticación federada, cifrado de payload de extremo a extremo y autorización de negocio.
 
+### Animaciones interactivas
+
+| Animación | Descripción |
+|-----------|-------------|
+| [docs/request-flow.html](docs/request-flow.html) | Flujo paso a paso: PKCE → JWT → RSA keygen → Kong → JWKS → Odoo AuthZ → JWE encrypt → decrypt (11 pasos animados) |
+| [docs/stride.html](docs/stride.html) | Modelo de amenazas STRIDE: vectores de ataque y contramedidas implementadas por categoría |
+
+> Abre los archivos directamente en el navegador — no requieren servidor.
+
 ---
 
 ## Arquitectura

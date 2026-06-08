@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POC Security — Flujo de Request JWT + JWE</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{padding:10px 20px;background:#161b22;border-bottom:1px solid #30363d;display:flex;align-items:center;gap:10px;flex-shrink:0}
+header h1{font-size:16px;font-weight:700;color:#58a6ff;letter-spacing:.02em}
+header .badge{font-size:10px;background:#1f6feb33;border:1px solid #1f6feb66;color:#58a6ff;padding:2px 8px;border-radius:20px}
+.main{display:flex;flex:1;overflow:hidden;min-height:0}
+#svg-wrap{flex:1;overflow:auto;padding:8px;display:flex;align-items:flex-start;justify-content:center}
+svg#seq{display:block}
+.panel{width:290px;background:#161b22;border-left:1px solid #30363d;display:flex;flex-direction:column;gap:0;overflow:hidden;flex-shrink:0}
+.panel-inner{padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1}
+.step-badge{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+.step-title{font-size:15px;font-weight:700;line-height:1.3}
+.step-desc{font-size:12px;line-height:1.65;color:#8b949e}
+.step-data{font-family:'Cascadia Code','Fira Code','Courier New',monospace;font-size:10.5px;background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:10px 12px;color:#79c0ff;line-height:1.5;white-space:pre-wrap;word-break:break-all}
+.security-box{font-size:11.5px;color:#3fb950;background:#0d11170d;border:1px solid #1f4620;border-radius:6px;padding:10px 12px;line-height:1.5}
+.controls{padding:10px 16px;background:#161b22;border-top:1px solid #30363d;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.btn{background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:12px;transition:background .15s,border-color .15s}
+.btn:hover{background:#30363d;border-color:#484f58}
+.btn.primary{background:#1f6feb;border-color:#1f6feb;font-weight:600}
+.btn.primary:hover{background:#388bfd;border-color:#388bfd}
+.progress{font-size:12px;color:#8b949e;margin-left:auto}
+.progress b{color:#58a6ff}
+.step-dots{display:flex;gap:4px;flex-wrap:wrap;margin-top:auto;padding-top:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:#21262d;border:1px solid #30363d;cursor:pointer;transition:all .2s}
+.dot.done{background:#1f6feb66;border-color:#1f6feb}
+.dot.active{background:#58a6ff;border-color:#58a6ff;transform:scale(1.4)}
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:20px">🔐</span>
+  <h1>POC Security — Flujo de Request JWT + JWE</h1>
+  <span class="badge">11 pasos</span>
+</header>
+<div class="main">
+  <div id="svg-wrap">
+    <svg id="seq" viewBox="0 0 900 740" xmlns="http://www.w3.org/2000/svg" style="min-width:520px;max-width:900px;width:100%">
+    <defs>
+      <!-- glows are applied via JS style.filter -->
+    </defs>
+
+    <!-- ══ COMPONENT HEADERS ══ -->
+    <!-- App -->
+    <rect x="20" y="16" width="110" height="52" rx="8" fill="#161b22" stroke="#3b82f6" stroke-width="2" id="c-app"/>
+    <text x="75" y="36" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="700" font-family="Segoe UI,system-ui,sans-serif">📱 Ionic</text>
+    <text x="75" y="52" text-anchor="middle" fill="#6e7681" font-size="9.5" font-family="Segoe UI,system-ui,sans-serif">App (Web/Mobile)</text>
+
+    <!-- Keycloak -->
+    <rect x="175" y="16" width="120" height="52" rx="8" fill="#161b22" stroke="#f59e0b" stroke-width="2" id="c-kc"/>
+    <text x="235" y="36" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="700" font-family="Segoe UI,system-ui,sans-serif">🔑 Keycloak 26</text>
+    <text x="235" y="52" text-anchor="middle" fill="#6e7681" font-size="9.5" font-family="Segoe UI,system-ui,sans-serif">web / mobile realm</text>
+
+    <!-- Kong -->
+    <rect x="355" y="16" width="110" height="52" rx="8" fill="#161b22" stroke="#8b5cf6" stroke-width="2" id="c-kong"/>
+    <text x="410" y="36" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="700" font-family="Segoe UI,system-ui,sans-serif">🦍 Kong 3.5</text>
+    <text x="410" y="52" text-anchor="middle" fill="#6e7681" font-size="9.5" font-family="Segoe UI,system-ui,sans-serif">TLS + Rate Limit</text>
+
+    <!-- api-node -->
+    <rect x="535" y="16" width="120" height="52" rx="8" fill="#161b22" stroke="#06b6d4" stroke-width="2" id="c-api"/>
+    <text x="595" y="36" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="700" font-family="Segoe UI,system-ui,sans-serif">🔵 api-node</text>
+    <text x="595" y="52" text-anchor="middle" fill="#6e7681" font-size="9.5" font-family="Segoe UI,system-ui,sans-serif">JWT + AuthZ + JWE</text>
+
+    <!-- Odoo -->
+    <rect x="760" y="16" width="110" height="52" rx="8" fill="#161b22" stroke="#f97316" stroke-width="2" id="c-odoo"/>
+    <text x="815" y="36" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="700" font-family="Segoe UI,system-ui,sans-serif">🟠 Odoo 17</text>
+    <text x="815" y="52" text-anchor="middle" fill="#6e7681" font-size="9.5" font-family="Segoe UI,system-ui,sans-serif">x_api_clientes</text>
+
+    <!-- ══ LIFELINES ══ -->
+    <line x1="75"  y1="68" x2="75"  y2="730" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4"/>
+    <line x1="235" y1="68" x2="235" y2="730" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4"/>
+    <line x1="410" y1="68" x2="410" y2="730" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4"/>
+    <line x1="595" y1="68" x2="595" y2="730" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4"/>
+    <line x1="815" y1="68" x2="815" y2="730" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4"/>
+
+    <!-- ══ ARROWS (managed by JS) ══ -->
+    <g id="arrows"></g>
+    </svg>
+  </div>
+
+  <div class="panel">
+    <div class="panel-inner">
+      <div id="p-badge" class="step-badge">Paso 1 de 11</div>
+      <div id="p-title" class="step-title" style="color:#3b82f6">1. Login PKCE</div>
+      <div id="p-desc" class="step-desc">La app genera code_verifier aleatorio, calcula code_challenge = SHA256(verifier) y redirige al usuario a Keycloak.</div>
+      <div>
+        <div style="font-size:10px;color:#484f58;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Datos transmitidos</div>
+        <div id="p-data" class="step-data">GET /realms/mobile-realm/auth?
+  response_type=code
+  client_id=mobile-app-client
+  code_challenge=SHA256(verifier)
+  code_challenge_method=S256</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#484f58;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Seguridad</div>
+        <div id="p-sec" class="security-box">✓ PKCE (RFC 7636) evita ataques de interceptación del código de autorización</div>
+      </div>
+      <div class="step-dots" id="dots"></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn" onclick="prevStep()">◀ Atrás</button>
+  <button class="btn primary" id="btn-play" onclick="togglePlay()">⏸ Pausar</button>
+  <button class="btn" onclick="nextStep()">Siguiente ▶</button>
+  <button class="btn" onclick="restart()">↺</button>
+  <div class="progress">Paso <b id="p-num">1</b> / 11</div>
+</div>
+
+<script>
+const CX = { app:75, kc:235, kong:410, api:595, odoo:815 };
+const COMP_MAP = {
+  75:  { el:'c-app',  color:'#3b82f6' },
+  235: { el:'c-kc',   color:'#f59e0b' },
+  410: { el:'c-kong', color:'#8b5cf6' },
+  595: { el:'c-api',  color:'#06b6d4' },
+  815: { el:'c-odoo', color:'#f97316' }
+};
+const Y0 = 108, DY = 56;
+
+const STEPS = [
+  { from:CX.app,  to:CX.kc,   color:'#3b82f6',
+    label:'PKCE auth_request',
+    title:'1. Login PKCE',
+    desc:'La app genera code_verifier aleatorio, calcula code_challenge=SHA256(verifier) y redirige al usuario a Keycloak para autenticarse con sus credenciales.',
+    data:`GET /realms/mobile-realm/auth?\n  response_type=code\n  client_id=mobile-app-client\n  code_challenge=SHA256(verifier)\n  code_challenge_method=S256`,
+    sec:'✓ PKCE (RFC 7636): evita ataques de interceptación del código de autorización' },
+
+  { from:CX.kc,   to:CX.app,  color:'#f59e0b',
+    label:'JWT RS256 (aud: mobile-api)',
+    title:'2. JWT emitido por Keycloak',
+    desc:'Keycloak verifica credenciales y emite un JWT RS256. El claim "aud" limita el token a un único servicio destino. TTL: 15 min (mobile) / 5 min (web).',
+    data:`{\n  "sub": "3d4e5f6a-uuid-del-usuario",\n  "aud": "mobile-api",\n  "iss": "http://localhost:8080/realms/mobile-realm",\n  "exp": 1717990200,\n  "realm_access": { "roles": ["user-api"] }\n}`,
+    sec:'✓ Firma RS256: imposible forjar sin la clave privada de Keycloak' },
+
+  { from:CX.app,  to:CX.app,  color:'#a855f7',
+    label:'RSA-OAEP-2048 keygen',
+    title:'3. Generación par RSA (WebCrypto)',
+    desc:'La app genera un par de claves RSA-OAEP-2048 usando Web Cryptography API. La clave privada es extractable:false en web (nunca sale del navegador).',
+    data:`await crypto.subtle.generateKey(\n  { name:"RSA-OAEP", modulusLength:2048,\n    publicExponent:new Uint8Array([1,0,1]),\n    hash:"SHA-256" },\n  false,  // ← extractable:false!\n  ["decrypt"]\n)`,
+    sec:'✓ extractable:false: la clave privada no puede exportarse ni leerse desde JavaScript' },
+
+  { from:CX.app,  to:CX.kong, color:'#10b981',
+    label:'Bearer JWT + X-Client-Public-Key',
+    title:'4. API Request → Kong',
+    desc:'La app envía la petición a Kong. El JWT va en Authorization Bearer y la clave pública RSA serializada como JWK en base64 en el header X-Client-Public-Key.',
+    data:`GET /api/v1/mobile/api/v1/data\nAuthorization: Bearer eyJhbGci...\nX-Client-Public-Key: eyJrdHkiOiJSU0EiLCJuIjoiLi4uIn0=\nContent-Type: application/json`,
+    sec:'✓ TLS 1.3 en Kong: JWT y clave pública cifrados en tránsito' },
+
+  { from:CX.kong, to:CX.kong, color:'#8b5cf6',
+    label:'TLS 1.3 + Rate Limit check',
+    title:'5. Kong: TLS Termination + Rate Limiting',
+    desc:'Kong termina TLS 1.3, aplica rate limiting diferenciado por canal (30 req/min mobile, 60 req/min web) e inyecta X-Channel y X-Correlation-ID.',
+    data:`# Plugin rate-limiting Kong\nconfig.minute: 30  # canal /mobile/**\nconfig.minute: 60  # canal /web/**\n\n# Headers inyectados:\nX-Channel: mobile\nX-Correlation-ID: f47ac10b-58cc-4372-a567-...`,
+    sec:'✓ Rate limiting diferenciado: un canal saturado no afecta al otro' },
+
+  { from:CX.kong, to:CX.api,  color:'#06b6d4',
+    label:'X-Channel: mobile  X-Correlation-ID: uuid',
+    title:'6. Kong → api-node (proxy)',
+    desc:'Kong enruta la petición al servicio destino propagando el JWT original y añadiendo headers de trazabilidad. El header X-Channel no es falsificable por el cliente.',
+    data:`→ http://api-node:3000/api/v1/data\nAuthorization: Bearer eyJhbGci...  ← original\nX-Channel: mobile\nX-Correlation-ID: f47ac10b-58cc...\nX-Client-Public-Key: eyJrdHkiOiJSU0EiLCJuIjoiLi4uIn0=`,
+    sec:'✓ X-Channel lo inyecta Kong según la ruta: imposible falsificarlo desde el cliente' },
+
+  { from:CX.api,  to:CX.kc,   color:'#f59e0b',
+    label:'GET /.well-known/jwks → validar firma',
+    title:'7. Validación JWT con JWKS',
+    desc:'api-node descarga las claves públicas de Keycloak vía JWKS endpoint y verifica la firma RS256 del JWT. Valida issuer, audience, expiración y rol.',
+    data:`GET /realms/mobile-realm/.well-known/jwks\n← { keys:[{ kty:"RSA", kid:"...", n:"...", e:"..." }] }\n\n# Validaciones:\n✓ alg === "RS256"\n✓ aud === "mobile-api"\n✓ iss === expected-issuer\n✓ exp > Date.now()/1000`,
+    sec:'✓ JWKS: verificación criptográfica sin base de datos centralizada de sesiones' },
+
+  { from:CX.api,  to:CX.odoo, color:'#f97316',
+    label:'sub + client_id → AuthZ',
+    title:'8. Autorización de negocio en Odoo',
+    desc:'api-node consulta a Odoo si el "sub" del JWT tiene registro activo en x_api_clientes. Es la segunda capa de autorización: JWT válido no es suficiente.',
+    data:`GET http://odoo:8069/api/validate-user?\n  sub=3d4e5f6a-uuid-del-usuario\n  client_id=mobile-app-client\n\n← HTTP 200\n{ "authorized": true,\n  "name": "Test User Mobile" }`,
+    sec:'✓ Doble capa: JWT válido criptográficamente + registro activo en Odoo' },
+
+  { from:CX.api,  to:CX.api,  color:'#ec4899',
+    label:'RSA-OAEP-256 + A256GCM',
+    title:'9. Cifrado JWE de la respuesta',
+    desc:'api-node cifra el payload JSON como JWE usando la clave pública RSA que envió el cliente. RSA-OAEP cifra la clave AES efímera; A256GCM (AEAD) cifra y autentica el cuerpo.',
+    data:`import { CompactEncrypt } from "jose"\n\nawait new CompactEncrypt(plaintext)\n  .setProtectedHeader({\n    alg: "RSA-OAEP-256",\n    enc: "A256GCM"\n  })\n  .encrypt(clientPublicKey)\n// → 5 segmentos separados por "."`,
+    sec:'✓ AEAD (A256GCM): cualquier modificación del ciphertext hace fallar el descifrado' },
+
+  { from:CX.api,  to:CX.kong, color:'#10b981',
+    label:'Content-Type: application/jose',
+    title:'10. Respuesta JWE → Kong',
+    desc:'El JWE compact (5 segmentos separados por ".") viaja de vuelta por Kong. Un interceptor de red solo ve texto cifrado opaco: el JSON con los datos nunca viajó en claro.',
+    data:`HTTP/1.1 200 OK\nContent-Type: application/jose\n\neyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0\n.gX3GHv5Oab2Zx...\n.48DEFGhijklMNO...\n.cipher_cipher_cipher...\n.auth_tag_here`,
+    sec:'✓ Content-Type: application/jose: el payload nunca está en JSON plano en la red' },
+
+  { from:CX.kong, to:CX.app,  color:'#10b981',
+    label:'JWE compact → decrypt con private key',
+    title:'11. App recibe y descifra JWE',
+    desc:'Kong proxea el JWE al cliente. La app usa su clave privada RSA (que nunca salió del dispositivo, extractable:false) para descifrar con WebCrypto. Solo este dispositivo puede leer la respuesta.',
+    data:`import { compactDecrypt } from "jose"\n\nconst { plaintext } = await compactDecrypt(\n  jweCompact,\n  privateKey  // ← extractable:false, nunca exportada\n)\nconst data = JSON.parse(\n  new TextDecoder().decode(plaintext)\n)`,
+    sec:'✓ Cifrado E2E: solo el dispositivo del usuario puede descifrar la respuesta de la API' },
+];
+
+const ARROW_COLORS = {
+  '#3b82f6':'blue','#f59e0b':'amber','#10b981':'green',
+  '#8b5cf6':'purple','#06b6d4':'teal','#f97316':'orange',
+  '#ec4899':'pink','#a855f7':'purple'
+};
+
+let cur = 0;
+let playing = true;
+let timer = null;
+
+function buildDots() {
+  const el = document.getElementById('dots');
+  el.innerHTML = '';
+  STEPS.forEach((_,i) => {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.title = `Paso ${i+1}`;
+    d.onclick = () => { stopPlay(); goTo(i); };
+    el.appendChild(d);
+  });
+}
+
+function updateDots() {
+  document.querySelectorAll('.dot').forEach((d,i) => {
+    d.className = 'dot' + (i < cur ? ' done' : i === cur ? ' active' : '');
+  });
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function animateLine(line, x1, y1, x2, y2, dur) {
+  const len = Math.hypot(x2-x1, y2-y1);
+  line.setAttribute('stroke-dasharray', len);
+  line.setAttribute('stroke-dashoffset', len);
+  let start = null;
+  function tick(ts) {
+    if (!start) start = ts;
+    const p = Math.min((ts - start) / dur, 1);
+    const ease = p < .5 ? 2*p*p : -1+(4-2*p)*p; // ease in-out
+    line.setAttribute('stroke-dashoffset', len * (1 - ease));
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+function renderArrows() {
+  const g = document.getElementById('arrows');
+  g.innerHTML = '';
+
+  // Reset component highlights
+  Object.values(COMP_MAP).forEach(({el}) => {
+    const node = document.getElementById(el);
+    node.setAttribute('stroke-width','2');
+    node.style.filter = '';
+  });
+
+  const step = STEPS[cur];
+
+  // Highlight active components
+  [step.from, step.to].filter((v,i,a)=>a.indexOf(v)===i).forEach(x => {
+    const m = COMP_MAP[x];
+    if (!m) return;
+    const node = document.getElementById(m.el);
+    node.setAttribute('stroke-width','3');
+    node.style.filter = `drop-shadow(0 0 8px ${m.color})`;
+  });
+
+  // Draw all previous (dimmed) + current (animated) arrows
+  STEPS.forEach((s, i) => {
+    const y = Y0 + i * DY;
+    const isSelf = s.from === s.to;
+
+    if (isSelf) {
+      const bw = 120, bh = 24;
+      const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      rect.setAttribute('x', s.from - bw/2);
+      rect.setAttribute('y', y - bh/2);
+      rect.setAttribute('width', bw);
+      rect.setAttribute('height', bh);
+      rect.setAttribute('rx', '5');
+      rect.setAttribute('fill', i === cur ? s.color + '1a' : 'none');
+      rect.setAttribute('stroke', i > cur ? '#21262d' : s.color);
+      rect.setAttribute('stroke-width', i === cur ? '2' : '1');
+      rect.setAttribute('opacity', i > cur ? '0.2' : i < cur ? '0.4' : '1');
+      if (i === cur) rect.style.filter = `drop-shadow(0 0 6px ${s.color})`;
+      g.appendChild(rect);
+
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x', s.from);
+      txt.setAttribute('y', y + 1);
+      txt.setAttribute('text-anchor','middle');
+      txt.setAttribute('dominant-baseline','middle');
+      txt.setAttribute('fill', i > cur ? '#30363d' : i === cur ? s.color : '#484f58');
+      txt.setAttribute('font-size', i === cur ? '10.5' : '9.5');
+      txt.setAttribute('font-weight', i === cur ? '700' : '400');
+      txt.setAttribute('font-family','Segoe UI,system-ui,sans-serif');
+      txt.textContent = s.label;
+      g.appendChild(txt);
+
+    } else {
+      const ltr = s.from < s.to;
+      const x1 = s.from + (ltr ? 6 : -6);
+      const x2 = s.to   + (ltr ? -10 : 10);
+      const midX = (x1 + x2) / 2;
+
+      // Marker
+      const markerColor = i > cur ? '#30363d' : s.color;
+      const markerId = 'mk-' + i;
+      const defs = document.querySelector('svg#seq defs') || (() => {
+        const d = document.createElementNS('http://www.w3.org/2000/svg','defs');
+        document.getElementById('seq').prepend(d); return d;
+      })();
+      // reuse or create marker
+      let mk = document.getElementById(markerId);
+      if (!mk) {
+        mk = document.createElementNS('http://www.w3.org/2000/svg','marker');
+        mk.setAttribute('id', markerId);
+        mk.setAttribute('markerWidth','8');
+        mk.setAttribute('markerHeight','8');
+        mk.setAttribute('refX','6');
+        mk.setAttribute('refY','3');
+        mk.setAttribute('orient','auto');
+        const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+        p.setAttribute('d','M0,0 L0,6 L8,3 z');
+        mk.appendChild(p);
+        defs.appendChild(mk);
+      }
+      mk.querySelector('path').setAttribute('fill', i > cur ? '#30363d' : s.color);
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y);
+      line.setAttribute('x2', i > cur ? x1 : x2);
+      line.setAttribute('y2', y);
+      line.setAttribute('stroke', i > cur ? '#21262d' : s.color);
+      line.setAttribute('stroke-width', i === cur ? '2.5' : '1.5');
+      line.setAttribute('opacity', i > cur ? '0.15' : i < cur ? '0.35' : '1');
+      if (i !== cur) line.setAttribute('marker-end', `url(#${markerId})`);
+
+      g.appendChild(line);
+
+      if (i === cur) {
+        line.style.filter = `drop-shadow(0 0 3px ${s.color})`;
+        animateLine(line, x1, y, x2, y, 700);
+        // add marker after animation
+        setTimeout(() => {
+          line.setAttribute('marker-end', `url(#${markerId})`);
+        }, 680);
+      }
+
+      // Label
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x', midX);
+      txt.setAttribute('y', y - 7);
+      txt.setAttribute('text-anchor','middle');
+      txt.setAttribute('fill', i > cur ? '#30363d' : i === cur ? s.color : '#484f58');
+      txt.setAttribute('font-size', i === cur ? '10.5' : '9.5');
+      txt.setAttribute('font-weight', i === cur ? '700' : '400');
+      txt.setAttribute('font-family','Segoe UI,system-ui,sans-serif');
+      txt.textContent = s.label;
+      g.appendChild(txt);
+    }
+  });
+}
+
+function updatePanel() {
+  const s = STEPS[cur];
+  document.getElementById('p-badge').textContent = `Paso ${cur+1} de 11`;
+  document.getElementById('p-title').textContent = s.title;
+  document.getElementById('p-title').style.color = s.color;
+  document.getElementById('p-desc').textContent = s.desc;
+  document.getElementById('p-data').textContent = s.data;
+  document.getElementById('p-sec').textContent = s.sec;
+  document.getElementById('p-num').textContent = cur+1;
+}
+
+function goTo(n) {
+  cur = Math.max(0, Math.min(n, STEPS.length - 1));
+  renderArrows();
+  updatePanel();
+  updateDots();
+}
+
+function nextStep() {
+  if (cur < STEPS.length - 1) goTo(cur + 1);
+  else stopPlay();
+}
+
+function prevStep() { stopPlay(); goTo(cur - 1); }
+
+function restart() { stopPlay(); goTo(0); startPlay(); }
+
+function startPlay() {
+  playing = true;
+  document.getElementById('btn-play').textContent = '⏸ Pausar';
+  timer = setInterval(() => {
+    if (cur < STEPS.length - 1) nextStep();
+    else stopPlay();
+  }, 2800);
+}
+
+function stopPlay() {
+  playing = false;
+  document.getElementById('btn-play').textContent = '▶ Reproducir';
+  clearInterval(timer);
+}
+
+function togglePlay() { playing ? stopPlay() : startPlay(); }
+
+buildDots();
+goTo(0);
+startPlay();
+</script>
+</body>
+</html>

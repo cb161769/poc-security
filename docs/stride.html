@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POC Security — STRIDE Threat Model</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{padding:10px 20px;background:#161b22;border-bottom:1px solid #30363d;display:flex;align-items:center;gap:10px;flex-shrink:0}
+header h1{font-size:16px;font-weight:700;color:#58a6ff}
+.badge{font-size:10px;background:#1f6feb33;border:1px solid #1f6feb66;color:#58a6ff;padding:2px 8px;border-radius:20px}
+.main{display:flex;flex:1;overflow:hidden;min-height:0}
+
+/* ── GRID ── */
+.grid-wrap{display:flex;flex-direction:column;gap:0;flex:1;overflow:hidden;padding:12px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex-shrink:0}
+.card{border-radius:10px;border:2px solid #21262d;background:#161b22;cursor:pointer;transition:border-color .25s,transform .15s,box-shadow .25s;position:relative;overflow:hidden;padding:12px 14px}
+.card:hover{transform:translateY(-2px)}
+.card.active{transform:translateY(-2px)}
+.card.done .card-letter{opacity:.5}
+.card-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.card-letter{font-size:28px;font-weight:900;line-height:1;font-family:'Segoe UI',system-ui,sans-serif}
+.card-name{flex:1}
+.card-name-en{font-size:11px;font-weight:700;letter-spacing:.04em}
+.card-name-es{font-size:9.5px;color:#8b949e;margin-top:1px}
+.card-risk{font-size:8.5px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.06em;align-self:flex-start;margin-top:1px}
+.risk-high{background:#5a1d1d;color:#f85149;border:1px solid #f8514940}
+.risk-med{background:#3d2e00;color:#d29922;border:1px solid #d2992240}
+.card-icon{font-size:18px;position:absolute;bottom:8px;right:10px;opacity:.35}
+.card-bar{height:3px;border-radius:2px;margin-top:8px;transition:width .6s ease}
+.card-bar-bg{height:3px;border-radius:2px;background:#21262d;margin-top:8px;overflow:hidden}
+.card-bar-fill{height:100%;border-radius:2px;width:0;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.card-phase-tag{font-size:9px;font-weight:700;letter-spacing:.08em;margin-top:6px}
+
+/* ── DETAIL ── */
+.detail{flex:1;background:#0d1117;border-top:1px solid #21262d;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;min-height:0}
+.detail-attack{border-right:1px solid #21262d;padding:14px 16px;overflow-y:auto}
+.detail-defense{padding:14px 16px;overflow-y:auto}
+.det-section-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.det-scenario{font-size:12px;color:#8b949e;line-height:1.6;margin-bottom:10px}
+.det-vectors{display:flex;flex-direction:column;gap:6px}
+.det-vector{font-size:11.5px;padding:7px 10px;border-radius:6px;line-height:1.5;display:flex;gap:8px}
+.det-vector-attack{background:#1a0808;border:1px solid #5a1d1d;color:#f85149}
+.det-vector-ok{background:#071a0e;border:1px solid #1f4620;color:#3fb950}
+.det-vector .icon{flex-shrink:0;font-size:12px;margin-top:1px}
+
+/* ── CONTROLS ── */
+.controls{padding:10px 16px;background:#161b22;border-top:1px solid #30363d;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.btn{background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:12px;transition:background .15s}
+.btn:hover{background:#30363d}
+.btn.primary{background:#1f6feb;border-color:#1f6feb;font-weight:600}
+.btn.primary:hover{background:#388bfd}
+.progress{font-size:12px;color:#8b949e;margin-left:auto}
+.progress b{color:#58a6ff}
+.phase-indicator{font-size:11px;color:#8b949e;display:flex;align-items:center;gap:6px}
+.phase-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* ── ANIMATIONS ── */
+@keyframes cardReveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes attackFlash{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 2px var(--c);}}
+@keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(400%)}}
+
+.card.entering{animation:cardReveal .35s ease forwards}
+.scanning::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--scan-c),transparent);animation:scan .8s linear;}
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:20px">🛡️</span>
+  <h1>POC Security — STRIDE Threat Model</h1>
+  <span class="badge">6 categorías</span>
+  <div style="margin-left:auto;font-size:11px;color:#6e7681">Amenazas vs. Contramedidas implementadas</div>
+</header>
+
+<div class="main">
+  <div class="grid-wrap">
+    <div class="grid" id="grid"></div>
+    <div class="detail" id="detail">
+      <div class="detail-attack" id="det-attack">
+        <div class="det-section-title" style="color:#f85149">
+          <span>💀</span><span>Vectores de ataque</span>
+        </div>
+        <div class="det-scenario" id="det-scenario">Selecciona una amenaza para ver el análisis detallado.</div>
+        <div class="det-vectors" id="det-avectors"></div>
+      </div>
+      <div class="detail-defense" id="det-defense">
+        <div class="det-section-title" style="color:#3fb950">
+          <span>🛡️</span><span>Contramedidas implementadas</span>
+        </div>
+        <div class="det-vectors" id="det-dvectors"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn" onclick="prevThreat()">◀ Anterior</button>
+  <button class="btn primary" id="btn-play" onclick="togglePlay()">⏸ Pausar</button>
+  <button class="btn" onclick="nextThreat()">Siguiente ▶</button>
+  <button class="btn" onclick="restart()">↺</button>
+  <div class="phase-indicator" id="phase-ind">
+    <span class="phase-dot" style="background:#f85149"></span>
+    <span id="phase-lbl">Analizando amenaza...</span>
+  </div>
+  <div class="progress">Amenaza <b id="cur-num">1</b> / 6</div>
+</div>
+
+<script>
+const THREATS = [
+  {
+    letter:'S', name:'Spoofing', es:'Suplantación de Identidad',
+    color:'#ef4444', icon:'👤', risk:'ALTA',
+    scenario:'Un atacante intenta autenticarse como un usuario legítimo o forja un JWT para acceder a la API sin credenciales válidas.',
+    attacks:[
+      'Forjar un JWT modificando el payload (sub, rol) sin la clave RS256 de Keycloak',
+      'Reutilizar un JWT caducado o robado de otra sesión',
+      'Usar un token de web-realm en el endpoint mobile-realm (cross-realm spoofing)',
+      'Suplantar el servicio api-node para capturar JWTs de los clientes'
+    ],
+    defenses:[
+      '✓ JWT RS256: firma criptográfica verificada con clave pública de Keycloak (JWKS)',
+      '✓ Claim "aud" validado: token de web-realm rechazado en endpoints mobile y viceversa',
+      '✓ Claim "exp": TTL 15min (mobile) / 5min (web) — ventana mínima para ataque de replay',
+      '✓ TLS 1.3 en Kong: impide intercepción de JWT en tránsito',
+      '✓ PKCE (RFC 7636): protege el flujo de código de autorización'
+    ]
+  },
+  {
+    letter:'T', name:'Tampering', es:'Manipulación de Datos',
+    color:'#f97316', icon:'✏️', risk:'ALTA',
+    scenario:'Un atacante intercepta y modifica el cuerpo de una respuesta API (saldo, datos de transferencia) o el JWT en tránsito.',
+    attacks:[
+      'MITM que modifica el JSON de respuesta (saldo: 1000 → 999999) antes de que llegue a la app',
+      'Inyección de campos falsos en el JWT (añadir "admin":true al payload)',
+      'Modificación del campo "amount" en una petición de transferencia',
+      'Flip de bits en el ciphertext JWE para alterar los datos descifrados'
+    ],
+    defenses:[
+      '✓ JWE con A256GCM (AEAD): authentication tag de 128 bits — cualquier modificación invalida el mensaje',
+      '✓ RSA-OAEP-256: la clave AES efímera está cifrada con la clave pública del cliente',
+      '✓ Firma RS256 del JWT: cualquier modificación del payload invalida la firma',
+      '✓ TLS 1.3 en Kong: cifrado + integridad de extremo a extremo hasta el gateway',
+      '✓ compactDecrypt falla con error si el authentication tag no coincide'
+    ]
+  },
+  {
+    letter:'R', name:'Repudiation', es:'Repudio de Acciones',
+    color:'#eab308', icon:'🚫', risk:'MEDIA',
+    scenario:'Un usuario realiza una transferencia o pago y luego niega haberlo ejecutado. Sin evidencia técnica no se puede refutar el repudio.',
+    attacks:[
+      '"Yo no hice esa transferencia de $5.000" — sin logs firmados vinculados al usuario',
+      'Modificación de logs del servidor para borrar evidencia de una operación',
+      'Negación de acceso: "nunca usé ese endpoint" sin trazabilidad end-to-end',
+      'Compartir credenciales y luego atribuir operaciones a "otro usuario"'
+    ],
+    defenses:[
+      '✓ JWT firmado por Keycloak incluye "sub" (ID único e inmutable del usuario)',
+      '✓ X-Correlation-ID inyectado por Kong: UUID único por request, trazable end-to-end',
+      '✓ El "sub" del JWT se valida criptográficamente — no se puede negar la autoría',
+      '⚠ MEJORA: implementar logs estructurados con sub + correlation ID + timestamp + hash',
+      '⚠ MEJORA: almacenar JWTs de operaciones críticas como evidencia no repudiable'
+    ]
+  },
+  {
+    letter:'I', name:'Information Disclosure', es:'Divulgación de Información',
+    color:'#06b6d4', icon:'👁️', risk:'ALTA',
+    scenario:'Datos sensibles (saldo, historial, datos personales) son interceptados en tránsito o accedidos sin autorización desde el servidor.',
+    attacks:[
+      'MITM que captura respuestas HTTP con saldos y transacciones en JSON plano',
+      'Acceso a logs del servidor donde el JSON de respuesta está impreso en claro',
+      'Robo de la clave privada RSA del cliente desde el storage del dispositivo',
+      'Exfiltración de la base de datos de PostgreSQL con historial de operaciones'
+    ],
+    defenses:[
+      '✓ JWE RSA-OAEP-256 + A256GCM: payload 100% cifrado, ilegible sin la clave privada del cliente',
+      '✓ Content-Type: application/jose — jamás hay JSON en claro en la respuesta HTTP',
+      '✓ extractable:false (web): la clave privada RSA no puede exportarse ni leerse en JS',
+      '✓ En mobile: clave almacenada en Secure Enclave / Android Keystore',
+      '✓ TLS 1.3 en Kong: doble capa de cifrado (TLS + JWE) en tránsito'
+    ]
+  },
+  {
+    letter:'D', name:'Denial of Service', es:'Denegación de Servicio',
+    color:'#8b5cf6', icon:'💣', risk:'MEDIA',
+    scenario:'Un atacante satura los servicios con miles de peticiones para hacerlos inaccesibles, o explota endpoints costosos para agotar recursos.',
+    attacks:[
+      'Flood de 10.000 req/min al endpoint /api/v1/mobile/transfers desde una botnet',
+      'Amplificación: llamadas masivas al endpoint de validación Odoo (operación costosa)',
+      'Token storm: generación masiva de tokens JWT en el realm de Keycloak',
+      'Slow HTTP attack: conexiones lentas que agotan el pool de Kong'
+    ],
+    defenses:[
+      '✓ Rate limiting Kong: 60 req/min (web), 30 req/min (mobile) — diferenciado por canal',
+      '✓ Respuesta 429 Too Many Requests con Retry-After header automático',
+      '✓ Separación de canales: saturar /mobile/** no afecta a /web/** y viceversa',
+      '✓ X-Correlation-ID: facilita identificar y bloquear IPs que generan floods',
+      '⚠ MEJORA prod: Redis backend para rate limiting distribuido multi-nodo'
+    ]
+  },
+  {
+    letter:'E', name:'Elevation of Privilege', es:'Elevación de Privilegios',
+    color:'#ec4899', icon:'⬆️', risk:'ALTA',
+    scenario:'Un usuario normal accede a recursos de administrador, o un cliente web usa su token para acceder a endpoints del canal mobile (acceso cross-channel).',
+    attacks:[
+      'Token de web-realm (aud: web-api) presentado al endpoint /api/v1/mobile/** ',
+      'Usuario con rol "user-api" modifica el JWT para añadir "admin-api" (sin firma válida)',
+      'Cliente no registrado en Odoo accede a la API con un JWT criptográficamente válido',
+      'IDOR: usuario A accede a transferencias del usuario B cambiando un ID en la URL'
+    ],
+    defenses:[
+      '✓ Claim "aud": web-api vs mobile-api — cada token solo funciona en su canal',
+      '✓ Roles Keycloak: user-api, user-web, admin-web — validados en cada servicio',
+      '✓ Doble capa: JWT válido + registro activo en x_api_clientes de Odoo',
+      '✓ X-Channel inyectado por Kong: imposible falsificar el canal desde el cliente',
+      '✓ Separación de realms: web-realm y mobile-realm son entidades independientes'
+    ]
+  }
+];
+
+let cur = 0;
+let phase = 0; // 0=attack, 1=defense
+let playing = true;
+let timer = null;
+
+function buildGrid() {
+  const g = document.getElementById('grid');
+  THREATS.forEach((t, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'card-'+i;
+    card.style.setProperty('--c', t.color);
+    card.onclick = () => { stopPlay(); activateThreat(i, 0); };
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="card-letter" style="color:${t.color}">${t.letter}</div>
+        <div class="card-name">
+          <div class="card-name-en" style="color:${t.color}">${t.name}</div>
+          <div class="card-name-es">${t.es}</div>
+        </div>
+        <div class="card-risk ${t.risk==='ALTA'?'risk-high':'risk-med'}">${t.risk}</div>
+      </div>
+      <div class="card-bar-bg"><div class="card-bar-fill" id="bar-${i}" style="background:${t.color}"></div></div>
+      <div class="card-phase-tag" id="tag-${i}" style="color:${t.color}"></div>
+      <span class="card-icon">${t.icon}</span>
+    `;
+    g.appendChild(card);
+  });
+}
+
+function updateGrid() {
+  THREATS.forEach((t, i) => {
+    const card = document.getElementById('card-'+i);
+    const bar = document.getElementById('bar-'+i);
+    const tag = document.getElementById('tag-'+i);
+    card.style.borderColor = i === cur ? t.color : '#21262d';
+    card.style.boxShadow = i === cur ? `0 0 14px ${t.color}44` : 'none';
+    card.classList.toggle('active', i === cur);
+    card.classList.toggle('done', i < cur);
+
+    if (i === cur) {
+      bar.style.width = phase === 0 ? '50%' : '100%';
+      tag.textContent = phase === 0 ? '⚔ Analizando amenaza...' : '✓ Contramedidas activas';
+      tag.style.color = phase === 0 ? t.color : '#3fb950';
+    } else if (i < cur) {
+      bar.style.width = '100%';
+      tag.textContent = '✓ Analizado';
+      tag.style.color = '#3fb950';
+    } else {
+      bar.style.width = '0%';
+      tag.textContent = '';
+    }
+  });
+}
+
+function updateDetail() {
+  const t = THREATS[cur];
+  const attackPanel = document.getElementById('det-attack');
+  const defensePanel = document.getElementById('det-defense');
+
+  document.getElementById('det-scenario').textContent = t.scenario;
+
+  const av = document.getElementById('det-avectors');
+  av.innerHTML = '';
+  t.attacks.forEach(a => {
+    const d = document.createElement('div');
+    d.className = 'det-vector det-vector-attack';
+    d.innerHTML = `<span class="icon">⚡</span><span>${a}</span>`;
+    av.appendChild(d);
+  });
+
+  const dv = document.getElementById('det-dvectors');
+  dv.innerHTML = '';
+  t.defenses.forEach(d => {
+    const el = document.createElement('div');
+    const isPending = d.startsWith('⚠');
+    el.className = 'det-vector ' + (isPending ? '' : 'det-vector-ok');
+    if (isPending) el.style.cssText = 'background:#1a1400;border:1px solid #d2992240;color:#d29922';
+    el.innerHTML = `<span class="icon">${isPending ? '⚠️' : '🛡️'}</span><span>${d}</span>`;
+    dv.appendChild(el);
+  });
+
+  // Phase indicator
+  const phaseEl = document.getElementById('phase-ind');
+  const phaseLbl = document.getElementById('phase-lbl');
+  const phaseDot = phaseEl.querySelector('.phase-dot');
+  if (phase === 0) {
+    phaseDot.style.background = '#f85149';
+    phaseLbl.textContent = `Analizando: ${t.name} (${t.es})`;
+    phaseLbl.style.color = '#f85149';
+    attackPanel.style.background = '#0d0808';
+    defensePanel.style.background = '#0d1117';
+  } else {
+    phaseDot.style.background = '#3fb950';
+    phaseLbl.textContent = `Defendido: ${t.defenses.filter(d=>!d.startsWith('⚠')).length} controles activos`;
+    phaseLbl.style.color = '#3fb950';
+    attackPanel.style.background = '#0d1117';
+    defensePanel.style.background = '#071209';
+  }
+
+  document.getElementById('cur-num').textContent = cur + 1;
+}
+
+function activateThreat(i, p) {
+  cur = i;
+  phase = p;
+  updateGrid();
+  updateDetail();
+}
+
+function nextThreat() {
+  if (phase === 0) {
+    activateThreat(cur, 1);
+  } else {
+    if (cur < THREATS.length - 1) activateThreat(cur + 1, 0);
+    else stopPlay();
+  }
+}
+
+function prevThreat() {
+  stopPlay();
+  if (phase === 1) activateThreat(cur, 0);
+  else if (cur > 0) activateThreat(cur - 1, 1);
+}
+
+function startPlay() {
+  playing = true;
+  document.getElementById('btn-play').textContent = '⏸ Pausar';
+  timer = setInterval(nextThreat, 2200);
+}
+
+function stopPlay() {
+  playing = false;
+  document.getElementById('btn-play').textContent = '▶ Reproducir';
+  clearInterval(timer);
+}
+
+function togglePlay() { playing ? stopPlay() : startPlay(); }
+
+function restart() { stopPlay(); activateThreat(0,0); startPlay(); }
+
+buildGrid();
+activateThreat(0, 0);
+
+// Staggered card reveal
+document.querySelectorAll('.card').forEach((c,i) => {
+  c.style.opacity = '0';
+  setTimeout(() => {
+    c.style.opacity = '1';
+    c.classList.add('entering');
+    setTimeout(() => c.classList.remove('entering'), 400);
+  }, i * 120);
+});
+
+setTimeout(startPlay, 900);
+</script>
+</body>
+</html>
