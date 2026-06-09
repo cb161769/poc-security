@@ -20,16 +20,16 @@ Implementa autenticación federada, cifrado de payload de extremo a extremo y au
 App Ionic (Web / Mobile)
   │
   ├── Keycloak 26 ──── Autenticación PKCE + JWT RS256
-  │     ├── web-realm   (aud: web-api   · TTL: 5 min)
-  │     └── mobile-realm (aud: mobile-api · TTL: 15 min)
+  │     ├── web-realm   (aud: ["web-api","account"]   · TTL: 5 min)
+  │     └── mobile-realm (aud: ["mobile-api","account"] · TTL: 5 min)
   │
   └── Kong 3.5 ──────── Perímetro TLS + Rate Limiting
         ├── /api/v1/web/**    → 60 req/min · X-Channel: web
         └── /api/v1/mobile/** → 30 req/min · X-Channel: mobile
               │
-              ├── api-node:3000       Identity Bridge + Odoo AuthZ
-              ├── transfers-service:3001  Servicio de Transferencias
-              └── payments-service:3002   Servicio de Pagos
+              ├── api-node:3000       Identity Bridge + Odoo AuthZ (POST /api/validate-jwt-client)
+              ├── transfers-service:3001  Transferencias (JWT + rol, sin Odoo)
+              └── payments-service:3002   Pagos (JWT + rol, sin Odoo)
                     │
                     └── Odoo 17 ─── Autorización de negocio (x_api_clientes)
                           └── PostgreSQL 15
@@ -366,10 +366,28 @@ Cubre:
 **Headers requeridos en todas las peticiones:**
 ```
 Authorization: Bearer <JWT>
-X-Client-Public-Key: <RSA-JWK-base64>
+X-Client-Public-Key: <base64( JSON(JWK) )>   ← clave pública RSA como objeto JWK serializado en JSON y luego base64
 ```
 
-**Formato de respuesta:** `Content-Type: application/jose` (JWE compact — 5 partes separadas por `.`)
+**Formato de respuesta:** `Content-Type: application/jose; charset=utf-8` (JWE compact — 5 partes separadas por `.`)
+
+**Headers de respuesta reales (observados en vivo):**
+```
+X-Request-Id: <uuid>              ← correlation ID (echo del plugin Kong correlation-id)
+X-Kong-Request-Id: <hex>          ← ID interno de Kong (diferente al anterior)
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: no-referrer
+Permissions-Policy: geolocation=()
+Via: kong/3.5.0
+X-Powered-By: Express             ⚠ fuga de framework — eliminar en producción
+ETag: W/"<hex>-<hash>"            ⚠ revela tamaño del JWE cifrado
+```
+
+**JWE Protected Header real (decodificado):**
+```json
+{ "alg": "RSA-OAEP-256", "enc": "A256GCM", "svc": "data|transfers|payments", "channel": "web|mobile" }
+```
 
 ### Servicios internos (solo accesibles en secure-net)
 
@@ -478,7 +496,10 @@ bash scripts/setup.sh         # Volver a configurar
 | Certificados | Autofirmados | Let's Encrypt / CA corporativa |
 | Logging | Console stdout | ELK / Loki estructurado |
 | Rate limiting | Policy local (un nodo) | Redis backend (multi-nodo) |
-| `/internal/validate-user` | Sin auth | Requiere `X-Internal-Secret` |
+| `/internal/validate-user` | **Expuesto vía Kong sin JWT** (accesible en `/api/v1/mobile/internal/validate-user`) | Añadir middleware JWT + `X-Internal-Secret` |
+| `X-Powered-By: Express` | **Leakage de framework activo** | Añadir `app.disable('x-powered-by')` en todos los servicios Node |
+| ETag en respuestas JWE | **Revela tamaño del payload cifrado** | Deshabilitar ETag en rutas `/api/...` |
+| Odoo AuthZ | Solo en api-node; transfers/payments validan solo JWT + rol | Agregar validación Odoo en los tres servicios |
 | Vault token | Archivo plano en disco | AppRole + TTL corto |
 
 ---

@@ -121,7 +121,7 @@ const THREATS = [
     defenses:[
       '✓ JWT RS256: firma criptográfica verificada con clave pública de Keycloak (JWKS)',
       '✓ Claim "aud" validado: token de web-realm rechazado en endpoints mobile y viceversa',
-      '✓ Claim "exp": TTL 15min (mobile) / 5min (web) — ventana mínima para ataque de replay',
+      '✓ Claim "exp": TTL 5 min en AMBOS canales (verificado en vivo: expires_in: 300s) — ventana mínima para replay',
       '✓ TLS 1.3 en Kong: impide intercepción de JWT en tránsito',
       '✓ PKCE (RFC 7636): protege el flujo de código de autorización'
     ]
@@ -156,7 +156,7 @@ const THREATS = [
     ],
     defenses:[
       '✓ JWT firmado por Keycloak incluye "sub" (ID único e inmutable del usuario)',
-      '✓ X-Correlation-ID inyectado por Kong: UUID único por request, trazable end-to-end',
+      '✓ X-Request-Id inyectado por Kong (plugin correlation-id): UUID único por request, echo\'d al cliente. También X-Kong-Request-Id interno (diferente UUID).',
       '✓ El "sub" del JWT se valida criptográficamente — no se puede negar la autoría',
       '⚠ MEJORA: implementar logs estructurados con sub + correlation ID + timestamp + hash',
       '⚠ MEJORA: almacenar JWTs de operaciones críticas como evidencia no repudiable'
@@ -174,10 +174,10 @@ const THREATS = [
     ],
     defenses:[
       '✓ JWE RSA-OAEP-256 + A256GCM: payload 100% cifrado, ilegible sin la clave privada del cliente',
-      '✓ Content-Type: application/jose — jamás hay JSON en claro en la respuesta HTTP',
+      '✓ Content-Type: application/jose; charset=utf-8 — jamás hay JSON en claro en la respuesta',
       '✓ extractable:false (web): la clave privada RSA no puede exportarse ni leerse en JS',
-      '✓ En mobile: clave almacenada en Secure Enclave / Android Keystore',
-      '✓ TLS 1.3 en Kong: doble capa de cifrado (TLS + JWE) en tránsito'
+      '⚠ ETag en respuestas JWE (activo en POC): revela tamaño del payload cifrado. Deshabilitar en prod.',
+      '⚠ X-Powered-By: Express (activo en POC): revela framework. Añadir app.disable("x-powered-by").'
     ]
   },
   {
@@ -194,7 +194,7 @@ const THREATS = [
       '✓ Rate limiting Kong: 60 req/min (web), 30 req/min (mobile) — diferenciado por canal',
       '✓ Respuesta 429 Too Many Requests con Retry-After header automático',
       '✓ Separación de canales: saturar /mobile/** no afecta a /web/** y viceversa',
-      '✓ X-Correlation-ID: facilita identificar y bloquear IPs que generan floods',
+      '✓ X-Request-Id (correlation): facilita identificar y bloquear tokens/IPs que generan floods',
       '⚠ MEJORA prod: Redis backend para rate limiting distribuido multi-nodo'
     ]
   },
@@ -205,15 +205,15 @@ const THREATS = [
     attacks:[
       'Token de web-realm (aud: web-api) presentado al endpoint /api/v1/mobile/** ',
       'Usuario con rol "user-api" modifica el JWT para añadir "admin-api" (sin firma válida)',
-      'Cliente no registrado en Odoo accede a la API con un JWT criptográficamente válido',
+      'Cliente no registrado en Odoo accede a transfers/payments con un JWT válido (no hay Odoo AuthZ ahí)',
       'IDOR: usuario A accede a transferencias del usuario B cambiando un ID en la URL'
     ],
     defenses:[
-      '✓ Claim "aud": web-api vs mobile-api — cada token solo funciona en su canal',
-      '✓ Roles Keycloak: user-api, user-web, admin-web — validados en cada servicio',
-      '✓ Doble capa: JWT válido + registro activo en x_api_clientes de Odoo',
-      '✓ X-Channel inyectado por Kong: imposible falsificar el canal desde el cliente',
-      '✓ Separación de realms: web-realm y mobile-realm son entidades independientes'
+      '✓ Claim "aud" validado: aud["web-api","account"] rechazado en /mobile/** y viceversa (probado en vivo: 401)',
+      '✓ Roles Keycloak validados en cada servicio: user-api/user-web requerido; cross-channel rechazado',
+      '✓ Doble capa en api-node: JWT + registro en Odoo. ⚠ transfers/payments: solo JWT+rol, sin Odoo.',
+      '✓ X-Channel inyectado por Kong según ruta: imposible falsificar el canal desde el cliente',
+      '⚠ /internal/validate-user expuesto vía Kong sin JWT (accesible en /api/v1/mobile/internal/validate-user)'
     ]
   }
 ];
