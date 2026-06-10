@@ -1,9 +1,12 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'io.ionic.starter',
-  appName: 'poc-security',
-  webDir: 'www'
+  appId: 'com.keystone.mobile',
+  appName: 'KEYSTONE',
+  webDir: 'www',
+  server: {
+    allowNavigation: []
+  }
 };
 
 export default config;

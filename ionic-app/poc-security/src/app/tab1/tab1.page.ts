@@ -20,9 +20,11 @@ export class Tab1Page implements OnInit, OnDestroy {
   rawJwe: string | null = null;
   channel: Channel = 'web';
 
-  // Timer
   timeRemaining = '';
   private timerSub: Subscription | null = null;
+
+  private loginAttempts = 0;
+  private lockoutUntil = 0;
 
   constructor(
     public auth: AuthService,
@@ -67,14 +69,33 @@ export class Tab1Page implements OnInit, OnDestroy {
       : 'Clave extractable — persistible en Secure Storage del dispositivo';
   }
 
+  get lockoutSecondsRemaining(): number {
+    return Math.max(0, Math.ceil((this.lockoutUntil - Date.now()) / 1000));
+  }
+
   async login() {
+    if (Date.now() < this.lockoutUntil) {
+      this.error = `Demasiados intentos. Espera ${this.lockoutSecondsRemaining}s`;
+      return;
+    }
+    if (!this.username.trim() || !this.password) {
+      this.error = 'Completa todos los campos';
+      return;
+    }
     this.loading = true;
     this.error = null;
     try {
-      await this.auth.login(this.username, this.password);
+      await this.auth.login(this.username.trim(), this.password);
+      this.loginAttempts = 0;
       this.updateTimer();
     } catch {
-      this.error = 'Credenciales inválidas';
+      this.loginAttempts++;
+      if (this.loginAttempts >= 5) {
+        this.lockoutUntil = Date.now() + 60_000;
+        this.error = 'Demasiados intentos. Espera 60 segundos.';
+      } else {
+        this.error = 'Credenciales incorrectas';
+      }
     } finally {
       this.loading = false;
     }
@@ -102,5 +123,7 @@ export class Tab1Page implements OnInit, OnDestroy {
     this.rawJwe = null;
     this.error = null;
     this.timeRemaining = '';
+    this.loginAttempts = 0;
+    this.lockoutUntil = 0;
   }
 }

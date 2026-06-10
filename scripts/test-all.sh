@@ -245,13 +245,15 @@ check_json_err "JWT con firma inválida → 401"  "$R" "inválido"
 # ════════════════════════════════════════════════════════
 section "7/7 · ENDPOINTS POST — Creación de Recursos"
 
-# POST transfer (web)
+# POST transfer (web) — body cifrado con server pubkey
+SERVER_JWK=$(curl -s "$KONG/api/v1/pubkey")
+WEB_TRANSFER_JWE=$(node "$(dirname "$0")/encrypt-body.js" "$SERVER_JWK" '{"amount":500,"to":"ACC-9988","memo":"Test transfer"}')
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $WEB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
        -H "X-Idempotency-Key: $(python3 -c 'import uuid; print(uuid.uuid4())')" \
-       -H "Content-Type: application/json" \
-       -d '{"amount":500,"to":"ACC-9988","memo":"Test transfer"}' \
+       -H "Content-Type: application/jose" \
+       -d "$WEB_TRANSFER_JWE" \
        "$KONG/api/v1/web/transfers")
 check_jwe "POST /web/transfers  → crear transferencia web"  "$R" "transfers" "web" 2>/dev/null || true
 
@@ -267,13 +269,15 @@ R=$(curl -s -X POST \
        "$KONG/api/v1/mobile/transfers")
 check_jwe "POST /mobile/transfers → crear transferencia mobile" "$R" "transfers" "mobile" 2>/dev/null || true
 
-# POST payment (web)
+# POST payment (web) — body cifrado con server pubkey
+SERVER_JWK=$(curl -s "$KONG/api/v1/pubkey")
+WEB_PAYMENT_JWE=$(node "$(dirname "$0")/encrypt-body.js" "$SERVER_JWK" '{"amount":99.99,"method":"card","merchant":"Test Corp"}')
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $WEB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
        -H "X-Idempotency-Key: $(python3 -c 'import uuid; print(uuid.uuid4())')" \
-       -H "Content-Type: application/json" \
-       -d '{"amount":99.99,"method":"card","merchant":"Test Corp"}' \
+       -H "Content-Type: application/jose" \
+       -d "$WEB_PAYMENT_JWE" \
        "$KONG/api/v1/web/payments")
 check_jwe "POST /web/payments   → crear pago web"           "$R" "payments" "web" 2>/dev/null || true
 

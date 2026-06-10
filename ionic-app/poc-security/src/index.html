@@ -12,8 +12,18 @@
   <meta name="format-detection" content="telephone=no" />
   <meta name="msapplication-tap-highlight" content="no" />
 
-  <!-- Content Security Policy (tune before production) -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:8000 http://localhost:8080 http://localhost:8069; object-src 'none';">
+  <!-- Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self';
+             script-src 'self';
+             style-src 'self' 'unsafe-inline';
+             img-src 'self' data: https:;
+             connect-src 'self'
+               http://localhost:8000 http://localhost:8080 http://localhost:8069
+               ws://localhost:4200;
+             object-src 'none';
+             base-uri 'self';
+             form-action 'self';">
 
   <link rel="icon" type="image/png" href="assets/icon/favicon.png" />
 
