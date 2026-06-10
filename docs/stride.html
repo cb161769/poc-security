@@ -177,7 +177,7 @@ const THREATS = [
       '✓ Content-Type: application/jose; charset=utf-8 — jamás hay JSON en claro en la respuesta',
       '✓ extractable:false (web): la clave privada RSA no puede exportarse ni leerse en JS',
       '✓ ETag deshabilitado en los 3 servicios: app.set("etag", false) — no filtra tamaño del JWE',
-      '✓ X-Powered-By eliminado en los 3 servicios: app.disable("x-powered-by") — sin fingerprint de framework',
+      '✓ X-Powered-By desactivado en los 3 servicios: app.disable("x-powered-by") — sin fingerprint de framework',
       '✓ Cache-Control: no-store en todas las respuestas JWE — sin caching intermedio'
     ]
   },

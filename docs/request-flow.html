@@ -193,8 +193,8 @@ const STEPS = [
     label:'Content-Type: application/jose; charset=utf-8',
     title:'10. Respuesta JWE → Kong',
     desc:'El JWE compact viaja de vuelta por Kong. La respuesta incluye X-Request-Id (correlation) + X-Kong-Request-Id (interno). X-Powered-By y ETag están deshabilitados en todos los servicios (P4 implementado).',
-    data:`HTTP/1.1 200 OK\nContent-Type: application/jose; charset=utf-8\nContent-Length: 984\nCache-Control: no-store\nX-Request-Id: 375990a7-0799-40f1-9c0d-212bdf8af278\nX-Kong-Request-Id: b058526055d31730c199de18ff2fa249\nX-Kong-Upstream-Latency: 13\nVia: kong/3.5.0\n// X-Powered-By → ELIMINADO (app.disable('x-powered-by'))\n// ETag         → ELIMINADO (app.set('etag', false))\n\neyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIiwic3ZjIjoiZGF0YSIsImNoYW5uZWwiOiJtb2JpbGUifQ\n.<cek_encriptada>.<iv>.<ciphertext>.<auth_tag>`,
-    sec:'✓ JWE cifra el payload. ✓ X-Powered-By eliminado. ✓ ETag deshabilitado. ✓ Cache-Control: no-store.' },
+    data:`HTTP/1.1 200 OK\nContent-Type: application/jose; charset=utf-8\nContent-Length: 984\nCache-Control: no-store\nX-Request-Id: 375990a7-0799-40f1-9c0d-212bdf8af278\nX-Kong-Request-Id: b058526055d31730c199de18ff2fa249\nX-Kong-Upstream-Latency: 13\nVia: kong/3.5.0\n// ✓ Sin X-Powered-By  (app.disable('x-powered-by'))\n// ✓ Sin ETag          (app.set('etag', false))\n\neyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIiwic3ZjIjoiZGF0YSIsImNoYW5uZWwiOiJtb2JpbGUifQ\n.<cek_encriptada>.<iv>.<ciphertext>.<auth_tag>`,
+    sec:'✓ JWE cifra el payload. ✓ Sin X-Powered-By ni ETag (desactivados en P4). ✓ Cache-Control: no-store.' },
 
   { from:CX.kong, to:CX.app,  color:'#10b981',
     label:'JWE compact → decrypt con private key',

@@ -583,20 +583,25 @@ X-Idempotency-Key: a3f2b1c4-9e8d-...
       <div class="box box-defense">
         <div class="box-label">🛡️ Controles implementados</div>
         <ul class="step-list">
-          <li><span class="icon">✓</span><div><strong>app.disable('x-powered-by')</strong> en los 3 servicios — header eliminado de todas las respuestas</div></li>
+          <li><span class="icon">✓</span><div><strong>app.disable('x-powered-by')</strong> en los 3 servicios — cabecera desactivada, no aparece en ninguna respuesta</div></li>
           <li><span class="icon">✓</span><div><strong>app.set('etag', false)</strong> — sin ETag en ninguna respuesta, JWE incluido</div></li>
           <li><span class="icon">✓</span><div><strong>Cache-Control: no-store</strong> en todas las respuestas JWE — previene caching intermediario</div></li>
           <li><span class="icon">✓</span><div>Kong agrega <code>Via: kong/3.5.0</code> — controlado y sin información interna de servicios backend</div></li>
         </ul>
-        <div class="code-block">// Antes (brechas confirmadas en auditoría viva)
-X-Powered-By: Express       ← eliminado
-ETag: W/"1a2b-abc..."       ← eliminado
-Cache-Control: (ausente)    ← agregado: no-store</div>
+        <div class="code-block">// Antes (sin controles P4)
+X-Powered-By: Express       // revelaba el framework al atacante
+ETag: W/"1a2b-abc..."       // filtraba el tamaño del payload cifrado
+                             // Cache-Control ausente — datos cacheables
+
+// Después (P4 implementado — activo en los 3 servicios)
+// Sin X-Powered-By  →  app.disable('x-powered-by')
+// Sin ETag          →  app.set('etag', false)
+Cache-Control: no-store      // respuesta no cacheable</div>
       </div>
     </div>
 
     <div class="status-bar">
-      <div class="status-chip"><span class="dot-s dot-green"></span> X-Powered-By eliminado</div>
+      <div class="status-chip"><span class="dot-s dot-green"></span> X-Powered-By desactivado</div>
       <div class="status-chip"><span class="dot-s dot-green"></span> ETag desactivado</div>
       <div class="status-chip"><span class="dot-s dot-green"></span> Cache-Control: no-store en JWE</div>
     </div>

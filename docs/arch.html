@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POC Security — Architecture Review</title>
+<style>
+:root{
+  --dark:#0d1117;--card:#161b22;--card2:#1c2128;--border:#30363d;--text:#e6edf3;--muted:#8b949e;
+  --blue:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--orange:#f0883e;
+  --purple:#bc8cff;--teal:#39d0d8;--pink:#f778ba;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--dark);color:var(--text)}
+.deck{width:100%;height:100vh;position:relative}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;transform:translateX(50px);padding:22px 5vw 64px}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out{opacity:0;transform:translateX(-50px)}
+.nav{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#161b22ee;border:1px solid var(--border);border-radius:40px;padding:7px 16px;backdrop-filter:blur(8px);z-index:100}
+.nav-btn{background:none;border:1px solid var(--border);color:var(--text);border-radius:20px;padding:4px 14px;cursor:pointer;font-size:13px;transition:all .15s}
+.nav-btn:hover{background:var(--border)}
+.nav-btn:disabled{opacity:.3;cursor:default}
+.dots{display:flex;gap:5px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .2s;cursor:pointer}
+.dot.active{background:var(--blue);width:20px;border-radius:3px}
+.slide-num{font-size:11px;color:var(--muted);min-width:42px;text-align:right}
+.section-tag{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.section-tag::before{content:'';display:block;width:20px;height:1px;background:var(--muted)}
+h2{font-size:clamp(16px,2.2vw,24px);font-weight:700;margin-bottom:3px}
+.accent-bar{width:36px;height:3px;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:2px;margin-bottom:10px}
+.badge{font-size:10px;padding:2px 9px;border-radius:20px;font-weight:700;letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px}
+.b-blue{background:#1f6feb18;border:1px solid #1f6feb44;color:var(--blue)}
+.b-green{background:#23863618;border:1px solid #23863644;color:var(--green)}
+.b-yellow{background:#9e640018;border:1px solid #9e640044;color:var(--yellow)}
+.b-red{background:#da363618;border:1px solid #da363644;color:var(--red)}
+.b-gray{background:#21262d;border:1px solid var(--border);color:var(--muted)}
+.b-purple{background:#6e40c918;border:1px solid #6e40c944;color:var(--purple)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.card p{font-size:11.5px;color:var(--muted);line-height:1.55;margin-top:4px}
+.grid{display:grid;gap:9px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g4{grid-template-columns:1fr 1fr 1fr 1fr}
+code{font-family:'Cascadia Code','Fira Code','Courier New',monospace;font-size:10px;background:#0d1117;border:1px solid #21262d;border-radius:3px;padding:1px 5px;color:#79c0ff}
+pre{font-family:'Cascadia Code','Fira Code','Courier New',monospace;font-size:10px;background:#0d1117;border:1px solid var(--border);border-radius:7px;padding:10px 12px;line-height:1.65;overflow:hidden}
+pre .k{color:#ff7b72}
+pre .s{color:#a5d6ff}
+pre .c{color:#8b949e;font-style:italic}
+pre .n{color:#79c0ff}
+pre .v{color:#3fb950}
+pre .o{color:#f0883e}
+
+/* ── ARCHITECTURE DIAGRAM ── */
+.arch-diagram{flex:1;position:relative;min-height:0}
+.arch-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.arch-node{position:absolute;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:8px 10px;text-align:center;min-width:110px}
+.arch-node .n-icon{font-size:20px;margin-bottom:2px}
+.arch-node .n-name{font-size:12px;font-weight:700}
+.arch-node .n-tech{font-size:9.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+.arch-node .n-badge{font-size:8.5px;padding:1px 6px;border-radius:10px;margin-top:4px;display:inline-block}
+.n-client{border-color:#58a6ff44;background:#1f6feb0a}
+.n-kc{border-color:#f59e0b44;background:#f59e0b08}
+.n-kong{border-color:#f0883e44;background:#f0883e08}
+.n-svc{border-color:#3fb95044;background:#23863608}
+.n-odoo{border-color:#bc8cff44;background:#6e40c908}
+.n-keys{border-color:#39d0d844;background:#06b6d408}
+
+/* legend */
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)}
+.leg-line{width:22px;height:2px;border-radius:1px}
+.leg-dash{background:repeating-linear-gradient(90deg,currentColor 0,currentColor 4px,transparent 4px,transparent 8px);height:1.5px;width:22px}
+
+/* ── ADR CARDS ── */
+.adr{border-radius:9px;border:1px solid var(--border);background:var(--card);overflow:hidden;margin-bottom:8px}
+.adr-head{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--border);background:#1c2128}
+.adr-num{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;min-width:36px}
+.adr-title{font-size:13px;font-weight:700}
+.adr-body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0}
+.adr-col{padding:8px 13px;border-right:1px solid #21262d;font-size:11px;line-height:1.55}
+.adr-col:last-child{border-right:none}
+.adr-col-label{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+
+/* ── MIDDLEWARE CHAIN ── */
+.mw-chain{display:flex;flex-direction:column;gap:0}
+.mw-step{display:flex;align-items:stretch;gap:0}
+.mw-connector{width:38px;display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0}
+.mw-line{flex:1;width:2px;background:var(--border)}
+.mw-dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--border);background:var(--dark);flex-shrink:0}
+.mw-card{flex:1;margin:3px 0;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card)}
+.mw-card .mw-name{font-size:12.5px;font-weight:700}
+.mw-card .mw-detail{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5}
+.mw-card .mw-reject{font-size:10px;margin-top:4px}
+.mw-card.active-mw{border-color:#1f6feb44;background:#1f6feb08}
+.mw-card.active-mw .mw-dot{border-color:var(--blue);background:var(--blue)}
+
+/* ── STATE TABLE ── */
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th{background:#1c2128;padding:7px 10px;text-align:left;color:var(--muted);font-weight:600;font-size:10px;letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:7px 10px;border-bottom:1px solid #21262d;vertical-align:top;line-height:1.5}
+tr:last-child td{border-bottom:none}
+.risk-H{color:var(--red);font-weight:700}
+.risk-M{color:var(--yellow);font-weight:700}
+.risk-L{color:var(--green);font-weight:700}
+.effort-S{background:#23863620;color:var(--green);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700}
+.effort-M{background:#9e640020;color:var(--yellow);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700}
+.effort-L{background:#da363620;color:var(--red);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700}
+
+/* ── PATTERN CARD ── */
+.pattern{display:flex;flex-direction:column;gap:8px;flex:1}
+.p-card{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px 13px;flex:1}
+.p-card h3{font-size:12.5px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:7px}
+
+/* ── PROD GAP ── */
+.gap-row{display:flex;align-items:flex-start;gap:10px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:6px}
+.gap-body{flex:1}
+.gap-title{font-size:13px;font-weight:700}
+.gap-desc{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5}
+.gap-meta{display:flex;gap:7px;margin-top:5px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 1: DIAGRAMA DE ARQUITECTURA
+══════════════════════════════════════════════════════ -->
+<div class="slide active" id="s0">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+    <div>
+      <div class="section-tag">Visión de sistema</div>
+      <h2>Arquitectura de componentes — C2 simplificado</h2>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <span class="badge b-blue">5 componentes</span>
+      <span class="badge b-gray">3 flujos de datos</span>
+      <span class="badge b-green">Docker Compose</span>
+    </div>
+  </div>
+
+  <div class="arch-diagram" id="arch-diagram" style="position:relative;flex:1;min-height:0">
+    <!-- SVG arrows layer -->
+    <svg class="arch-svg" id="arch-svg" style="overflow:visible"></svg>
+
+    <!-- CLIENT -->
+    <div class="arch-node n-client" id="n-client" style="left:50%;top:0;transform:translateX(-50%)">
+      <div class="n-icon">📱</div>
+      <div class="n-name">Cliente</div>
+      <div class="n-tech">Ionic 8 · Angular 20 · Capacitor 8<br>WebCrypto RSA key pair (extractable:false)</div>
+      <span class="n-badge" style="background:#1f6feb20;color:var(--blue)">2 canales: web · mobile</span>
+    </div>
+
+    <!-- KEYCLOAK -->
+    <div class="arch-node n-kc" id="n-kc" style="left:8%;top:40%">
+      <div class="n-icon">🔑</div>
+      <div class="n-name">Keycloak 26</div>
+      <div class="n-tech">web-realm · mobile-realm<br>RS256 · PKCE · TTL 5 min<br>JWKS endpoint expuesto</div>
+      <span class="n-badge" style="background:#f59e0b20;color:#f59e0b">Identity Provider</span>
+    </div>
+
+    <!-- KONG -->
+    <div class="arch-node n-kong" id="n-kong" style="left:50%;top:38%;transform:translateX(-50%)">
+      <div class="n-icon">🔀</div>
+      <div class="n-name">Kong 3.5 OSS</div>
+      <div class="n-tech">Rate-limit por token JWT<br>mTLS · Correlation-ID<br>X-Channel injection</div>
+      <span class="n-badge" style="background:#f0883e20;color:var(--orange)">API Gateway</span>
+    </div>
+
+    <!-- NODE SERVICES -->
+    <div class="arch-node n-svc" id="n-svc" style="right:4%;top:35%">
+      <div class="n-icon">⚡</div>
+      <div class="n-name">Node Services (×3)</div>
+      <div class="n-tech">api-node · transfers · payments<br>Express 4 · jose v5 · jsonwebtoken<br>Cadena de 4 middlewares</div>
+      <span class="n-badge" style="background:#23863620;color:var(--green)">Business Logic</span>
+    </div>
+
+    <!-- ODOO -->
+    <div class="arch-node n-odoo" id="n-odoo" style="left:28%;bottom:2%">
+      <div class="n-icon">🏢</div>
+      <div class="n-name">Odoo 17</div>
+      <div class="n-tech">x_api_clientes model<br>sub · active · client_id<br>/api/validate-jwt-client</div>
+      <span class="n-badge" style="background:#6e40c920;color:var(--purple)">AuthZ de negocio</span>
+    </div>
+
+    <!-- KEY ROTATOR -->
+    <div class="arch-node n-keys" id="n-keys" style="right:4%;bottom:2%">
+      <div class="n-icon">🔄</div>
+      <div class="n-name">Key Rotator</div>
+      <div class="n-tech">shared-keys/ volume<br>RSA-4096 cada 24 h<br>pubkey.pem · privkey.pem</div>
+      <span class="n-badge" style="background:#06b6d420;color:var(--teal)">Key Management</span>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="leg-item"><div class="leg-line" style="background:#bc8cff"></div> Flujo PKCE / auth (Keycloak)</div>
+    <div class="leg-item"><div class="leg-line" style="background:#58a6ff"></div> Flujo de request (JWT + JWE)</div>
+    <div class="leg-item"><div class="leg-line" style="background:#f0883e"></div> Validación JWKS (RS256)</div>
+    <div class="leg-item"><div class="leg-line" style="background:#3fb950"></div> AuthZ de negocio (Odoo)</div>
+    <div class="leg-item"><div class="leg-dash" style="color:#39d0d8"></div> Llaves de cifrado compartidas</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 2: ARCHITECTURE DECISION RECORDS
+══════════════════════════════════════════════════════ -->
+<div class="slide" id="s1">
+  <div class="section-tag">Decisiones de diseño</div>
+  <h2>Architecture Decision Records (ADRs)</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Por qué se eligió cada componente clave — alternativas evaluadas y trade-offs aceptados</p>
+
+  <div class="adr">
+    <div class="adr-head">
+      <span class="adr-num">ADR-01</span>
+      <span class="adr-title">Dos realms Keycloak (web-realm · mobile-realm) en lugar de uno</span>
+      <span class="badge b-green" style="margin-left:auto">Activo</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-col"><div class="adr-col-label">Rationale</div>Audience claims aislados (<code>aud: web-api</code> vs <code>aud: mobile-api</code>) permiten que un token robado de un canal no pueda usarse en el otro. Rate limits y TTLs configurables por canal sin afectar al otro.</div>
+      <div class="adr-col"><div class="adr-col-label">Alternativa descartada</div>Un solo realm con roles diferenciadores. Descartada porque el <code>aud</code> es un claim estándar validable; un rol es solo un claim custom, más fácil de manipular en escenarios de JWT confusion attacks.</div>
+      <div class="adr-col"><div class="adr-col-label">Trade-off aceptado</div>Doble mantenimiento de configuración de realm. Mitigado porque la configuración es declarativa (exportable JSON). En producción: realm-per-product-family sería el siguiente paso.</div>
+    </div>
+  </div>
+
+  <div class="adr">
+    <div class="adr-head">
+      <span class="adr-num">ADR-02</span>
+      <span class="adr-title">JWE (RSA-OAEP-256 + A256GCM) sobre las respuestas, independiente de TLS</span>
+      <span class="badge b-green" style="margin-left:auto">Activo</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-col"><div class="adr-col-label">Rationale</div>TLS termina en Kong. Entre Kong y los servicios internos, el tráfico viajaría en claro sin JWE. Además, el cifrado E2E protege contra proxies intermedios incluso si se usara TLS mutual hasta el servicio.</div>
+      <div class="adr-col"><div class="adr-col-label">Alternativa descartada</div>TLS extremo-a-extremo (cliente ↔ servicio sin terminar en Kong). Descartada porque Kong necesita inspeccionar el request para aplicar rate-limiting, correlation-id y routing por canal.</div>
+      <div class="adr-col"><div class="adr-col-label">Trade-off aceptado</div>+4KB overhead por respuesta (JWE compact). Lat. adicional ~1ms para RSA-OAEP decrypt en cliente. Aceptable para operaciones financieras donde el payload es pequeño (&lt;2KB).</div>
+    </div>
+  </div>
+
+  <div class="adr">
+    <div class="adr-head">
+      <span class="adr-num">ADR-03</span>
+      <span class="adr-title">Pubkey binding stateful (Map en memoria) con TTL = JWT exp</span>
+      <span class="badge b-yellow" style="margin-left:auto">Limitado a 1 nodo</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-col"><div class="adr-col-label">Rationale</div>El binding vincula al usuario (<code>sub</code>) con su clave pública RSA durante la vida del JWT. Usar <code>exp</code> del JWT como TTL elimina la necesidad de cleanup manual y sigue el mismo ciclo de vida que el token.</div>
+      <div class="adr-col"><div class="adr-col-label">Alternativa descartada</div>Incluir la clave pública directamente en el JWT como claim. Descartada porque inflaría el tamaño del token (~800B extra) y requeriría re-autenticación para cambiar la clave.</div>
+      <div class="adr-col"><div class="adr-col-label">Trade-off aceptado</div>El Map vive en el proceso Node. Dos instancias del mismo servicio no comparten el store → un request con pubkey puede registrar en instancia A y fallar en instancia B. Requiere Redis para escalar horizontalmente.</div>
+    </div>
+  </div>
+
+  <div class="adr">
+    <div class="adr-head">
+      <span class="adr-num">ADR-04</span>
+      <span class="adr-title">Rate-limiting por token JWT en Kong (no por IP)</span>
+      <span class="badge b-green" style="margin-left:auto">Activo</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-col"><div class="adr-col-label">Rationale</div>Rate-limit por IP falla en móvil (IP dinámica, NAT compartido). Limitar por token JWT asegura que el límite sigue al usuario real, no al carrier. Web: 60/min · Mobile: 30/min por diferencia de patrones de uso.</div>
+      <div class="adr-col"><div class="adr-col-label">Alternativa descartada</div>Rate-limit en los propios servicios Node. Descartada porque Kong aplica el límite antes de que el request llegue al servicio, ahorrando CPU de validación JWT en requests que se van a rechazar de todas formas.</div>
+      <div class="adr-col"><div class="adr-col-label">Trade-off aceptado</div>Kong OSS usa store en memoria para los contadores (no Redis). Reinicio de Kong resetea los contadores. Mitigación: Kong rara vez se reinicia; para producción, Kong Gateway + Redis plugin.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 3: MIDDLEWARE CHAIN
+══════════════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="section-tag">Diseño de middlewares</div>
+  <h2>Cadena de middlewares — orden y rationale</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">El orden no es arbitrario: cada paso falla-rápido antes de ejecutar el siguiente (fail-fast composition)</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1">
+    <!-- Chain -->
+    <div>
+      <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Cadena — los 3 servicios (GET y POST)</div>
+      <div class="mw-chain">
+        <div class="mw-step">
+          <div class="mw-connector"><div class="mw-dot" style="border-color:var(--orange);background:var(--orange)"></div><div class="mw-line"></div></div>
+          <div class="mw-card" style="border-color:#f0883e44;background:#f0883e08">
+            <div class="mw-name">① Kong (gateway)</div>
+            <div class="mw-detail">mTLS · rate-limit por token · correlation-id · channel routing</div>
+            <div class="mw-reject"><span class="badge b-gray">TLS fail → 400</span> <span class="badge b-gray">Rate exceeded → 429</span></div>
+          </div>
+        </div>
+        <div class="mw-step">
+          <div class="mw-connector"><div class="mw-dot" style="border-color:var(--blue);background:var(--blue)"></div><div class="mw-line"></div></div>
+          <div class="mw-card" style="border-color:#58a6ff44;background:#1f6feb08">
+            <div class="mw-name">② validateJWT</div>
+            <div class="mw-detail">RS256 · issuer · audience · exp · clockTolerance:30s<br>Carga JWKS de Keycloak (cacheado en memoria)</div>
+            <div class="mw-reject"><span class="badge b-gray">Invalid/expired → 401</span> <span class="badge b-gray">Wrong audience → 401</span></div>
+          </div>
+        </div>
+        <div class="mw-step">
+          <div class="mw-connector"><div class="mw-dot" style="border-color:var(--purple);background:var(--purple)"></div><div class="mw-line"></div></div>
+          <div class="mw-card" style="border-color:#bc8cff44;background:#6e40c908">
+            <div class="mw-name">③ validateClientInOdoo</div>
+            <div class="mw-detail">POST a Odoo con sub + email + client_id · Header X-Internal-Secret<br>Verifica active=true en x_api_clientes</div>
+            <div class="mw-reject"><span class="badge b-gray">Not found / inactive → 403</span> <span class="badge b-gray">Odoo down → 502</span></div>
+          </div>
+        </div>
+        <div class="mw-step">
+          <div class="mw-connector"><div class="mw-dot" style="border-color:var(--green);background:var(--green)"></div><div class="mw-line"></div></div>
+          <div class="mw-card" style="border-color:#3fb95044;background:#23863608">
+            <div class="mw-name">④ validatePubKeyBinding</div>
+            <div class="mw-detail">Map&lt;sub, {key, exp}&gt; · primer uso registra · reuso verifica<br>TTL = JWT exp · sin X-Client-Public-Key → skip</div>
+            <div class="mw-reject"><span class="badge b-gray">Key mismatch → 403</span></div>
+          </div>
+        </div>
+        <div class="mw-step">
+          <div class="mw-connector"><div class="mw-dot" style="border-color:var(--yellow);background:var(--yellow)"></div><div class="mw-line"></div></div>
+          <div class="mw-card" style="border-color:#d2992244;background:#9e640008">
+            <div class="mw-name">⑤ checkIdempotency <span style="font-size:10px;color:var(--muted)">(POST únicamente)</span></div>
+            <div class="mw-detail">X-Idempotency-Key UUID requerido · Map con TTL 5 min<br>Replay: devuelve respuesta cacheada sin procesar</div>
+            <div class="mw-reject"><span class="badge b-gray">Sin key → 400</span> <span class="badge b-gray">Replay → 200 + Replayed:true</span></div>
+          </div>
+        </div>
+        <div class="mw-step">
+          <div class="mw-connector"><div class="mw-dot" style="border-color:var(--teal);background:var(--teal)"></div></div>
+          <div class="mw-card" style="border-color:#39d0d844;background:#06b6d408">
+            <div class="mw-name">⑥ Handler → respuesta JWE</div>
+            <div class="mw-detail">Lógica de negocio · cifra con pubkey del cliente<br>Cache-Control: no-store · Content-Type: application/jose</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Why this order -->
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px">Por qué este orden importa</div>
+
+      <div class="card" style="padding:10px 13px">
+        <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:4px">JWT antes de Odoo</div>
+        <p>Una llamada a Odoo cuesta ~5ms de I/O. Si el JWT es inválido (caso más frecuente en ataques), rechazar en paso ② evita la llamada a Odoo — CPU y I/O ahorrados.</p>
+      </div>
+      <div class="card" style="padding:10px 13px">
+        <div style="font-size:12px;font-weight:700;color:var(--purple);margin-bottom:4px">Odoo antes de Pubkey Binding</div>
+        <p>Un usuario dado de baja en Odoo no debe poder registrar una clave pública. Si la validación de Odoo fuera después, un atacante podría registrar una clave con un token robado antes de que se detecte la baja.</p>
+      </div>
+      <div class="card" style="padding:10px 13px">
+        <div style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:4px">Idempotency solo en POST</div>
+        <p>GET es idempotente por semántica HTTP. El middleware se registra solo en rutas POST; no hay overhead en lecturas. El store de idempotencia solo crece con operaciones de escritura.</p>
+      </div>
+      <div class="card" style="padding:10px 13px;border-color:#f8514933;background:#f8514908">
+        <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:4px">Riesgo: Odoo como SPOF</div>
+        <p>Si Odoo está caído, los 3 servicios devuelven 502 en cada request — incluyendo GETs de solo lectura. Pendiente: circuit breaker con fallback configurable (strict / permissive mode).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 4: GESTIÓN DE ESTADO Y ESCALABILIDAD
+══════════════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="section-tag">Estado y escalabilidad</div>
+  <h2>Gestión de estado — limitaciones de escala horizontal</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Cada servicio Node tiene estado en memoria. Esto funciona con 1 instancia; con ≥2 instancias aparecen inconsistencias</p>
+
+  <table style="margin-bottom:12px">
+    <thead>
+      <tr><th>Store</th><th>Tecnología actual</th><th>Contenido</th><th>TTL</th><th>Problema con escalado</th><th>Solución</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>pubKeyStore</code></td>
+        <td><code>Map&lt;sub, &#123;key, exp&#125;&gt;</code><br><span style="font-size:10px;color:var(--muted)">en proceso Node</span></td>
+        <td>Binding usuario↔clave RSA pública</td>
+        <td>JWT <code>exp</code></td>
+        <td class="risk-H">Si instancia A registra la clave y el request llega a instancia B, la clave no existe → falso 403</td>
+        <td>Redis con SETNX + TTL absoluto</td>
+      </tr>
+      <tr>
+        <td><code>idempotencyStore</code></td>
+        <td><code>Map&lt;key, &#123;status, body&#125;&gt;</code><br><span style="font-size:10px;color:var(--muted)">en proceso Node</span></td>
+        <td>Respuestas POST para anti-replay</td>
+        <td>5 minutos</td>
+        <td class="risk-H">Mismo UUID en instancia B no encuentra la respuesta → request se procesa dos veces</td>
+        <td>Redis con GETSET + TTL relativo</td>
+      </tr>
+      <tr>
+        <td>JWKS cache</td>
+        <td><code>jwks-rsa</code> (in-memory)<br><span style="font-size:10px;color:var(--muted)">auto-refresh</span></td>
+        <td>Claves públicas RS256 de Keycloak</td>
+        <td>Auto-refresh</td>
+        <td class="risk-L">Cada instancia refreshea independiente — aceptable; read-only, no necesita coordinación</td>
+        <td>No requiere cambio</td>
+      </tr>
+      <tr>
+        <td>Claves JWE</td>
+        <td>Volume mount <code>shared-keys/</code></td>
+        <td>pubkey.pem / privkey.pem RSA-4096</td>
+        <td>Rotación cada 24h</td>
+        <td class="risk-M">Todos los contenedores montan el mismo volumen — consistente en Docker Compose. En Kubernetes: necesita Secret o Vault</td>
+        <td>HashiCorp Vault o K8s Secret</td>
+      </tr>
+      <tr>
+        <td>Rate-limit counters</td>
+        <td>Kong OSS (in-memory)</td>
+        <td>Contadores por token JWT</td>
+        <td>Ventana 1 min</td>
+        <td class="risk-M">Sin Redis, cada nodo Kong tiene contadores independientes. Un usuario puede alcanzar N×límite con N nodos Kong</td>
+        <td>Kong + Redis plugin</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="grid g3">
+    <div class="card" style="border-color:#f8514933;background:#f8514908;padding:10px 13px">
+      <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:5px">🚧 Bloqueante para HA</div>
+      <p>pubKeyStore + idempotencyStore en memoria — cualquier arquitectura active-active requiere Redis. Sin él, los controles de seguridad se vuelven inconsistentes bajo balanceo de carga.</p>
+    </div>
+    <div class="card" style="padding:10px 13px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px">📐 Arquitectura Redis recomendada</div>
+      <p>Redis Cluster con 2 shards por store. Claves: <code>pkbind:{sub}</code> y <code>idem:{key}</code>. TTL absolutas en UNIX epoch. Evitar KEYS * — usar SCAN para operaciones de mantenimiento.</p>
+    </div>
+    <div class="card" style="padding:10px 13px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px">📊 Estimación de carga en Redis</div>
+      <p>~100B por entrada de pubkey · ~2KB por entrada de idempotency. 10k usuarios activos simultáneos ≈ 21MB RAM. Trivial para Redis; el cuello de botella es el throughput de Odoo, no Redis.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 5: PATRONES DE SEGURIDAD
+══════════════════════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="section-tag">Patrones implementados</div>
+  <h2>3 patrones de seguridad — diseño y flujo</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;flex:1">
+
+    <!-- Pubkey Binding -->
+    <div class="p-card">
+      <h3><span style="color:var(--blue)">①</span> Pubkey Binding</h3>
+      <div style="font-size:10.5px;color:var(--muted);margin-bottom:8px">Patrón: TOFU (Trust On First Use) con TTL vinculado al ciclo de vida del JWT</div>
+      <pre style="font-size:9.5px;margin-bottom:6px"><span class="c">// Flujo de decisión</span>
+<span class="k">if</span> (!header[<span class="s">'x-client-public-key'</span>])
+  <span class="k">return</span> next()          <span class="c">// sin binding</span>
+
+<span class="k">const</span> entry = store.get(sub)
+<span class="k">const</span> expired = now > entry?.exp
+
+<span class="k">if</span> (!entry || expired) &#123;
+  store.set(sub, &#123; key, exp &#125;) <span class="c">// TOFU</span>
+  <span class="k">return</span> next()
+&#125;
+<span class="k">if</span> (entry.key !== key) → <span class="v">403</span>  <span class="c">// mismatch</span>
+next()                           <span class="c">// válido</span></pre>
+      <div style="font-size:10.5px;color:var(--muted)">
+        <div style="color:var(--green);margin-bottom:3px">Propiedades garantizadas:</div>
+        ✓ Un usuario solo puede descifrar con su propia clave<br>
+        ✓ Al renovar JWT, puede cambiar de clave (nuevo TTL)<br>
+        ✓ Sin header → no registra binding (permite readiness probes)
+      </div>
+    </div>
+
+    <!-- Anti-replay -->
+    <div class="p-card">
+      <h3><span style="color:var(--yellow)">②</span> Anti-Replay Idempotency</h3>
+      <div style="font-size:10.5px;color:var(--muted);margin-bottom:8px">Patrón: Idempotency Key con response caching — RFC 9110 §9.2.2 inspirado</div>
+      <pre style="font-size:9.5px;margin-bottom:6px"><span class="c">// Primera vez</span>
+store.set(key, &#123; statusCode, body &#125;)
+setTimeout(() => store.delete(key), TTL)
+
+<span class="c">// Reenvío (replay)</span>
+<span class="k">if</span> (store.has(key)) &#123;
+  res.set(<span class="s">'X-Idempotency-Replayed'</span>, <span class="s">'true'</span>)
+  <span class="k">return</span> res.status(cached.statusCode)
+            .send(cached.body)  <span class="c">// sin procesar</span>
+&#125;
+
+<span class="c">// Wiring: interceptar res.send()</span>
+res.send = <span class="k">function</span>(body) &#123;
+  <span class="k">if</span> (2xx) store.set(key, ...)
+  <span class="k">return</span> orig(body)
+&#125;</pre>
+      <div style="font-size:10.5px;color:var(--muted)">
+        <div style="color:var(--green);margin-bottom:3px">Propiedades garantizadas:</div>
+        ✓ Mismo UUID → misma respuesta, sin doble proceso<br>
+        ✓ Solo cachea respuestas 2xx (errores no se cachean)<br>
+        ✓ TTL 5 min &gt; TTL JWT 5 min → cobertura total
+      </div>
+    </div>
+
+    <!-- Defense in depth -->
+    <div class="p-card">
+      <h3><span style="color:var(--green)">③</span> Defense in Depth</h3>
+      <div style="font-size:10.5px;color:var(--muted);margin-bottom:8px">Patrón: capas independientes de control — comprometer una no compromete las demás</div>
+      <div style="font-size:10.5px;line-height:1.8">
+        <div style="padding:5px 8px;background:#f0883e08;border:1px solid #f0883e33;border-radius:5px;margin-bottom:4px">
+          <span style="color:var(--orange)">Capa 1 — Red:</span> mTLS + TLS 1.2/1.3 AEAD ciphers
+        </div>
+        <div style="padding:5px 8px;background:#1f6feb08;border:1px solid #1f6feb33;border-radius:5px;margin-bottom:4px">
+          <span style="color:var(--blue)">Capa 2 — Auth:</span> JWT RS256 · audience · issuer · exp
+        </div>
+        <div style="padding:5px 8px;background:#6e40c908;border:1px solid #6e40c933;border-radius:5px;margin-bottom:4px">
+          <span style="color:var(--purple)">Capa 3 — AuthZ:</span> Odoo active check en los 3 servicios
+        </div>
+        <div style="padding:5px 8px;background:#23863608;border:1px solid #23863633;border-radius:5px;margin-bottom:4px">
+          <span style="color:var(--green)">Capa 4 — Binding:</span> Pubkey TOFU · anti-replay idempotency
+        </div>
+        <div style="padding:5px 8px;background:#06b6d408;border:1px solid #06b6d433;border-radius:5px">
+          <span style="color:var(--teal)">Capa 5 — Payload:</span> JWE E2E · no-store · sin metadatos
+        </div>
+      </div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:6px">
+        Un atacante necesita comprometer <strong>todas las capas</strong> simultáneamente para obtener datos en claro.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 6: GAPS DE PRODUCCIÓN
+══════════════════════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="section-tag">Producción</div>
+  <h2>Gap analysis — producción vs. POC</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Clasificado por riesgo de seguridad y esfuerzo de implementación. Los bloqueantes deben resolverse antes del primer deploy</p>
+
+  <div class="grid g2" style="gap:12px">
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);margin-bottom:8px">🔴 Bloqueantes para producción</div>
+
+      <div class="gap-row" style="border-color:#f8514933;background:#f8514908">
+        <div style="font-size:20px;flex-shrink:0;width:28px">🗄️</div>
+        <div class="gap-body">
+          <div class="gap-title">Redis para stores de estado</div>
+          <div class="gap-desc">pubKeyStore e idempotencyStore en memoria → inconsistentes con ≥2 instancias. Cualquier escalado horizontal rompe los controles de seguridad.</div>
+          <div class="gap-meta"><span class="effort-M">Esfuerzo M</span> <span class="badge b-red">Bloqueante HA</span> <span class="badge b-gray">ioredis · Redis Cluster</span></div>
+        </div>
+      </div>
+
+      <div class="gap-row" style="border-color:#f8514933;background:#f8514908">
+        <div style="font-size:20px;flex-shrink:0;width:28px">🔌</div>
+        <div class="gap-body">
+          <div class="gap-title">Circuit breaker para Odoo y Keycloak</div>
+          <div class="gap-desc">Si Odoo cae, los 3 servicios devuelven 502 en cada request. Si Keycloak cae, ningún JWT puede validarse. Sin degradación controlada ni retries con backoff.</div>
+          <div class="gap-meta"><span class="effort-M">Esfuerzo M</span> <span class="badge b-red">Bloqueante disponibilidad</span> <span class="badge b-gray">opossum · cockatiel</span></div>
+        </div>
+      </div>
+
+      <div class="gap-row" style="border-color:#f8514933;background:#f8514908">
+        <div style="font-size:20px;flex-shrink:0;width:28px">🔒</div>
+        <div class="gap-body">
+          <div class="gap-title">Certificados TLS de CA reconocida</div>
+          <div class="gap-desc">POC usa certs autofirmados. Clientes móviles nativos (Capacitor) necesitarán trust anchors adicionales o fallarán en producción con TLS errors.</div>
+          <div class="gap-meta"><span class="effort-S">Esfuerzo S</span> <span class="badge b-red">Bloqueante cliente</span> <span class="badge b-gray">Let's Encrypt · AWS ACM</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--yellow);margin-bottom:8px">🟡 No bloqueantes — hardening de producción</div>
+
+      <div class="gap-row">
+        <div style="font-size:20px;flex-shrink:0;width:28px">🚫</div>
+        <div class="gap-body">
+          <div class="gap-title">Revocación de tokens en tiempo real</div>
+          <div class="gap-desc">Token comprometido sigue válido hasta exp (5 min). Keycloak soporta token introspection endpoint para revocación inmediata, pero requiere llamada síncrona extra por request.</div>
+          <div class="gap-meta"><span class="effort-L">Esfuerzo L</span> <span class="badge b-yellow">Riesgo 5min window</span> <span class="badge b-gray">Keycloak introspect · Redis denylist</span></div>
+        </div>
+      </div>
+
+      <div class="gap-row">
+        <div style="font-size:20px;flex-shrink:0;width:28px">🌐</div>
+        <div class="gap-body">
+          <div class="gap-title">Red interna aislada (no-ingress)</div>
+          <div class="gap-desc">En Docker Compose, los puertos internos están expuestos al host. En producción, solo Kong debe tener ingress; los servicios Node deben estar en red privada sin acceso directo.</div>
+          <div class="gap-meta"><span class="effort-S">Esfuerzo S</span> <span class="badge b-yellow">Exposición de superficie</span> <span class="badge b-gray">Docker networks · K8s NetworkPolicy</span></div>
+        </div>
+      </div>
+
+      <div class="gap-row">
+        <div style="font-size:20px;flex-shrink:0;width:28px">📊</div>
+        <div class="gap-body">
+          <div class="gap-title">Observabilidad y alertas (SIEM)</div>
+          <div class="gap-desc">Los rechazos de seguridad (403 Odoo, 403 pubkey, 429 rate-limit) solo quedan en logs de stdout. Sin correlación, sin alertas en tiempo real, sin dashboards de seguridad.</div>
+          <div class="gap-meta"><span class="effort-M">Esfuerzo M</span> <span class="badge b-yellow">Sin visibilidad de ataques</span> <span class="badge b-gray">OpenTelemetry · Datadog · Splunk</span></div>
+        </div>
+      </div>
+
+      <div class="gap-row">
+        <div style="font-size:20px;flex-shrink:0;width:28px">🔑</div>
+        <div class="gap-body">
+          <div class="gap-title">Gestión de secretos (Vault)</div>
+          <div class="gap-desc">INTERNAL_SECRET y claves JWE están en .env y volumen de disco. En producción se necesita rotación dinámica y auditoría de acceso a secretos.</div>
+          <div class="gap-meta"><span class="effort-M">Esfuerzo M</span> <span class="badge b-yellow">Secretos en disco</span> <span class="badge b-gray">HashiCorp Vault · AWS Secrets Manager</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<nav class="nav">
+  <button class="nav-btn" id="btn-prev" onclick="go(-1)" disabled>← Prev</button>
+  <div class="dots" id="dots"></div>
+  <button class="nav-btn" id="btn-next" onclick="go(1)">Next →</button>
+  <span class="slide-num" id="slide-num">1 / 6</span>
+</nav>
+
+<script>
+const TITLES = [
+  'Arquitectura de componentes',
+  'Architecture Decision Records',
+  'Cadena de middlewares',
+  'Estado y escalabilidad',
+  'Patrones de seguridad',
+  'Gap analysis — producción',
+];
+const slides = document.querySelectorAll('.slide');
+const dotsEl = document.getElementById('dots');
+let cur = 0;
+
+slides.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.title = TITLES[i];
+  d.onclick = () => goTo(i);
+  dotsEl.appendChild(d);
+});
+
+function goTo(n) {
+  if (n < 0 || n >= slides.length) return;
+  slides[cur].classList.remove('active');
+  slides[cur].classList.add('out');
+  slides[cur].addEventListener('transitionend', () => slides[cur].classList.remove('out'), {once:true});
+  cur = n;
+  slides[cur].classList.add('active');
+  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === cur));
+  document.getElementById('btn-prev').disabled = cur === 0;
+  document.getElementById('btn-next').disabled = cur === slides.length - 1;
+  document.getElementById('slide-num').textContent = `${cur + 1} / ${slides.length}`;
+  if (cur === 0) drawArrows();
+}
+
+function go(delta) { goTo(cur + delta); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+});
+
+/* ── ARCHITECTURE ARROWS ── */
+function mid(el) {
+  const d = document.getElementById('arch-diagram');
+  const dr = d.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  return {
+    x: r.left - dr.left + r.width / 2,
+    y: r.top  - dr.top  + r.height / 2,
+    t: r.top  - dr.top,
+    b: r.top  - dr.top  + r.height,
+    l: r.left - dr.left,
+    r: r.left - dr.left + r.width,
+  };
+}
+
+function arrow(svg, x1,y1, x2,y2, color, dashed, label) {
+  const dx = x2-x1, dy = y2-y1;
+  const len = Math.sqrt(dx*dx+dy*dy);
+  const ux = dx/len, uy = dy/len;
+  const mx = (x1+x2)/2 + uy*18, my = (y1+y2)/2 - ux*18;
+  const path = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`;
+  const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d', path);
+  p.setAttribute('stroke', color);
+  p.setAttribute('stroke-width', '1.5');
+  p.setAttribute('fill', 'none');
+  if (dashed) p.setAttribute('stroke-dasharray','5,4');
+  svg.appendChild(p);
+  // arrowhead at end
+  const ah = document.createElementNS('http://www.w3.org/2000/svg','path');
+  const ang = Math.atan2(y2-my, x2-mx);
+  const a1 = ang + 2.5, a2 = ang - 2.5;
+  const as = 7;
+  ah.setAttribute('d', `M${x2},${y2} L${x2-as*Math.cos(a1)},${y2-as*Math.sin(a1)} M${x2},${y2} L${x2-as*Math.cos(a2)},${y2-as*Math.sin(a2)}`);
+  ah.setAttribute('stroke', color); ah.setAttribute('stroke-width','1.5'); ah.setAttribute('fill','none');
+  svg.appendChild(ah);
+  if (label) {
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x', (x1+x2)/2 + uy*28);
+    t.setAttribute('y', (y1+y2)/2 - ux*28 + 4);
+    t.setAttribute('fill', color); t.setAttribute('font-size','9');
+    t.setAttribute('text-anchor','middle');
+    t.setAttribute('font-family','Segoe UI,system-ui,sans-serif');
+    t.setAttribute('opacity','0.85');
+    t.textContent = label;
+    svg.appendChild(t);
+  }
+}
+
+function drawArrows() {
+  const svg = document.getElementById('arch-svg');
+  svg.innerHTML = '';
+  const client = document.getElementById('n-client');
+  const kc = document.getElementById('n-kc');
+  const kong = document.getElementById('n-kong');
+  const svc = document.getElementById('n-svc');
+  const odoo = document.getElementById('n-odoo');
+  const keys = document.getElementById('n-keys');
+  if (!client || !kc) return;
+
+  const C = mid(client), K = mid(kc), KO = mid(kong), S = mid(svc), O = mid(odoo), KY = mid(keys);
+
+  // Client → Keycloak (PKCE)
+  arrow(svg, C.l+10, C.b-14, K.r-4, K.t+14, '#bc8cff', false, 'PKCE');
+  // Client → Kong (request)
+  arrow(svg, C.l+40, C.b-10, KO.r-4, KO.t+10, '#58a6ff', false, 'JWT+JWE');
+  // Kong → Services
+  arrow(svg, KO.r-4, KO.y, S.l+4, S.y, '#58a6ff', false, 'proxy');
+  // Services → Keycloak (JWKS)
+  arrow(svg, S.l+8, S.t+16, K.r-4, K.b-14, '#f0883e', true, 'JWKS');
+  // Services → Odoo
+  arrow(svg, S.l+28, S.b-8, O.r-4, O.t+12, '#3fb950', false, 'AuthZ');
+  // Services → Keys
+  arrow(svg, S.l+50, S.b-4, KY.t > S.b ? KY.x : KY.l+4, KY.t > S.b ? KY.t+4 : KY.y, '#39d0d8', true, 'pubkey');
+}
+
+window.addEventListener('resize', () => { if (cur === 0) drawArrows(); });
+setTimeout(drawArrows, 120);
+</script>
+</body>
+</html>
