@@ -249,7 +249,7 @@ public class MainActivity extends BridgeActivity {
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         super.onPause();
         // Clear clipboard when app goes to background to prevent
         // financial data (account numbers, amounts) from leaking to other apps

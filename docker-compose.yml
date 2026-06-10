@@ -193,6 +193,67 @@ services:
     depends_on:
       - kong
 
+  # --- ANDROID EMULATOR (Android 34, software renderer) ---
+  # Requires: docker compose --profile android-tests up
+  android-emulator:
+    image: budtmo/docker-android:emulator_34
+    container_name: android-emulator
+    privileged: true           # KVM passthrough on Linux hosts; falls back to swiftshader on Windows/WSL2
+    environment:
+      EMULATOR_DEVICE: "Samsung Galaxy S10"
+      WEB_VNC: "false"
+      DATAPARTITION: "2048m"
+    ports:
+      - "5555:5555"            # ADB TCP
+    networks:
+      - secure-net
+    profiles:
+      - android-tests
+    healthcheck:
+      test: ["CMD-SHELL", "adb -e shell getprop sys.boot_completed 2>/dev/null | grep -q '1'"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 180s
+
+  # --- ANDROID BUILD (compiles release APK from source) ---
+  # Runs once and exits; output written to android-apk volume
+  android-build:
+    build:
+      context: ./docker/android-build
+    container_name: android-build
+    volumes:
+      - ./ionic-app/poc-security:/workspace:ro
+      - android-apk:/output
+    networks:
+      - secure-net
+    profiles:
+      - android-tests
+    restart: "no"
+
+  # --- ANDROID TEST RUNNER (runs security test suite) ---
+  # Waits for emulator healthy + build complete, then runs test-android-docker.ps1
+  android-test-runner:
+    build:
+      context: ./docker/android-test-runner
+    container_name: android-test-runner
+    environment:
+      EMULATOR_HOST: android-emulator
+      EMULATOR_PORT: "5555"
+      MAX_WAIT_SECONDS: "300"
+    volumes:
+      - android-apk:/apk-input:ro
+    networks:
+      - secure-net
+    profiles:
+      - android-tests
+    restart: "no"
+    depends_on:
+      android-emulator:
+        condition: service_healthy
+      android-build:
+        condition: service_completed_successfully
+
 networks:
   public-net:
     driver: bridge
@@ -202,3 +263,4 @@ networks:
 volumes:
   postgres_data:
   odoo_data:
+  android-apk:               # shared APK between android-build and android-test-runner
