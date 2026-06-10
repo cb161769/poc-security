@@ -35,13 +35,37 @@ export class ApiService {
     return { jwe, data: await this.crypto.decryptJWE(jwe) };
   }
 
-  private async jwePost(path: string, body: any): Promise<JweResult> {
+  private async jwePost(path: string, body: any, _retry = false): Promise<JweResult> {
+    const isMobile = this.auth.getChannel() === 'mobile';
+    await this.crypto.fetchServerPublicKey();
+
+    let requestBody: any;
+    let contentType: string;
+    if (isMobile) {
+      requestBody = await this.crypto.encryptForServer(body);
+      contentType = 'application/jose';
+    } else {
+      requestBody = body;
+      contentType = 'application/json';
+    }
+
     const idempotencyKey = crypto.randomUUID();
-    const headers = this.headers.set('X-Idempotency-Key', idempotencyKey);
-    const jwe = await firstValueFrom(
-      this.http.post(`${this.base}${path}`, body, { headers, responseType: 'text' })
-    );
-    return { jwe, data: await this.crypto.decryptJWE(jwe) };
+    const headers = this.headers
+      .set('X-Idempotency-Key', idempotencyKey)
+      .set('Content-Type', contentType);
+
+    try {
+      const jwe = await firstValueFrom(
+        this.http.post(`${this.base}${path}`, requestBody, { headers, responseType: 'text' })
+      );
+      return { jwe, data: await this.crypto.decryptJWE(jwe) };
+    } catch (err: any) {
+      if (!_retry && err?.status === 422 && err?.error?.error === 'KEY_ROTATED') {
+        this.crypto.clearServerKey();
+        return this.jwePost(path, body, true);
+      }
+      throw err;
+    }
   }
 
   // ── api-node (Identity Bridge) ──────────────────────

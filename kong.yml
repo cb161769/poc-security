@@ -31,6 +31,14 @@ services:
           - name: request-transformer
             config: { add: { headers: ["X-Channel:mobile"] } }
 
+      - name: pubkey-route
+        paths: [/api/v1/pubkey]
+        strip_path: false
+        methods: ["GET", "OPTIONS"]
+        plugins:
+          - name: rate-limiting
+            config: { minute: 120, policy: local }
+
   # ── TRANSFERS SERVICE ──────────────────────────────
   - name: transfers-svc
     url: http://transfers-service:3001

@@ -123,81 +123,160 @@ tr:last-child td{border-bottom:none}
 <div class="deck" id="deck">
 
 <!-- ══════════════════════════════════════════════════════
-     SLIDE 1: DIAGRAMA DE ARQUITECTURA
+     SLIDE 1: C4 CONTAINER DIAGRAM
 ══════════════════════════════════════════════════════ -->
 <div class="slide active" id="s0">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px">
     <div>
-      <div class="section-tag">Visión de sistema</div>
-      <h2>Arquitectura de componentes — C2 simplificado</h2>
+      <div class="section-tag">Visión de sistema · C4 Nivel 2</div>
+      <h2>Diagrama de Contenedores</h2>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <span class="badge b-blue">5 componentes</span>
-      <span class="badge b-gray">3 flujos de datos</span>
+      <span class="badge b-blue">8 contenedores</span>
+      <span class="badge b-gray">9 relaciones explícitas</span>
       <span class="badge b-green">Docker Compose</span>
     </div>
   </div>
 
-  <div class="arch-diagram" id="arch-diagram" style="position:relative;flex:1;min-height:0">
-    <!-- SVG arrows layer -->
-    <svg class="arch-svg" id="arch-svg" style="overflow:visible"></svg>
+  <svg viewBox="0 0 900 316" xmlns="http://www.w3.org/2000/svg" style="width:100%;flex:1;min-height:0;overflow:visible">
+    <defs>
+      <marker id="ca"     markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#58a6ff"/></marker>
+      <marker id="ca-rev" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto-start-reverse"><path d="M0,0 L0,7 L7,3.5 z" fill="#f59e0b99"/></marker>
+      <marker id="ca-g"   markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#8b949e"/></marker>
+      <marker id="ca-p"   markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#bc8cff88"/></marker>
+      <marker id="ca-t"   markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5 z" fill="#39d0d888"/></marker>
+    </defs>
 
-    <!-- CLIENT -->
-    <div class="arch-node n-client" id="n-client" style="left:50%;top:0;transform:translateX(-50%)">
-      <div class="n-icon">📱</div>
-      <div class="n-name">Cliente</div>
-      <div class="n-tech">Ionic 8 · Angular 20 · Capacitor 8<br>WebCrypto RSA key pair (extractable:false)</div>
-      <span class="n-badge" style="background:#1f6feb20;color:var(--blue)">2 canales: web · mobile</span>
-    </div>
+    <!-- ── SYSTEM BOUNDARY ── -->
+    <rect x="106" y="2" width="790" height="312" rx="9" fill="none" stroke="#30363d" stroke-width="1.5" stroke-dasharray="8,4"/>
+    <rect x="118" y="-3" width="206" height="13" fill="#0d1117"/>
+    <text x="124" y="8" font-family="Segoe UI,system-ui,sans-serif" font-size="9" fill="#8b949e" font-weight="700" letter-spacing="1.2">POC SECURITY PLATFORM [SYSTEM]</text>
 
-    <!-- KEYCLOAK -->
-    <div class="arch-node n-kc" id="n-kc" style="left:8%;top:40%">
-      <div class="n-icon">🔑</div>
-      <div class="n-name">Keycloak 26</div>
-      <div class="n-tech">web-realm · mobile-realm<br>RS256 · PKCE · TTL 5 min<br>JWKS endpoint expuesto</div>
-      <span class="n-badge" style="background:#f59e0b20;color:#f59e0b">Identity Provider</span>
-    </div>
+    <!-- ── USER (external) ── -->
+    <rect x="3" y="76" width="96" height="82" rx="7" fill="#0d1117" stroke="#8b949e" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="51" y="96"  text-anchor="middle" font-size="16">👤</text>
+    <text x="51" y="112" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="11" fill="#e6edf3" font-weight="700">Usuario</text>
+    <text x="51" y="125" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e" font-style="italic">[Person]</text>
+    <text x="51" y="138" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">Web · Mobile</text>
+    <text x="51" y="150" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">browser</text>
 
-    <!-- KONG -->
-    <div class="arch-node n-kong" id="n-kong" style="left:50%;top:38%;transform:translateX(-50%)">
-      <div class="n-icon">🔀</div>
-      <div class="n-name">Kong 3.5 OSS</div>
-      <div class="n-tech">Rate-limit por token JWT<br>mTLS · Correlation-ID<br>X-Channel injection</div>
-      <span class="n-badge" style="background:#f0883e20;color:var(--orange)">API Gateway</span>
-    </div>
+    <!-- ── IONIC APP ── -->
+    <rect x="120" y="12" width="172" height="80" rx="7" fill="#1f6feb0a" stroke="#1f6feb66" stroke-width="1.5"/>
+    <text x="206" y="32"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="12" fill="#e6edf3" font-weight="700">Ionic App</text>
+    <text x="206" y="46"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#58a6ff" font-style="italic">[Angular 20 · Capacitor 8 · :4200]</text>
+    <line x1="130" y1="51" x2="282" y2="51" stroke="#30363d" stroke-width="0.5"/>
+    <text x="206" y="63"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">SPA + Mobile · WebCrypto API</text>
+    <text x="206" y="76"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">RSA-OAEP · sessionStorage (web)</text>
+    <text x="206" y="84"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="8.5" fill="#8b949e">PKCE client · initPromise lock</text>
 
-    <!-- NODE SERVICES -->
-    <div class="arch-node n-svc" id="n-svc" style="right:4%;top:35%">
-      <div class="n-icon">⚡</div>
-      <div class="n-name">Node Services (×3)</div>
-      <div class="n-tech">api-node · transfers · payments<br>Express 4 · jose v5 · jsonwebtoken<br>Cadena de 4 middlewares</div>
-      <span class="n-badge" style="background:#23863620;color:var(--green)">Business Logic</span>
-    </div>
+    <!-- ── KEYCLOAK ── -->
+    <rect x="580" y="12" width="172" height="80" rx="7" fill="#f59e0b0a" stroke="#f59e0b66" stroke-width="1.5"/>
+    <text x="666" y="32"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="12" fill="#e6edf3" font-weight="700">Keycloak 26</text>
+    <text x="666" y="46"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#d29922" font-style="italic">[Identity Provider · Docker · :8080]</text>
+    <line x1="590" y1="51" x2="742" y2="51" stroke="#30363d" stroke-width="0.5"/>
+    <text x="666" y="63"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">web-realm · mobile-realm · RS256</text>
+    <text x="666" y="76"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">JWT TTL 5 min · aud claim isolado</text>
+    <text x="666" y="84"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="8.5" fill="#8b949e">JWKS endpoint · PKCE server</text>
 
-    <!-- ODOO -->
-    <div class="arch-node n-odoo" id="n-odoo" style="left:28%;bottom:2%">
-      <div class="n-icon">🏢</div>
-      <div class="n-name">Odoo 17</div>
-      <div class="n-tech">x_api_clientes model<br>sub · active · client_id<br>/api/validate-jwt-client</div>
-      <span class="n-badge" style="background:#6e40c920;color:var(--purple)">AuthZ de negocio</span>
-    </div>
+    <!-- ── KONG GATEWAY ── -->
+    <rect x="196" y="138" width="320" height="60" rx="7" fill="#f0883e0a" stroke="#f0883e66" stroke-width="1.5"/>
+    <text x="356" y="158"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="12" fill="#e6edf3" font-weight="700">Kong Gateway 3.5</text>
+    <text x="356" y="171"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#f0883e" font-style="italic">[API Gateway · DB-less · Docker · :8000]</text>
+    <line x1="206" y1="175" x2="506" y2="175" stroke="#30363d" stroke-width="0.5"/>
+    <text x="356" y="188"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">Rate-limit (por token JWT) · CORS · Correlation-ID · X-Channel inject · TLS</text>
 
-    <!-- KEY ROTATOR -->
-    <div class="arch-node n-keys" id="n-keys" style="right:4%;bottom:2%">
-      <div class="n-icon">🔄</div>
-      <div class="n-name">Key Rotator</div>
-      <div class="n-tech">shared-keys/ volume<br>RSA-4096 cada 24 h<br>pubkey.pem · privkey.pem</div>
-      <span class="n-badge" style="background:#06b6d420;color:var(--teal)">Key Management</span>
-    </div>
-  </div>
+    <!-- ── API-NODE ── -->
+    <rect x="120" y="235" width="155" height="72" rx="7" fill="#1f6feb0a" stroke="#1f6feb44" stroke-width="1.5"/>
+    <text x="197" y="254" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="11" fill="#e6edf3" font-weight="700">api-node</text>
+    <text x="197" y="267" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#58a6ff" font-style="italic">[Express · Node.js · :3000]</text>
+    <line x1="130" y1="271" x2="265" y2="271" stroke="#30363d" stroke-width="0.5"/>
+    <text x="197" y="283" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">Identity bridge · /data · JWE</text>
+    <text x="197" y="296" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">JWT val · Odoo AuthZ · Pubkey bind</text>
 
-  <!-- Legend -->
-  <div class="legend">
-    <div class="leg-item"><div class="leg-line" style="background:#bc8cff"></div> Flujo PKCE / auth (Keycloak)</div>
-    <div class="leg-item"><div class="leg-line" style="background:#58a6ff"></div> Flujo de request (JWT + JWE)</div>
-    <div class="leg-item"><div class="leg-line" style="background:#f0883e"></div> Validación JWKS (RS256)</div>
-    <div class="leg-item"><div class="leg-line" style="background:#3fb950"></div> AuthZ de negocio (Odoo)</div>
-    <div class="leg-item"><div class="leg-dash" style="color:#39d0d8"></div> Llaves de cifrado compartidas</div>
+    <!-- ── TRANSFERS SERVICE ── -->
+    <rect x="290" y="235" width="155" height="72" rx="7" fill="#1f6feb0a" stroke="#1f6feb44" stroke-width="1.5"/>
+    <text x="367" y="254" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="11" fill="#e6edf3" font-weight="700">transfers-service</text>
+    <text x="367" y="267" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#58a6ff" font-style="italic">[Express · Node.js · :3001]</text>
+    <line x1="300" y1="271" x2="435" y2="271" stroke="#30363d" stroke-width="0.5"/>
+    <text x="367" y="283" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">Transferencias · JWE · Idempotency</text>
+    <text x="367" y="296" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">Odoo AuthZ · Máx $10,000</text>
+
+    <!-- ── PAYMENTS SERVICE ── -->
+    <rect x="460" y="235" width="155" height="72" rx="7" fill="#1f6feb0a" stroke="#1f6feb44" stroke-width="1.5"/>
+    <text x="537" y="254" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="11" fill="#e6edf3" font-weight="700">payments-service</text>
+    <text x="537" y="267" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#58a6ff" font-style="italic">[Express · Node.js · :3002]</text>
+    <line x1="470" y1="271" x2="605" y2="271" stroke="#30363d" stroke-width="0.5"/>
+    <text x="537" y="283" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">Pagos · JWE · card/ach/wire</text>
+    <text x="537" y="296" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">Idempotency · Odoo AuthZ · Máx $5k</text>
+
+    <!-- ── ODOO 17 ── -->
+    <rect x="650" y="220" width="172" height="87" rx="7" fill="#bc8cff0a" stroke="#bc8cff44" stroke-width="1.5"/>
+    <text x="736" y="241" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="12" fill="#e6edf3" font-weight="700">Odoo 17</text>
+    <text x="736" y="254" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#bc8cff" font-style="italic">[ERP · Python · :8069]</text>
+    <line x1="660" y1="258" x2="812" y2="258" stroke="#30363d" stroke-width="0.5"/>
+    <text x="736" y="270" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">Business AuthZ · x_api_clientes</text>
+    <text x="736" y="283" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">active=true · sub indexed</text>
+    <text x="736" y="296" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">/api/validate-jwt-client</text>
+
+    <!-- ── KEY ROTATOR ── -->
+    <rect x="756" y="12" width="130" height="80" rx="7" fill="#39d0d808" stroke="#39d0d844" stroke-width="1.5"/>
+    <text x="821" y="32"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="11" fill="#e6edf3" font-weight="700">key-rotator</text>
+    <text x="821" y="45"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#39d0d8" font-style="italic">[Docker · cron · :—]</text>
+    <line x1="766" y1="49" x2="876" y2="49" stroke="#30363d" stroke-width="0.5"/>
+    <text x="821" y="61"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">RSA-4096 cada 24h</text>
+    <text x="821" y="74"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9"  fill="#8b949e">shared-keys/ volume</text>
+    <text x="821" y="84"  text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="8.5" fill="#8b949e">pubkey.pem · privkey.pem</text>
+
+    <!-- ════ RELATIONSHIPS ════ -->
+
+    <!-- [1] User → Ionic  "uses" -->
+    <line x1="99" y1="115" x2="120" y2="55" stroke="#8b949e" stroke-width="1" marker-end="url(#ca-g)"/>
+    <rect x="93" y="81" width="28" height="12" fill="#0d1117"/>
+    <text x="107" y="91" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9" fill="#8b949e">uses</text>
+
+    <!-- [2] Ionic ↔ Keycloak  "PKCE · JWT · JWKS" (bidireccional) -->
+    <line x1="292" y1="51" x2="580" y2="51" stroke="#f59e0b88" stroke-width="1.2" marker-start="url(#ca-rev)" marker-end="url(#ca)"/>
+    <rect x="364" y="42" width="163" height="12" fill="#0d1117"/>
+    <text x="446" y="52" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9" fill="#d29922">PKCE · JWT RS256 · JWKS fetch</text>
+
+    <!-- [3] Ionic → Kong  "HTTPS + JWT + X-Client-Public-Key" -->
+    <line x1="206" y1="92" x2="264" y2="138" stroke="#58a6ff" stroke-width="1.2" marker-end="url(#ca)"/>
+    <rect x="185" y="109" width="116" height="12" fill="#0d1117"/>
+    <text x="243" y="119" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="9" fill="#58a6ff">HTTPS · JWT · JWE key</text>
+
+    <!-- [4] Kong → api-node -->
+    <line x1="228" y1="198" x2="197" y2="235" stroke="#58a6ff88" stroke-width="1" marker-end="url(#ca)"/>
+    <!-- [5] Kong → transfers (vertical) -->
+    <line x1="356" y1="198" x2="356" y2="235" stroke="#58a6ff88" stroke-width="1" marker-end="url(#ca)"/>
+    <!-- [6] Kong → payments -->
+    <line x1="476" y1="198" x2="510" y2="235" stroke="#58a6ff88" stroke-width="1" marker-end="url(#ca)"/>
+    <text x="356" y="221" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="8" fill="#58a6ff55">proxy · strip_path · X-Channel</text>
+
+    <!-- [7-9] Services → Odoo  "validate-jwt-client" (dashed) -->
+    <line x1="275" y1="268" x2="650" y2="256" stroke="#bc8cff55" stroke-width="1" stroke-dasharray="5,3" marker-end="url(#ca-p)"/>
+    <line x1="445" y1="268" x2="650" y2="262" stroke="#bc8cff55" stroke-width="1" stroke-dasharray="5,3" marker-end="url(#ca-p)"/>
+    <line x1="615" y1="268" x2="650" y2="267" stroke="#bc8cff55" stroke-width="1" stroke-dasharray="5,3" marker-end="url(#ca-p)"/>
+    <rect x="458" y="248" width="126" height="12" fill="#0d1117"/>
+    <text x="521" y="258" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="8.5" fill="#bc8cff77">validate-jwt-client [AuthZ]</text>
+
+    <!-- [10] key-rotator → Services (shared volume, dashed teal) -->
+    <line x1="756" y1="52" x2="648" y2="52" stroke="#39d0d855" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#ca-t)"/>
+    <rect x="668" y="42" width="76" height="12" fill="#0d1117"/>
+    <text x="706" y="52" text-anchor="middle" font-family="Segoe UI,system-ui,sans-serif" font-size="8.5" fill="#39d0d877">shared-keys/ vol.</text>
+
+  </svg>
+
+  <!-- C4 Legend -->
+  <div class="legend" style="margin-top:5px">
+    <div class="leg-item"><div style="width:11px;height:11px;border:1.5px solid #1f6feb66;background:#1f6feb0a;border-radius:2px;flex-shrink:0"></div>App / Services Node.js</div>
+    <div class="leg-item"><div style="width:11px;height:11px;border:1.5px solid #f0883e66;background:#f0883e0a;border-radius:2px;flex-shrink:0"></div>API Gateway</div>
+    <div class="leg-item"><div style="width:11px;height:11px;border:1.5px solid #f59e0b66;background:#f59e0b0a;border-radius:2px;flex-shrink:0"></div>Identity Provider</div>
+    <div class="leg-item"><div style="width:11px;height:11px;border:1.5px solid #bc8cff44;background:#bc8cff0a;border-radius:2px;flex-shrink:0"></div>Business ERP</div>
+    <div class="leg-item"><div style="width:11px;height:11px;border:1.5px solid #39d0d844;background:#39d0d808;border-radius:2px;flex-shrink:0"></div>Key Management</div>
+    <div class="leg-item"><div style="width:11px;height:11px;border:1px dashed #8b949e;border-radius:2px;flex-shrink:0"></div>Externo al sistema</div>
+    <div class="leg-item"><div class="leg-dash" style="color:#bc8cff55"></div>AuthZ call (interno)</div>
+    <div class="leg-item"><div class="leg-dash" style="color:#39d0d855"></div>Volumen compartido</div>
+    <span style="margin-left:auto;font-size:10px;color:var(--muted);opacity:.5">C4 Model · Level 2 Container Diagram</span>
   </div>
 </div>
 
@@ -604,7 +683,7 @@ res.send = <span class="k">function</span>(body) &#123;
 
 <script>
 const TITLES = [
-  'Arquitectura de componentes',
+  'C4 · Diagrama de Contenedores',
   'Architecture Decision Records',
   'Cadena de middlewares',
   'Estado y escalabilidad',
@@ -634,7 +713,6 @@ function goTo(n) {
   document.getElementById('btn-prev').disabled = cur === 0;
   document.getElementById('btn-next').disabled = cur === slides.length - 1;
   document.getElementById('slide-num').textContent = `${cur + 1} / ${slides.length}`;
-  if (cur === 0) drawArrows();
 }
 
 function go(delta) { goTo(cur + delta); }
@@ -644,84 +722,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
 });
 
-/* ── ARCHITECTURE ARROWS ── */
-function mid(el) {
-  const d = document.getElementById('arch-diagram');
-  const dr = d.getBoundingClientRect();
-  const r = el.getBoundingClientRect();
-  return {
-    x: r.left - dr.left + r.width / 2,
-    y: r.top  - dr.top  + r.height / 2,
-    t: r.top  - dr.top,
-    b: r.top  - dr.top  + r.height,
-    l: r.left - dr.left,
-    r: r.left - dr.left + r.width,
-  };
-}
 
-function arrow(svg, x1,y1, x2,y2, color, dashed, label) {
-  const dx = x2-x1, dy = y2-y1;
-  const len = Math.sqrt(dx*dx+dy*dy);
-  const ux = dx/len, uy = dy/len;
-  const mx = (x1+x2)/2 + uy*18, my = (y1+y2)/2 - ux*18;
-  const path = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`;
-  const p = document.createElementNS('http://www.w3.org/2000/svg','path');
-  p.setAttribute('d', path);
-  p.setAttribute('stroke', color);
-  p.setAttribute('stroke-width', '1.5');
-  p.setAttribute('fill', 'none');
-  if (dashed) p.setAttribute('stroke-dasharray','5,4');
-  svg.appendChild(p);
-  // arrowhead at end
-  const ah = document.createElementNS('http://www.w3.org/2000/svg','path');
-  const ang = Math.atan2(y2-my, x2-mx);
-  const a1 = ang + 2.5, a2 = ang - 2.5;
-  const as = 7;
-  ah.setAttribute('d', `M${x2},${y2} L${x2-as*Math.cos(a1)},${y2-as*Math.sin(a1)} M${x2},${y2} L${x2-as*Math.cos(a2)},${y2-as*Math.sin(a2)}`);
-  ah.setAttribute('stroke', color); ah.setAttribute('stroke-width','1.5'); ah.setAttribute('fill','none');
-  svg.appendChild(ah);
-  if (label) {
-    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
-    t.setAttribute('x', (x1+x2)/2 + uy*28);
-    t.setAttribute('y', (y1+y2)/2 - ux*28 + 4);
-    t.setAttribute('fill', color); t.setAttribute('font-size','9');
-    t.setAttribute('text-anchor','middle');
-    t.setAttribute('font-family','Segoe UI,system-ui,sans-serif');
-    t.setAttribute('opacity','0.85');
-    t.textContent = label;
-    svg.appendChild(t);
-  }
-}
-
-function drawArrows() {
-  const svg = document.getElementById('arch-svg');
-  svg.innerHTML = '';
-  const client = document.getElementById('n-client');
-  const kc = document.getElementById('n-kc');
-  const kong = document.getElementById('n-kong');
-  const svc = document.getElementById('n-svc');
-  const odoo = document.getElementById('n-odoo');
-  const keys = document.getElementById('n-keys');
-  if (!client || !kc) return;
-
-  const C = mid(client), K = mid(kc), KO = mid(kong), S = mid(svc), O = mid(odoo), KY = mid(keys);
-
-  // Client → Keycloak (PKCE)
-  arrow(svg, C.l+10, C.b-14, K.r-4, K.t+14, '#bc8cff', false, 'PKCE');
-  // Client → Kong (request)
-  arrow(svg, C.l+40, C.b-10, KO.r-4, KO.t+10, '#58a6ff', false, 'JWT+JWE');
-  // Kong → Services
-  arrow(svg, KO.r-4, KO.y, S.l+4, S.y, '#58a6ff', false, 'proxy');
-  // Services → Keycloak (JWKS)
-  arrow(svg, S.l+8, S.t+16, K.r-4, K.b-14, '#f0883e', true, 'JWKS');
-  // Services → Odoo
-  arrow(svg, S.l+28, S.b-8, O.r-4, O.t+12, '#3fb950', false, 'AuthZ');
-  // Services → Keys
-  arrow(svg, S.l+50, S.b-4, KY.t > S.b ? KY.x : KY.l+4, KY.t > S.b ? KY.t+4 : KY.y, '#39d0d8', true, 'pubkey');
-}
-
-window.addEventListener('resize', () => { if (cur === 0) drawArrows(); });
-setTimeout(drawArrows, 120);
 </script>
 </body>
 </html>

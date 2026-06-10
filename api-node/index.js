@@ -2,7 +2,8 @@ const express = require('express');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
-const { CompactEncrypt, importJWK } = require('jose');
+const { CompactEncrypt, importJWK, importSPKI, exportJWK } = require('jose');
+const fs = require('fs');
 
 const app = express();
 app.use(express.json());
@@ -223,6 +224,21 @@ app.post('/internal/validate-user', validateJWT, async (req, res) => {
     }
   } catch {
     res.status(500).json({ status: 'error', message: 'Error de conexión con Odoo' });
+  }
+});
+
+/* ================================
+   PUBKEY ENDPOINT (público)
+================================ */
+app.get('/api/v1/pubkey', async (req, res) => {
+  try {
+    const pem = fs.readFileSync('/shared-keys/pub.pem', 'utf8');
+    const key = await importSPKI(pem, 'RSA-OAEP-256');
+    const jwk = await exportJWK(key);
+    res.json({ alg: 'RSA-OAEP-256', use: 'enc', ...jwk });
+  } catch (err) {
+    console.error('[api-node] Error leyendo pub.pem:', err.message);
+    res.status(503).json({ error: 'Clave pública no disponible' });
   }
 });
 

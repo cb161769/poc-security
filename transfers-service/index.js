@@ -2,10 +2,12 @@ const express = require('express');
 const axios   = require('axios');
 const jwt     = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
-const { CompactEncrypt, importJWK } = require('jose');
+const { CompactEncrypt, importJWK, compactDecrypt, importPKCS8 } = require('jose');
+const fs = require('fs');
 
 const app = express();
 app.use(express.json());
+app.use(express.text({ type: 'application/jose' }));
 app.disable('x-powered-by');
 app.set('etag', false);
 
@@ -77,6 +79,36 @@ function checkIdempotency(req, res, next) {
     return originalSend(body);
   };
   next();
+}
+
+/* ── SERVER PRIVATE KEY (para descifrar requests) ───── */
+let _privKey = null, _privKeyAt = 0;
+async function getServerPrivKey() {
+  if (_privKey && Date.now() - _privKeyAt < 3_600_000) return _privKey;
+  const pem = fs.readFileSync('/shared-keys/priv.pem', 'utf8');
+  _privKey = await importPKCS8(pem, 'RSA-OAEP-256');
+  _privKeyAt = Date.now();
+  return _privKey;
+}
+
+async function decryptRequestBody(req, res, next) {
+  const ct = req.headers['content-type'] || '';
+  const isMobile = req.channel === 'mobile';
+
+  if (isMobile && !ct.includes('application/jose'))
+    return res.status(415).json({ error: 'Canal mobile requiere body cifrado (application/jose)' });
+
+  if (!ct.includes('application/jose')) return next();
+
+  try {
+    const key = await getServerPrivKey();
+    const { plaintext } = await compactDecrypt(req.body, key);
+    req.body = JSON.parse(new TextDecoder().decode(plaintext));
+    next();
+  } catch {
+    _privKey = null; // forzar recarga en próxima petición
+    return res.status(422).json({ error: 'KEY_ROTATED', message: 'Refetch /api/v1/pubkey y reintenta' });
+  }
 }
 
 /* ── DETECT CHANNEL ─────────────────────────────────── */
@@ -184,7 +216,7 @@ app.get('/', validateJWT, validateClientInOdoo, validatePubKeyBinding, async (re
 });
 
 // POST / — crear transferencia
-app.post('/', validateJWT, validateClientInOdoo, validatePubKeyBinding, checkIdempotency, async (req, res) => {
+app.post('/', validateJWT, validateClientInOdoo, validatePubKeyBinding, decryptRequestBody, checkIdempotency, async (req, res) => {
   const pubKey = req.headers['x-client-public-key'];
   if (!pubKey) return res.status(400).json({ error: 'X-Client-Public-Key requerido' });
 

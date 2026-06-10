@@ -255,13 +255,15 @@ R=$(curl -s -X POST \
        "$KONG/api/v1/web/transfers")
 check_jwe "POST /web/transfers  → crear transferencia web"  "$R" "transfers" "web" 2>/dev/null || true
 
-# POST transfer (mobile)
+# POST transfer (mobile) — body cifrado con server pubkey
+SERVER_JWK=$(curl -s "$KONG/api/v1/pubkey")
+TRANSFER_JWE=$(node "$(dirname "$0")/encrypt-body.js" "$SERVER_JWK" '{"amount":200,"to":"ACC-1122","memo":"Test mobile"}')
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $MOB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
        -H "X-Idempotency-Key: $(python3 -c 'import uuid; print(uuid.uuid4())')" \
-       -H "Content-Type: application/json" \
-       -d '{"amount":200,"to":"ACC-1122","memo":"Test mobile"}' \
+       -H "Content-Type: application/jose" \
+       -d "$TRANSFER_JWE" \
        "$KONG/api/v1/mobile/transfers")
 check_jwe "POST /mobile/transfers → crear transferencia mobile" "$R" "transfers" "mobile" 2>/dev/null || true
 
@@ -275,13 +277,15 @@ R=$(curl -s -X POST \
        "$KONG/api/v1/web/payments")
 check_jwe "POST /web/payments   → crear pago web"           "$R" "payments" "web" 2>/dev/null || true
 
-# POST payment (mobile)
+# POST payment (mobile) — body cifrado con server pubkey
+SERVER_JWK=$(curl -s "$KONG/api/v1/pubkey")
+PAYMENT_JWE=$(node "$(dirname "$0")/encrypt-body.js" "$SERVER_JWK" '{"amount":49.99,"method":"ach","merchant":"Utility"}')
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $MOB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
        -H "X-Idempotency-Key: $(python3 -c 'import uuid; print(uuid.uuid4())')" \
-       -H "Content-Type: application/json" \
-       -d '{"amount":49.99,"method":"ach","merchant":"Utility"}' \
+       -H "Content-Type: application/jose" \
+       -d "$PAYMENT_JWE" \
        "$KONG/api/v1/mobile/payments")
 check_jwe "POST /mobile/payments → crear pago mobile"       "$R" "payments" "mobile" 2>/dev/null || true
 

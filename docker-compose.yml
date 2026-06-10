@@ -121,13 +121,14 @@ services:
     volumes:
       - ./shared-keys:/shared-keys
     entrypoint: >
-      /bin/sh -c "while true; do 
+      /bin/sh -c "while true; do
         echo '🔄 Rotando llaves...';
         apk add --no-cache openssl;
         openssl genrsa -out /shared-keys/priv.pem 2048;
+        chmod 644 /shared-keys/priv.pem;
         openssl rsa -in /shared-keys/priv.pem -pubout -out /shared-keys/pub.pem;
         date > /shared-keys/last_rotation.txt;
-        sleep 86400; 
+        sleep 86400;
       done"
 
   # --- TRANSFERS SERVICE ---
@@ -142,6 +143,8 @@ services:
       - ODOO_URL=http://odoo-server:8069
       - INTERNAL_SECRET=${INTERNAL_SECRET:-mi_clave_secreta_2026}
       - NODE_ENV=production
+    volumes:
+      - ./shared-keys:/shared-keys:ro
     networks:
       - secure-net
     depends_on:
@@ -160,6 +163,8 @@ services:
       - ODOO_URL=http://odoo-server:8069
       - INTERNAL_SECRET=${INTERNAL_SECRET:-mi_clave_secreta_2026}
       - NODE_ENV=production
+    volumes:
+      - ./shared-keys:/shared-keys:ro
     networks:
       - secure-net
     depends_on:

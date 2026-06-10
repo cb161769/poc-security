@@ -9,6 +9,9 @@ export class CryptoService {
   private channel: Channel = 'web';
   private initPromise: Promise<void> | null = null;
 
+  private serverPubKey: CryptoKey | null = null;
+  private serverPubKeyFetchedAt = 0;
+
   async initialize(channel: Channel): Promise<void> {
     if (this.privateKey && this.publicKeyB64) return;
     if (this.initPromise) return this.initPromise;
@@ -88,6 +91,35 @@ export class CryptoService {
     this.publicKeyB64 = null;
     this.initPromise = null;
     sessionStorage.removeItem('poc_keypair');
+    this.clearServerKey();
+  }
+
+  clearServerKey(): void {
+    this.serverPubKey = null;
+    this.serverPubKeyFetchedAt = 0;
+  }
+
+  async fetchServerPublicKey(): Promise<void> {
+    if (this.serverPubKey && Date.now() - this.serverPubKeyFetchedAt < 3_600_000) return;
+    const res = await fetch('/api/v1/pubkey');
+    if (!res.ok) throw new Error(`No se pudo obtener server pubkey: ${res.status}`);
+    const jwk = await res.json();
+    this.serverPubKey = await window.crypto.subtle.importKey(
+      'jwk', jwk,
+      { name: 'RSA-OAEP', hash: 'SHA-256' },
+      true, ['encrypt']
+    );
+    this.serverPubKeyFetchedAt = Date.now();
+  }
+
+  async encryptForServer(payload: object): Promise<string> {
+    if (!this.serverPubKey) throw new Error('Server pubkey no cargada');
+    const { CompactEncrypt, importJWK } = await import('jose');
+    const jwk = await window.crypto.subtle.exportKey('jwk', this.serverPubKey);
+    const joseKey = await importJWK(jwk as any, 'RSA-OAEP-256');
+    return new CompactEncrypt(new TextEncoder().encode(JSON.stringify(payload)))
+      .setProtectedHeader({ alg: 'RSA-OAEP-256', enc: 'A256GCM', dir: 'req' })
+      .encrypt(joseKey);
   }
 
   getChannel(): Channel {
