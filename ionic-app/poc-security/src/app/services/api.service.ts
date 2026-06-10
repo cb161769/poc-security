@@ -36,18 +36,9 @@ export class ApiService {
   }
 
   private async jwePost(path: string, body: any, _retry = false): Promise<JweResult> {
-    const isMobile = this.auth.getChannel() === 'mobile';
     await this.crypto.fetchServerPublicKey();
-
-    let requestBody: any;
-    let contentType: string;
-    if (isMobile) {
-      requestBody = await this.crypto.encryptForServer(body);
-      contentType = 'application/jose';
-    } else {
-      requestBody = body;
-      contentType = 'application/json';
-    }
+    const requestBody = await this.crypto.encryptForServer(body);
+    const contentType = 'application/jose';
 
     const idempotencyKey = crypto.randomUUID();
     const headers = this.headers
