@@ -9,6 +9,7 @@ export class CryptoService {
   private channel: Channel = 'web';
 
   async initialize(channel: Channel): Promise<void> {
+    if (this.privateKey && this.publicKeyB64) return;
     this.channel = channel;
     channel === 'web' ? await this.initWeb() : await this.initMobile();
   }
@@ -19,29 +20,35 @@ export class CryptoService {
    * XSS no puede exportar la private key fuera del contexto WebCrypto.
    */
   private async initWeb(): Promise<void> {
-    // Paso 1: generar par extractable para poder exportar ambas claves
-    const tempPair = await window.crypto.subtle.generateKey(
+    // Restaurar desde sessionStorage si existe (sobrevive recargas, muere al cerrar pestaña)
+    const stored = sessionStorage.getItem('poc_keypair');
+    if (stored) {
+      try {
+        const { pubB64, privJwk } = JSON.parse(stored);
+        this.privateKey = await window.crypto.subtle.importKey(
+          'jwk', privJwk, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['decrypt']
+        );
+        this.publicKeyB64 = pubB64;
+        return;
+      } catch { sessionStorage.removeItem('poc_keypair'); }
+    }
+
+    // Generar par nuevo y persistirlo
+    const keyPair = await window.crypto.subtle.generateKey(
       { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
-      true,
-      ['encrypt', 'decrypt']
+      true, ['encrypt', 'decrypt']
     );
 
-    // Paso 2: exportar la clave pública (se envía al servidor)
-    const pubJwk = await window.crypto.subtle.exportKey('jwk', tempPair.publicKey);
+    const pubJwk  = await window.crypto.subtle.exportKey('jwk', keyPair.publicKey);
+    const privJwk = await window.crypto.subtle.exportKey('jwk', keyPair.privateKey);
+
     this.publicKeyB64 = btoa(JSON.stringify(pubJwk));
+    sessionStorage.setItem('poc_keypair', JSON.stringify({ pubB64: this.publicKeyB64, privJwk }));
 
-    // Paso 3: exportar clave privada temporalmente y re-importar como no-extractable
-    const privJwk = await window.crypto.subtle.exportKey('jwk', tempPair.privateKey);
-
+    // Re-importar privada como no-extractable en memoria
     this.privateKey = await window.crypto.subtle.importKey(
-      'jwk',
-      privJwk,
-      { name: 'RSA-OAEP', hash: 'SHA-256' },
-      false,       // ← no-extractable: XSS no puede robarla con exportKey()
-      ['decrypt']
+      'jwk', privJwk, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['decrypt']
     );
-
-    // Paso 4: limpiar la JWK temporal de memoria (best-effort)
     Object.keys(privJwk).forEach(k => { (privJwk as any)[k] = null; });
   }
 
@@ -70,6 +77,12 @@ export class CryptoService {
   getPublicKeyB64(): string {
     if (!this.publicKeyB64) throw new Error('CryptoService sin inicializar');
     return this.publicKeyB64;
+  }
+
+  clearKey(): void {
+    this.privateKey = null;
+    this.publicKeyB64 = null;
+    sessionStorage.removeItem('poc_keypair');
   }
 
   getChannel(): Channel {

@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Channel, PlatformService } from './platform.service';
+import { CryptoService } from './crypto.service';
 
 interface TokenResponse {
   access_token: string;
@@ -16,7 +17,7 @@ export class AuthService {
   private channel: Channel;
   private expiresAt: number | null = null; // ms epoch
 
-  constructor(private http: HttpClient, private platform: PlatformService) {
+  constructor(private http: HttpClient, private platform: PlatformService, private crypto: CryptoService) {
     this.channel = this.platform.getChannel();
   }
 
@@ -66,5 +67,6 @@ export class AuthService {
   logout(): void {
     this.token = null;
     this.expiresAt = null;
+    this.crypto.clearKey();
   }
 }

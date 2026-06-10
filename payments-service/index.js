@@ -41,7 +41,7 @@ function validatePubKeyBinding(req, res, next) {
   const sub = req.jwt.sub;
   const entry = pubKeyStore.get(sub);
   const now = Math.floor(Date.now() / 1000);
-  if (!entry || now > entry.exp) {
+  if (!entry || now > entry.exp || entry.exp !== req.jwt.exp) {
     pubKeyStore.set(sub, { key: pubKeyB64, exp: req.jwt.exp });
     return next();
   }

@@ -36,8 +36,10 @@ export class ApiService {
   }
 
   private async jwePost(path: string, body: any): Promise<JweResult> {
+    const idempotencyKey = crypto.randomUUID();
+    const headers = this.headers.set('X-Idempotency-Key', idempotencyKey);
     const jwe = await firstValueFrom(
-      this.http.post(`${this.base}${path}`, body, { headers: this.headers, responseType: 'text' })
+      this.http.post(`${this.base}${path}`, body, { headers, responseType: 'text' })
     );
     return { jwe, data: await this.crypto.decryptJWE(jwe) };
   }
