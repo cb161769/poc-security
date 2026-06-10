@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POC Security API — Presentación</title>
+<style>
+:root{
+  --dark:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;
+  --blue:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--orange:#f0883e;
+  --purple:#bc8cff;--teal:#39d353;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--dark);color:var(--text)}
+
+/* ── DECK ── */
+.deck{width:100%;height:100vh;position:relative}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;transform:translateX(50px);padding:32px 6vw 20px}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.out{opacity:0;transform:translateX(-50px)}
+
+/* ── NAV ── */
+.nav{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:#161b22e0;border:1px solid var(--border);border-radius:40px;padding:8px 16px;backdrop-filter:blur(8px);z-index:100}
+.nav-btn{background:none;border:1px solid var(--border);color:var(--text);border-radius:20px;padding:4px 14px;cursor:pointer;font-size:13px;transition:all .15s}
+.nav-btn:hover{background:var(--border)}
+.nav-btn:disabled{opacity:.3;cursor:default}
+.nav-dots{display:flex;gap:5px;align-items:center}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:all .2s;cursor:pointer}
+.dot.active{background:var(--blue);width:18px;border-radius:3px}
+.slide-num{font-size:11px;color:var(--muted);min-width:40px;text-align:right}
+
+/* ── TOP BADGE ── */
+.top-badge{display:flex;align-items:center;gap:8px;margin-bottom:18px}
+.badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.badge-blue{background:#1f6feb22;border:1px solid #1f6feb55;color:var(--blue)}
+.badge-green{background:#23863622;border:1px solid #23863655;color:var(--green)}
+.badge-red{background:#da363622;border:1px solid #da363655;color:var(--red)}
+.badge-yellow{background:#9e640022;border:1px solid #9e640055;color:var(--yellow)}
+.badge-purple{background:#6e40c922;border:1px solid #6e40c955;color:var(--purple)}
+
+/* ── TYPOGRAPHY ── */
+h1{font-size:clamp(22px,3.5vw,42px);font-weight:800;line-height:1.15;letter-spacing:-.02em}
+h2{font-size:clamp(18px,2.5vw,28px);font-weight:700;margin-bottom:6px}
+h3{font-size:14px;font-weight:700;margin-bottom:4px}
+.subtitle{font-size:clamp(13px,1.5vw,18px);color:var(--muted);margin-top:8px;line-height:1.5}
+.hero-meta{display:flex;gap:16px;margin-top:20px;flex-wrap:wrap}
+.hero-chip{font-size:12px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--muted)}
+.hero-chip b{color:var(--text)}
+
+/* ── CARDS GRID ── */
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g4{grid-template-columns:1fr 1fr 1fr 1fr}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.card-icon{font-size:22px;margin-bottom:6px}
+.card p{font-size:12px;color:var(--muted);line-height:1.55;margin-top:4px}
+.card.highlight{border-color:#1f6feb55;background:#1f6feb0a}
+.card.success{border-color:#23863655;background:#2386360a}
+.card.danger{border-color:#da363655;background:#da36360a}
+.card.warn{border-color:#9e640055;background:#9e64000a}
+
+/* ── ARCH DIAGRAM ── */
+.arch{display:flex;align-items:center;gap:0;margin:12px 0;overflow:hidden}
+.arch-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;text-align:center;font-size:11px;min-width:90px;flex-shrink:0}
+.arch-box .icon{font-size:20px;margin-bottom:4px}
+.arch-box .label{font-weight:700;font-size:12px}
+.arch-box .sub{font-size:10px;color:var(--muted)}
+.arch-arrow{flex:1;height:2px;background:linear-gradient(90deg,var(--border),var(--blue));position:relative;min-width:20px}
+.arch-arrow::after{content:'▶';position:absolute;right:-6px;top:-8px;color:var(--blue);font-size:12px}
+.arch-label{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--muted);white-space:nowrap}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#21262d;padding:8px 12px;text-align:left;color:var(--muted);font-weight:600;font-size:11px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:8px 12px;border-bottom:1px solid #21262d;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#ffffff04}
+.status-ok{color:var(--green);font-weight:700}
+.status-partial{color:var(--yellow);font-weight:700}
+.status-pending{color:var(--muted)}
+
+/* ── CODE ── */
+code{font-family:'Cascadia Code','Fira Code','Courier New',monospace;font-size:11px;background:#0d1117;border:1px solid #21262d;border-radius:4px;padding:1px 5px;color:#79c0ff}
+pre{font-family:'Cascadia Code','Fira Code','Courier New',monospace;font-size:11px;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:#e6edf3;overflow:hidden;line-height:1.6}
+pre .k{color:#ff7b72}
+pre .s{color:#a5d6ff}
+pre .c{color:#8b949e;font-style:italic}
+pre .n{color:#79c0ff}
+pre .v{color:#3fb950}
+
+/* ── SCORE BOX ── */
+.score-big{font-size:clamp(48px,8vw,90px);font-weight:900;color:var(--green);line-height:1;letter-spacing:-.04em}
+.score-label{font-size:14px;color:var(--muted);margin-top:4px}
+.result-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #21262d;font-size:12.5px}
+.result-row:last-child{border-bottom:none}
+.result-icon{font-size:14px;flex-shrink:0;width:18px}
+.result-name{flex:1}
+.result-code{font-family:monospace;font-size:11px;background:var(--card);border:1px solid var(--border);padding:2px 8px;border-radius:4px;color:var(--blue);flex-shrink:0}
+
+/* ── STRIDE PILLS ── */
+.stride-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.stride-card{border-radius:8px;padding:10px 12px;border:1px solid transparent}
+.s-S{background:#2d1f1f;border-color:#f85149aa;color:#f85149}
+.s-T{background:#1f2d1f;border-color:#3fb950aa;color:#3fb950}
+.s-R{background:#1f1f2d;border-color:#58a6ffaa;color:#58a6ff}
+.s-I{background:#2d2d1f;border-color:#d29922aa;color:#d29922}
+.s-D{background:#2d1f2d;border-color:#bc8cffaa;color:#bc8cff}
+.s-E{background:#2d221f;border-color:#f0883eaa;color:#f0883e}
+.stride-letter{font-size:24px;font-weight:900;line-height:1}
+.stride-name{font-size:11px;font-weight:700;margin-top:2px;opacity:.9}
+.stride-es{font-size:10px;opacity:.6;margin-top:1px}
+.stride-control{font-size:10px;margin-top:6px;color:var(--text);opacity:.8;line-height:1.4}
+
+/* ── FLOW STEPS ── */
+.flow{display:flex;flex-direction:column;gap:6px}
+.flow-step{display:flex;align-items:flex-start;gap:10px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:12px}
+.flow-num{background:#1f6feb;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.flow-step b{color:var(--blue)}
+.flow-step span{color:var(--muted);margin-left:4px}
+
+/* ── TITLE SLIDE ── */
+.slide-title{justify-content:center;align-items:flex-start;padding-top:10vh}
+.accent-line{width:48px;height:4px;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:2px;margin-bottom:16px}
+
+/* ── LINKS ── */
+.doc-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.doc-link{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--blue);text-decoration:none;font-size:12px;transition:all .15s}
+.doc-link:hover{border-color:var(--blue);background:#1f6feb10}
+.doc-link .link-icon{font-size:16px}
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+<!-- ══ SLIDE 1: TITLE ══ -->
+<div class="slide slide-title active" id="s0">
+  <div class="accent-line"></div>
+  <div class="top-badge">
+    <span class="badge badge-blue">POC · Seguridad API</span>
+    <span class="badge badge-green">✓ 17/17 Tests PASS</span>
+  </div>
+  <h1>Arquitectura de Seguridad<br><span style="color:var(--blue)">API REST + Mobile</span></h1>
+  <p class="subtitle">Proof of Concept — Controles de seguridad implementados y validados<br>con pruebas de ataque automatizadas</p>
+  <div class="hero-meta">
+    <div class="hero-chip"><b>Ionic 8</b> + Angular 20</div>
+    <div class="hero-chip"><b>Keycloak 26</b> RS256 · PKCE</div>
+    <div class="hero-chip"><b>Kong 3.5</b> OSS</div>
+    <div class="hero-chip"><b>JWE</b> RSA-OAEP-256 · A256GCM</div>
+    <div class="hero-chip"><b>Odoo 17</b> AuthZ</div>
+    <div class="hero-chip"><b>mTLS</b> + TLS 1.3</div>
+  </div>
+  <div class="doc-links" style="margin-top:28px">
+    <a class="doc-link" href="request-flow.html" target="_blank"><span class="link-icon">🔀</span>Flujo JWT + JWE</a>
+    <a class="doc-link" href="stride.html" target="_blank"><span class="link-icon">🎯</span>STRIDE Threat Model</a>
+    <a class="doc-link" href="attack-repudiation.html" target="_blank"><span class="link-icon">🛡️</span>Ataques Repudiados</a>
+  </div>
+</div>
+
+<!-- ══ SLIDE 2: STACK ══ -->
+<div class="slide" id="s1">
+  <div class="top-badge"><span class="badge badge-blue">Arquitectura</span></div>
+  <h2>Stack Tecnológico</h2>
+  <p class="subtitle" style="margin-bottom:16px">Cinco capas de defensa en profundidad</p>
+
+  <div class="arch" style="margin-bottom:16px">
+    <div class="arch-box" style="border-color:#58a6ff55">
+      <div class="icon">📱</div>
+      <div class="label">Cliente</div>
+      <div class="sub">Ionic 8 / Angular 20<br>Capacitor 8</div>
+    </div>
+    <div class="arch-arrow" style="position:relative"><span class="arch-label">PKCE + mTLS</span></div>
+    <div class="arch-box" style="border-color:#f0883e55">
+      <div class="icon">🔀</div>
+      <div class="label">Kong 3.5</div>
+      <div class="sub">Rate-limit · Correlation<br>TLS 1.2/1.3</div>
+    </div>
+    <div class="arch-arrow" style="position:relative"><span class="arch-label">JWT RS256</span></div>
+    <div class="arch-box" style="border-color:#3fb95055">
+      <div class="icon">⚡</div>
+      <div class="label">Node APIs</div>
+      <div class="sub">api-node · transfers<br>payments</div>
+    </div>
+    <div class="arch-arrow" style="position:relative"><span class="arch-label">XMLRPC</span></div>
+    <div class="arch-box" style="border-color:#bc8cff55">
+      <div class="icon">🏢</div>
+      <div class="label">Odoo 17</div>
+      <div class="sub">x_api_clientes<br>Business AuthZ</div>
+    </div>
+  </div>
+
+  <div class="grid g3" style="margin-top:4px">
+    <div class="card highlight">
+      <div class="card-icon">🔑</div>
+      <h3>Keycloak 26</h3>
+      <p>web-realm + mobile-realm. RS256, audience claims, PKCE obligatorio para mobile. Clock tolerance 30s.</p>
+    </div>
+    <div class="card highlight">
+      <div class="card-icon">🔒</div>
+      <h3>JWE Payload</h3>
+      <p>Respuestas cifradas RSA-OAEP-256 + A256GCM. Clave pública del cliente inyectada en header <code>X-Client-Public-Key</code>.</p>
+    </div>
+    <div class="card highlight">
+      <div class="card-icon">🛡️</div>
+      <h3>Defensa en Capas</h3>
+      <p>Kong filtra tráfico → Node valida JWT + Odoo AuthZ → JWE cifra respuesta. Sin trust implícito.</p>
+    </div>
+  </div>
+
+  <div class="grid g4" style="margin-top:10px">
+    <div class="card" style="padding:10px 12px"><div style="font-size:11px;color:var(--muted)">Canal web</div><div style="font-size:13px;font-weight:700">web-realm</div><div style="font-size:10px;color:var(--muted)">audience: web-api</div></div>
+    <div class="card" style="padding:10px 12px"><div style="font-size:11px;color:var(--muted)">Canal mobile</div><div style="font-size:13px;font-weight:700">mobile-realm</div><div style="font-size:10px;color:var(--muted)">audience: mobile-api</div></div>
+    <div class="card" style="padding:10px 12px"><div style="font-size:11px;color:var(--muted)">Rotación llaves</div><div style="font-size:13px;font-weight:700">Cada 24h</div><div style="font-size:10px;color:var(--muted)">key-rotator container</div></div>
+    <div class="card" style="padding:10px 12px"><div style="font-size:11px;color:var(--muted)">Secretos</div><div style="font-size:13px;font-weight:700">.env / Docker</div><div style="font-size:10px;color:var(--muted)">$&#123;VAR:-default&#125;</div></div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 3: STRIDE ══ -->
+<div class="slide" id="s2">
+  <div class="top-badge"><span class="badge badge-red">STRIDE</span></div>
+  <h2>Modelo de Amenazas</h2>
+  <p class="subtitle" style="margin-bottom:14px">6 categorías de riesgo — controles implementados por categoría</p>
+
+  <div class="stride-grid">
+    <div class="stride-card s-S">
+      <div class="stride-letter">S</div>
+      <div class="stride-name">SPOOFING</div>
+      <div class="stride-es">Suplantación de identidad</div>
+      <div class="stride-control">✓ JWT RS256 firmado por Keycloak<br>✓ mTLS cliente↔Kong<br>✓ Audience claim por canal</div>
+    </div>
+    <div class="stride-card s-T">
+      <div class="stride-letter">T</div>
+      <div class="stride-name">TAMPERING</div>
+      <div class="stride-es">Manipulación de datos</div>
+      <div class="stride-control">✓ JWE RSA-OAEP-256 A256GCM<br>✓ Pubkey binding (anti key-swap)<br>✓ JWKS inmutable por realm</div>
+    </div>
+    <div class="stride-card s-R">
+      <div class="stride-letter">R</div>
+      <div class="stride-name">REPUDIATION</div>
+      <div class="stride-es">Repudio de transacciones</div>
+      <div class="stride-control">✓ X-Request-Id trazabilidad<br>✓ Idempotency-Key audit trail<br>✓ JWT sub en cada log</div>
+    </div>
+    <div class="stride-card s-I">
+      <div class="stride-letter">I</div>
+      <div class="stride-name">INFO DISCLOSURE</div>
+      <div class="stride-es">Fuga de información</div>
+      <div class="stride-control">✓ X-Powered-By eliminado<br>✓ ETag deshabilitado<br>✓ Cache-Control: no-store</div>
+    </div>
+    <div class="stride-card s-D">
+      <div class="stride-letter">D</div>
+      <div class="stride-name">DOS / DDOS</div>
+      <div class="stride-es">Denegación de servicio</div>
+      <div class="stride-control">✓ Rate-limit por token/min<br>✓ Kong: 30 req/min mobile<br>⚠ Sin circuit-breaker aún</div>
+    </div>
+    <div class="stride-card s-E">
+      <div class="stride-letter">E</div>
+      <div class="stride-name">ELEVATION</div>
+      <div class="stride-es">Escalada de privilegios</div>
+      <div class="stride-control">✓ Odoo AuthZ por sub<br>✓ Role check por servicio<br>✓ Canal separation web/mobile</div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:10px">
+    <div class="card success" style="flex:1;padding:10px 14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">✅</span>
+      <div><div style="font-size:13px;font-weight:700;color:var(--green)">5/6 categorías cubiertas</div><div style="font-size:11px;color:var(--muted)">Spoofing, Tampering, Repudiation, Info Disclosure, Elevation — mitigados</div></div>
+    </div>
+    <div class="card warn" style="flex:1;padding:10px 14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">⚠️</span>
+      <div><div style="font-size:13px;font-weight:700;color:var(--yellow)">DoS: cobertura parcial</div><div style="font-size:11px;color:var(--muted)">Rate limiting activo — circuit breaker y throttling granular pendientes</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 4: FLOW ══ -->
+<div class="slide" id="s3">
+  <div class="top-badge"><span class="badge badge-blue">Flujo de Request</span></div>
+  <h2>JWT + JWE — Request Completo</h2>
+  <p class="subtitle" style="margin-bottom:14px">9 pasos desde el cliente hasta la respuesta cifrada</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="flow">
+      <div class="flow-step"><div class="flow-num">1</div><div><b>PKCE Auth</b><span>Cliente → Keycloak. code_challenge + code_verifier</span></div></div>
+      <div class="flow-step"><div class="flow-num">2</div><div><b>JWT Emitido</b><span>RS256 · audience · roles · exp · sub · realm</span></div></div>
+      <div class="flow-step"><div class="flow-num">3</div><div><b>mTLS Handshake</b><span>Cliente presenta cert firmado por CA interna → Kong verifica</span></div></div>
+      <div class="flow-step"><div class="flow-num">4</div><div><b>Kong Gateway</b><span>Rate-limit por token · X-Request-Id · correlation header</span></div></div>
+      <div class="flow-step"><div class="flow-num">5</div><div><b>JWT Validation</b><span>Node verifica firma RS256 via JWKS · issuer · audience · clockTolerance:30s</span></div></div>
+    </div>
+    <div class="flow">
+      <div class="flow-step"><div class="flow-num">6</div><div><b>Odoo AuthZ</b><span>sub validado contra x_api_clientes · active=false → 403</span></div></div>
+      <div class="flow-step"><div class="flow-num">7</div><div><b>Pubkey Binding</b><span>X-Client-Public-Key registrada en primer uso · mismatch → 403</span></div></div>
+      <div class="flow-step"><div class="flow-num">8</div><div><b>Idempotency</b><span>X-Idempotency-Key requerido en POST · replay → respuesta cacheada</span></div></div>
+      <div class="flow-step"><div class="flow-num">9</div><div><b>JWE Response</b><span>RSA-OAEP-256 + A256GCM · Cache-Control: no-store · Content-Type: application/jose</span></div></div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px" class="card" style="padding:10px">
+    <pre style="font-size:10.5px"><span class="c">// Respuesta cifrada — solo el cliente con su clave privada puede descifrar</span>
+<span class="k">Content-Type</span>: <span class="s">application/jose</span>
+<span class="k">Cache-Control</span>: <span class="s">no-store</span>
+<span class="k">X-Request-Id</span>: <span class="v">a3f8c2d1-...</span>
+
+<span class="n">eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0.Zmlu...</span></pre>
+  </div>
+</div>
+
+<!-- ══ SLIDE 5: P4 CONTROLS ══ -->
+<div class="slide" id="s4">
+  <div class="top-badge"><span class="badge badge-yellow">Controles P4</span></div>
+  <h2>Header Hardening — Info Disclosure</h2>
+  <p class="subtitle" style="margin-bottom:14px">Eliminación de fingerprinting de servidor y filtración de metadatos</p>
+
+  <div class="grid g3" style="margin-bottom:12px">
+    <div class="card danger">
+      <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:6px">❌ ANTES</div>
+      <pre style="font-size:10px">HTTP/1.1 200 OK
+X-Powered-By: Express
+ETag: "abc123def456"
+Cache-Control: max-age=0</pre>
+      <p style="margin-top:8px;font-size:11px;color:var(--red)">Fingerprint de framework + tamaño de payload filtrado por ETag + posible cacheo de datos sensibles</p>
+    </div>
+    <div class="card success">
+      <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ DESPUÉS</div>
+      <pre style="font-size:10px">HTTP/1.1 200 OK
+Content-Type: application/jose
+Cache-Control: no-store
+X-Request-Id: a3f8c2d1-...</pre>
+      <p style="margin-top:8px;font-size:11px;color:var(--green)">Sin fingerprint · Sin ETag · Respuesta no cacheable · Solo JWE en body</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:8px">Implementación</h3>
+      <pre><span class="c">// Líneas 1-2 tras app.use(json)</span>
+<span class="n">app</span>.<span class="k">disable</span>(<span class="s">'x-powered-by'</span>)
+<span class="n">app</span>.<span class="k">set</span>(<span class="s">'etag'</span>, <span class="k">false</span>)
+
+<span class="c">// En cada respuesta JWE</span>
+<span class="n">res</span>.<span class="k">set</span>(<span class="s">'Cache-Control'</span>, <span class="s">'no-store'</span>)
+   .<span class="k">send</span>(<span class="v">jwe</span>)</pre>
+    </div>
+  </div>
+
+  <div class="grid g3">
+    <div class="card" style="padding:10px 14px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px">✅</span><div><div style="font-size:12px;font-weight:700">X-Powered-By eliminado</div><div style="font-size:10px;color:var(--muted)">En los 3 servicios Node</div></div>
+    </div>
+    <div class="card" style="padding:10px 14px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px">✅</span><div><div style="font-size:12px;font-weight:700">ETag deshabilitado</div><div style="font-size:10px;color:var(--muted)">No filtra tamaño de payload cifrado</div></div>
+    </div>
+    <div class="card" style="padding:10px 14px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px">✅</span><div><div style="font-size:12px;font-weight:700">Cache-Control: no-store</div><div style="font-size:10px;color:var(--muted)">En todas las respuestas JWE</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 6: PUBKEY BINDING ══ -->
+<div class="slide" id="s5">
+  <div class="top-badge"><span class="badge badge-purple">Controles P1a</span></div>
+  <h2>Pubkey Binding — JWE Key Substitution</h2>
+  <p class="subtitle" style="margin-bottom:14px">Prevención de sustitución de clave pública en respuestas JWE</p>
+
+  <div class="grid g2" style="gap:12px">
+    <div>
+      <div class="card danger" style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:6px">⚔️ Vector de ataque</div>
+        <p style="font-size:12px;line-height:1.6;color:var(--muted)">Atacante intercepta la request e inyecta su propia clave pública en <code>X-Client-Public-Key</code>. El servidor cifra la respuesta con la clave del atacante → datos expuestos.</p>
+      </div>
+      <div class="card success">
+        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">🛡️ Control implementado</div>
+        <p style="font-size:12px;line-height:1.6;color:var(--muted)">Primera clave enviada por un <code>sub</code> queda registrada. Cualquier request posterior con clave diferente → <code>403</code>. TTL = JWT <code>exp</code> para cleanup automático.</p>
+      </div>
+    </div>
+    <div>
+      <pre style="height:100%;font-size:10.5px"><span class="c">// Map<sub, {key, exp}> — persiste en memoria</span>
+<span class="k">const</span> <span class="n">pubKeyStore</span> = <span class="k">new</span> <span class="n">Map</span>()
+
+<span class="k">function</span> <span class="n">validatePubKeyBinding</span>(req, res, next) &#123;
+  <span class="k">const</span> <span class="n">pub</span> = req.headers[<span class="s">'x-client-public-key'</span>]
+  <span class="k">if</span> (!pub) <span class="k">return</span> next()   <span class="c">// header opcional</span>
+
+  <span class="k">const</span> entry = <span class="n">pubKeyStore</span>.get(req.jwt.sub)
+  <span class="k">const</span> now = Math.floor(Date.now() / <span class="v">1000</span>)
+
+  <span class="c">// Primer uso o TTL expirado → registrar</span>
+  <span class="k">if</span> (!entry || now > entry.exp) &#123;
+    <span class="n">pubKeyStore</span>.set(req.jwt.sub,
+      &#123; key: pub, exp: req.jwt.exp &#125;)
+    <span class="k">return</span> next()
+  &#125;
+  <span class="c">// Clave diferente → bloquear</span>
+  <span class="k">if</span> (entry.key !== pub)
+    <span class="k">return</span> res.status(<span class="v">403</span>).json(
+      &#123; error: <span class="s">'Clave no coincide'</span> &#125;)
+  next()
+&#125;</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 7: ANTI-REPLAY ══ -->
+<div class="slide" id="s6">
+  <div class="top-badge"><span class="badge badge-purple">Controles P1b</span></div>
+  <h2>Anti-Replay — Idempotency Key</h2>
+  <p class="subtitle" style="margin-bottom:14px">Prevención de reenvío de operaciones POST (transfers + payments)</p>
+
+  <div class="grid g2" style="gap:12px">
+    <div>
+      <div class="card danger" style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:6px">⚔️ Vector de ataque</div>
+        <p style="font-size:12px;line-height:1.6;color:var(--muted)">Atacante captura un POST de transferencia válido y lo reenvía múltiples veces con el mismo JWT. Sin protección, cada reenvío ejecuta una nueva transacción.</p>
+      </div>
+      <div class="card success">
+        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">🛡️ Control implementado</div>
+        <p style="font-size:12px;line-height:1.6;color:var(--muted)"><code>X-Idempotency-Key</code> (UUID) requerido en todo POST. Reenvío dentro de 5 min → respuesta cacheada + header <code>X-Idempotency-Replayed: true</code>. Sin duplicados.</p>
+      </div>
+      <div class="card" style="margin-top:10px;padding:10px 14px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Headers en replay</div>
+        <pre style="font-size:10px">HTTP/1.1 200 OK
+X-Idempotency-Replayed: true
+Content-Type: application/jose
+
+[misma respuesta cacheada]</pre>
+      </div>
+    </div>
+    <div>
+      <pre style="height:100%;font-size:10.5px"><span class="k">const</span> IDEMPOTENCY_TTL_MS = <span class="v">5</span> * <span class="v">60</span> * <span class="v">1000</span>
+<span class="k">const</span> store = <span class="k">new</span> <span class="n">Map</span>()
+
+<span class="k">function</span> <span class="n">checkIdempotency</span>(req, res, next) &#123;
+  <span class="k">const</span> key = req.headers[<span class="s">'x-idempotency-key'</span>]
+  <span class="k">if</span> (!key)
+    <span class="k">return</span> res.status(<span class="v">400</span>).json(
+      &#123; error: <span class="s">'X-Idempotency-Key requerido'</span> &#125;)
+
+  <span class="c">// Replay detectado → respuesta cacheada</span>
+  <span class="k">const</span> entry = store.get(key)
+  <span class="k">if</span> (entry)
+    <span class="k">return</span> res.status(entry.statusCode)
+      .set(<span class="s">'X-Idempotency-Replayed'</span>, <span class="s">'true'</span>)
+      .send(entry.body)
+
+  <span class="c">// Primera vez → interceptar send para cachear</span>
+  <span class="k">const</span> orig = res.send.bind(res)
+  res.send = <span class="k">function</span>(body) &#123;
+    <span class="k">if</span> (res.statusCode >= <span class="v">200</span> && res.statusCode < <span class="v">300</span>)
+      store.set(key, &#123;
+        statusCode: res.statusCode,
+        contentType: res.getHeader(<span class="s">'Content-Type'</span>),
+        body
+      &#125;)
+    setTimeout(() => store.delete(key), IDEMPOTENCY_TTL_MS)
+    <span class="k">return</span> orig(body)
+  &#125;
+  next()
+&#125;</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 8: ODOO AUTHZ ══ -->
+<div class="slide" id="s7">
+  <div class="top-badge"><span class="badge badge-purple">Controles P1c</span></div>
+  <h2>Odoo AuthZ — Autorización de Negocio</h2>
+  <p class="subtitle" style="margin-bottom:14px">Validación de clientes activos contra ERP antes de procesar cualquier request</p>
+
+  <div class="grid g3" style="gap:10px;margin-bottom:10px">
+    <div class="card danger">
+      <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:6px">⚔️ Ataque</div>
+      <p style="font-size:12px;line-height:1.6;color:var(--muted)">JWT válido pero cliente cancelado/suspendido en el ERP. Sin AuthZ de negocio, cualquier usuario con token puede operar.</p>
+    </div>
+    <div class="card success">
+      <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">🛡️ Control</div>
+      <p style="font-size:12px;line-height:1.6;color:var(--muted)">Cada request valida <code>sub</code> del JWT contra modelo <code>x_api_clientes</code> en Odoo. <code>active=false</code> → 403 inmediato.</p>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px">Modelo Odoo</div>
+      <pre style="font-size:10px"><span class="c"># x_api_clientes</span>
+sub     = <span class="n">Char</span>(index=<span class="k">True</span>)
+email   = <span class="n">Char</span>()
+active  = <span class="n">Boolean</span>()
+<span class="c"># active=False → filtrado</span>
+<span class="c"># active_test:False para buscar</span></pre>
+    </div>
+  </div>
+
+  <div class="grid g2" style="gap:10px">
+    <pre style="font-size:10.5px"><span class="c">// validateClientInOdoo middleware</span>
+<span class="k">async function</span> <span class="n">validateClientInOdoo</span>(req, res, next) &#123;
+  <span class="k">try</span> &#123;
+    <span class="k">const</span> r = <span class="k">await</span> axios.post(
+      <span class="s">`$&#123;ODOO_URL&#125;/api/validate-jwt-client`</span>,
+      &#123; sub: req.jwt.sub, email: req.jwt.email,
+        client_id: req.jwt.client_id,
+        roles: req.jwt.roles &#125;,
+      &#123; headers: &#123; <span class="s">'X-Internal-Secret'</span>: SECRET &#125; &#125;
+    )
+    <span class="k">if</span> (!r.data?.authorized)
+      <span class="k">return</span> res.status(<span class="v">403</span>).json(
+        &#123; error: <span class="s">'Cliente no autorizado por Odoo'</span> &#125;)
+    req.client = r.data.client
+    next()
+  &#125; <span class="k">catch</span> (e) &#123;
+    <span class="k">return</span> res.status(<span class="v">502</span>).json(
+      &#123; error: <span class="s">'Error validando cliente'</span> &#125;)
+  &#125;
+&#125;</pre>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="card" style="padding:10px 14px">
+        <div style="font-size:11px;color:var(--muted)">Orden de middlewares</div>
+        <div style="font-size:12px;margin-top:6px;line-height:2">
+          <code>validateJWT</code> → <code>validateClientInOdoo</code><br>
+          → <code>validatePubKeyBinding</code><br>
+          → <code>checkIdempotency</code> (POST)<br>
+          → <code>handler</code>
+        </div>
+      </div>
+      <div class="card success" style="padding:10px 14px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:18px">✅</span>
+        <div><div style="font-size:12px;font-weight:700">3 servicios protegidos</div><div style="font-size:10px;color:var(--muted)">api-node · transfers-service · payments-service</div></div>
+      </div>
+      <div class="card" style="padding:10px 14px">
+        <div style="font-size:11px;color:var(--muted)">Secret interno</div>
+        <pre style="font-size:10px;margin-top:4px">X-Internal-Secret: $&#123;INTERNAL_SECRET&#125;
+<span class="c"># Solo services → Odoo (no expuesto)</span></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 9: TEST RESULTS ══ -->
+<div class="slide" id="s8">
+  <div class="top-badge"><span class="badge badge-green">Resultados</span></div>
+  <h2>Pruebas de Ataque — 17/17 PASS</h2>
+  <p class="subtitle" style="margin-bottom:14px">Suite automatizada ejecutada con <code>bash scripts/test-attacks.sh</code></p>
+
+  <div style="display:flex;gap:20px;align-items:flex-start">
+    <div style="flex-shrink:0;text-align:center;padding:16px 20px;background:var(--card);border:1px solid #23863655;border-radius:12px">
+      <div class="score-big">17</div>
+      <div style="font-size:11px;color:var(--green);font-weight:700;margin-top:2px">/ 17 PASS</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">0 FAIL · 0 SKIP · 9 tests</div>
+    </div>
+    <div style="flex:1">
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">X-Powered-By eliminado</div><div class="result-code">→ ausente</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">ETag eliminado</div><div class="result-code">→ ausente</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Cache-Control: no-store</div><div class="result-code">→ presente</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Key substitution bloqueada (KEY_B → KEY_A binding)</div><div class="result-code">→ 403</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">KEY_A original sigue funcionando</div><div class="result-code">→ 200</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Replay detectado → X-Idempotency-Replayed: true</div><div class="result-code">→ 200</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">POST sin X-Idempotency-Key rechazado</div><div class="result-code">→ 400</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Odoo AuthZ bloquea cliente desactivado</div><div class="result-code">→ 403</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Amount limit — transfer $99,999 bloqueado</div><div class="result-code">→ 422</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Monto válido ($500) procesado</div><div class="result-code">→ 200</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Método inválido (crypto) bloqueado</div><div class="result-code">→ 422</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Método válido: card aceptado</div><div class="result-code">→ 200</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Método válido: ach aceptado</div><div class="result-code">→ 200</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Método válido: wire aceptado</div><div class="result-code">→ 200</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Cross-channel: web-token en /mobile rechazado</div><div class="result-code">→ 401</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Cross-channel: mobile-token en /web rechazado</div><div class="result-code">→ 401</div></div>
+      <div class="result-row"><div class="result-icon">✅</div><div class="result-name">Rate limiting: 35 requests bloqueadas</div><div class="result-code">→ 429</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 10: COVERAGE TABLE ══ -->
+<div class="slide" id="s9">
+  <div class="top-badge"><span class="badge badge-blue">Cobertura</span></div>
+  <h2>Mapa de Cobertura de Seguridad</h2>
+  <p class="subtitle" style="margin-bottom:14px">Controles implementados por ataque y servicio</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Ataque</th>
+        <th>Control implementado</th>
+        <th>Servicios</th>
+        <th>Resultado</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>JWT Replay / Token Reutilizado</td><td>exp + iat · JWKS rotation 24h · clockTolerance:30s</td><td>api-node, transfers, payments</td><td class="status-ok">✓ MITIGADO</td></tr>
+      <tr><td>Cross-Channel Token Abuse</td><td>Audience claim por realm · Canal separation web/mobile</td><td>Kong + services</td><td class="status-ok">✓ MITIGADO</td></tr>
+      <tr><td>JWE Key Substitution</td><td>Pubkey binding primera clave por sub · TTL = JWT exp</td><td>api-node, transfers, payments</td><td class="status-ok">✓ MITIGADO</td></tr>
+      <tr><td>API Replay (POST doble-envío)</td><td>X-Idempotency-Key requerido · TTL 5min · replay detectado</td><td>transfers, payments</td><td class="status-ok">✓ MITIGADO</td></tr>
+      <tr><td>Odoo AuthZ Bypass</td><td>Validación sub contra x_api_clientes · active=false → 403</td><td>Todos (vía Odoo API)</td><td class="status-ok">✓ MITIGADO</td></tr>
+      <tr><td>Info Disclosure (fingerprint)</td><td>X-Powered-By off · ETag off · Cache-Control: no-store</td><td>Todos los servicios</td><td class="status-ok">✓ MITIGADO</td></tr>
+      <tr><td>Rate Abuse / DDoS básico</td><td>Kong: 30 req/min mobile · per-consumer limiter</td><td>Kong Gateway</td><td class="status-ok">✓ MITIGADO</td></tr>
+      <tr><td>MitM / TLS Downgrade</td><td>TLS 1.2/1.3 · AEAD ciphers · mTLS cliente↔Kong</td><td>Kong + TLS config</td><td class="status-ok">✓ MITIGADO</td></tr>
+      <tr><td>Monto fuera de límite</td><td>MAX_TRANSFER_AMOUNT=10000 · MAX_PAYMENT_AMOUNT=5000</td><td>transfers, payments</td><td class="status-ok">✓ MITIGADO</td></tr>
+      <tr><td>Método de pago inválido</td><td>Whitelist: card, ach, wire · otros → 422</td><td>payments</td><td class="status-ok">✓ MITIGADO</td></tr>
+      <tr><td>Circuit Breaker / Cascada</td><td>—</td><td>—</td><td class="status-pending">⏳ PENDIENTE</td></tr>
+      <tr><td>Refresh Token Rotation</td><td>—</td><td>—</td><td class="status-pending">⏳ PENDIENTE</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══ SLIDE 11: NEXT STEPS ══ -->
+<div class="slide" id="s10">
+  <div class="top-badge"><span class="badge badge-yellow">Próximos pasos</span></div>
+  <h2>Roadmap hacia Producción</h2>
+  <p class="subtitle" style="margin-bottom:16px">Brechas identificadas para hardening adicional en entorno productivo</p>
+
+  <div class="grid g2" style="gap:10px">
+    <div>
+      <div style="font-size:11px;color:var(--yellow);font-weight:700;margin-bottom:8px;letter-spacing:.06em">⚠️ PRIORIDAD ALTA</div>
+      <div class="card warn" style="margin-bottom:8px;padding:12px 14px">
+        <h3>P2 — Circuit Breaker</h3>
+        <p>Resilience4j / Opossum para proteger servicios backend cuando Odoo o Keycloak están degradados. Sin él, una caída de Odoo tumba todos los endpoints.</p>
+      </div>
+      <div class="card warn" style="margin-bottom:8px;padding:12px 14px">
+        <h3>P2 — Refresh Token Rotation</h3>
+        <p>Rotation + revocation en Keycloak. Token comprometido actualmente válido hasta expiración. Blacklist Redis para revocación inmediata.</p>
+      </div>
+      <div class="card warn" style="padding:12px 14px">
+        <h3>P2 — Distributed Idempotency</h3>
+        <p>Store en memoria = no persistente entre restarts. Redis con TTL para producción multi-instancia.</p>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--blue);font-weight:700;margin-bottom:8px;letter-spacing:.06em">📋 PRIORIDAD MEDIA</div>
+      <div class="card highlight" style="margin-bottom:8px;padding:12px 14px">
+        <h3>P3 — Pubkey Store Persistente</h3>
+        <p>Map en memoria se pierde en restart. Persistir en Redis/DB con TTL = JWT exp. Sin esto, restart de servicio invalida todos los bindings activos.</p>
+      </div>
+      <div class="card highlight" style="margin-bottom:8px;padding:12px 14px">
+        <h3>P3 — Alerting y SIEM</h3>
+        <p>Exportar eventos de seguridad (403 pubkey, Odoo 403, rate-limit 429) a sistema de alertas. Actualmente solo logs locales.</p>
+      </div>
+      <div class="card highlight" style="padding:12px 14px">
+        <h3>P3 — secure-net: internal: true</h3>
+        <p>Docker Compose tiene <code>internal: false</code> por conveniencia del POC. En producción, aislar completamente la red backend del mundo exterior.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- ── NAVIGATION ── -->
+<nav class="nav">
+  <button class="nav-btn" id="btn-prev" onclick="go(-1)" disabled>← Prev</button>
+  <div class="nav-dots" id="dots"></div>
+  <button class="nav-btn" id="btn-next" onclick="go(1)">Next →</button>
+  <span class="slide-num" id="slide-num">1 / 11</span>
+</nav>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const dots = document.getElementById('dots');
+let cur = 0;
+
+slides.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.onclick = () => go(i - cur);
+  dots.appendChild(d);
+});
+
+function go(delta) {
+  const next = cur + delta;
+  if (next < 0 || next >= slides.length) return;
+  slides[cur].classList.remove('active');
+  slides[cur].classList.add('out');
+  setTimeout(() => slides[cur < next ? cur : next + 1 - 1]?.classList.remove('out'), 350);
+  slides[cur].addEventListener('transitionend', () => slides[cur].classList.remove('out'), {once:true});
+  cur = next;
+  slides[cur].classList.add('active');
+  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === cur));
+  document.getElementById('btn-prev').disabled = cur === 0;
+  document.getElementById('btn-next').disabled = cur === slides.length - 1;
+  document.getElementById('slide-num').textContent = `${cur + 1} / ${slides.length}`;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') go(1);
+  if (e.key === 'ArrowLeft') go(-1);
+});
+</script>
+</body>
+</html>

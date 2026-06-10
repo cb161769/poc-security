@@ -250,8 +250,8 @@
     </p>
     <div class="meta">
       <div class="meta-item"><strong>8</strong> categorías de ataque</div>
-      <div class="meta-item"><strong>6</strong> completamente mitigadas</div>
-      <div class="meta-item"><strong>2</strong> parciales / en roadmap</div>
+      <div class="meta-item"><strong>7</strong> completamente mitigadas</div>
+      <div class="meta-item"><strong>1</strong> parcial (MitM — POC usa certs autofirmados)</div>
       <div class="meta-item"><strong>Stack:</strong> Kong 3.5 · Keycloak 26 · Node 20 · Odoo 17</div>
     </div>
   </div>
@@ -464,7 +464,7 @@ pubKeyStore.get('sub:123') !== PUB_KEY_B
       <div class="status-chip"><span class="dot-s dot-green"></span> Binding en api-node</div>
       <div class="status-chip"><span class="dot-s dot-green"></span> Binding en transfers-service</div>
       <div class="status-chip"><span class="dot-s dot-green"></span> Binding en payments-service</div>
-      <div class="status-chip"><span class="dot-s dot-yellow"></span> TTL de binding = vida del proceso (roadmap: bind por JWT exp)</div>
+      <div class="status-chip"><span class="dot-s dot-green"></span> TTL = JWT exp (cleanup automático al expirar token)</div>
     </div>
   </div>
 

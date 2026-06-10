@@ -7,9 +7,10 @@ Implementa autenticación federada, cifrado de payload de extremo a extremo y au
 
 | Animación / Presentación | Descripción |
 |--------------------------|-------------|
+| [docs/index.html](docs/index.html) | **Presentación principal** (11 slides): arquitectura, STRIDE, flujo JWT+JWE, controles P4+P1, resultados 17/17 PASS, mapa de cobertura y roadmap |
 | [docs/request-flow.html](docs/request-flow.html) | Flujo paso a paso: PKCE → JWT → RSA keygen → Kong → JWKS → Odoo AuthZ → JWE encrypt → decrypt (11 pasos animados) |
 | [docs/stride.html](docs/stride.html) | Modelo de amenazas STRIDE: vectores de ataque y contramedidas implementadas por categoría |
-| [docs/attack-repudiation.html](docs/attack-repudiation.html) | Presentación PPT (12 slides): 8 categorías de ataque, controles implementados, estado de mitigación y próximos pasos — apta para revisar con el equipo de seguridad |
+| [docs/attack-repudiation.html](docs/attack-repudiation.html) | Detalle de ataques repudiados: 8 categorías, controles implementados y estado de mitigación |
 
 > Abre los archivos directamente en el navegador — no requieren servidor.  
 > **Navegación en la presentación:** teclas `←` `→` o barra espaciadora.

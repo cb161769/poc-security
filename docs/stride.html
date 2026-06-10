@@ -176,8 +176,9 @@ const THREATS = [
       '✓ JWE RSA-OAEP-256 + A256GCM: payload 100% cifrado, ilegible sin la clave privada del cliente',
       '✓ Content-Type: application/jose; charset=utf-8 — jamás hay JSON en claro en la respuesta',
       '✓ extractable:false (web): la clave privada RSA no puede exportarse ni leerse en JS',
-      '⚠ ETag en respuestas JWE (activo en POC): revela tamaño del payload cifrado. Deshabilitar en prod.',
-      '⚠ X-Powered-By: Express (activo en POC): revela framework. Añadir app.disable("x-powered-by").'
+      '✓ ETag deshabilitado en los 3 servicios: app.set("etag", false) — no filtra tamaño del JWE',
+      '✓ X-Powered-By eliminado en los 3 servicios: app.disable("x-powered-by") — sin fingerprint de framework',
+      '✓ Cache-Control: no-store en todas las respuestas JWE — sin caching intermedio'
     ]
   },
   {
@@ -211,9 +212,9 @@ const THREATS = [
     defenses:[
       '✓ Claim "aud" validado: aud["web-api","account"] rechazado en /mobile/** y viceversa (probado en vivo: 401)',
       '✓ Roles Keycloak validados en cada servicio: user-api/user-web requerido; cross-channel rechazado',
-      '✓ Doble capa en api-node: JWT + registro en Odoo. ⚠ transfers/payments: solo JWT+rol, sin Odoo.',
+      '✓ Odoo AuthZ en los 3 servicios: api-node + transfers-service + payments-service consultan x_api_clientes',
       '✓ X-Channel inyectado por Kong según ruta: imposible falsificar el canal desde el cliente',
-      '⚠ /internal/validate-user expuesto vía Kong sin JWT (accesible en /api/v1/mobile/internal/validate-user)'
+      '✓ /internal/validate-user requiere JWT válido: validateJWT middleware aplicado al endpoint interno'
     ]
   }
 ];
