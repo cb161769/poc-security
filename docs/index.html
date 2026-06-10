@@ -149,7 +149,8 @@ pre .v{color:#3fb950}
   <div class="accent-bar"></div>
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <span class="badge b-blue">POC · Seguridad API</span>
-    <span class="badge b-green">✓ 17/17 Pruebas Superadas</span>
+    <span class="badge b-green">✓ 33/33 Funcional</span>
+    <span class="badge b-green">✓ 17/17 Ataques</span>
     <span class="badge b-gray">Junio 2026</span>
   </div>
   <h1>Arquitectura de Seguridad<br><span style="color:var(--blue)">API REST + Mobile</span></h1>
@@ -160,16 +161,16 @@ pre .v{color:#3fb950}
 
   <div class="grid g4" style="margin-top:22px;margin-bottom:18px">
     <div class="card stat hi-green">
+      <div class="stat-num" style="color:var(--green)">33</div>
+      <div class="stat-label">Pruebas funcionales<br>superadas · 0 fallos</div>
+    </div>
+    <div class="card stat hi-green">
       <div class="stat-num" style="color:var(--green)">17</div>
-      <div class="stat-label">Pruebas de ataque<br>superadas · 0 fallos</div>
+      <div class="stat-label">Verificaciones de ataque<br>superadas · 0 fallos</div>
     </div>
     <div class="card stat hi-blue">
-      <div class="stat-num" style="color:var(--blue)">8</div>
-      <div class="stat-label">Vectores de ataque<br>cubiertos (STRIDE)</div>
-    </div>
-    <div class="card stat">
-      <div class="stat-num" style="color:var(--purple)">4</div>
-      <div class="stat-label">Controles de seguridad<br>implementados</div>
+      <div class="stat-num" style="color:var(--blue)">9</div>
+      <div class="stat-label">Ataques simulados<br>y bloqueados</div>
     </div>
     <div class="card stat hi-yellow">
       <div class="stat-num" style="color:var(--yellow)">5</div>
@@ -430,30 +431,76 @@ pre .v{color:#3fb950}
 <!-- ══ 6. RESULTADOS ══ -->
 <div class="slide" id="s5">
   <div class="section-tag">Evidencia</div>
-  <h2>Pruebas de ataque — resultados</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Suite automatizada: <code style="font-size:11px">bash scripts/test-attacks.sh</code> — reinicia servicios, obtiene tokens reales y ejecuta cada ataque</p>
+  <h2>9 ataques simulados — 17 verificaciones superadas</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Suite automatizada: <code style="font-size:11px">bash scripts/test-attacks.sh</code> — reinicia servicios, obtiene tokens reales y ejecuta cada ataque</p>
 
-  <div style="display:flex;gap:18px;align-items:flex-start">
-    <div style="flex-shrink:0;text-align:center;padding:16px 18px;background:var(--card);border:1px solid #23863644;border-radius:12px">
-      <div class="score-big">17</div>
+  <div style="display:flex;gap:14px;align-items:flex-start">
+    <!-- Score box -->
+    <div style="flex-shrink:0;text-align:center;padding:14px 16px;background:var(--card);border:1px solid #23863644;border-radius:12px;min-width:110px">
+      <div class="score-big" style="font-size:clamp(42px,6vw,72px)">17</div>
       <div style="font-size:11px;color:var(--green);font-weight:700;margin-top:2px">/ 17 PASS</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px">0 fallos · 0 omitidos</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:2px">9 pruebas · 17 verificaciones</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">9 ataques</div>
+      <div style="font-size:10px;color:var(--muted)">0 fallos</div>
+      <div style="border-top:1px solid var(--border);margin:8px 0"></div>
+      <div style="font-size:10px;color:var(--green);font-weight:700">+33/33</div>
+      <div style="font-size:9px;color:var(--muted)">suite funcional</div>
     </div>
-    <div style="flex:1">
-      <div class="result-row"><span>✅</span><div class="result-name">Sin cabeceras que revelan framework o versión del servidor</div><div class="result-code">→ ausente</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Respuestas no cacheables ni con fingerprint de tamaño</div><div class="result-code">→ no-store</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Sustitución de clave pública bloqueada</div><div class="result-code">→ 403</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Clave del usuario original sigue funcionando tras intento de sustitución</div><div class="result-code">→ 200</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Reenvío de operación detectado como duplicado</div><div class="result-code">→ Replayed</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Operación sin clave de idempotencia rechazada</div><div class="result-code">→ 400</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Cliente desactivado en ERP rechazado aunque tenga token válido</div><div class="result-code">→ 403</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Transferencia por encima del límite bloqueada ($99,999 &gt; $10,000)</div><div class="result-code">→ 422</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Monto válido ($500) procesado correctamente</div><div class="result-code">→ 200</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Método de pago no permitido (cripto) bloqueado</div><div class="result-code">→ 422</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Métodos permitidos (tarjeta, ACH, transferencia) aceptados</div><div class="result-code">→ 200</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Token de canal web rechazado en endpoint mobile (y viceversa)</div><div class="result-code">→ 401</div></div>
-      <div class="result-row"><span>✅</span><div class="result-name">Rate limiting: 35 peticiones con mismo token → bloqueadas</div><div class="result-code">→ 429</div></div>
+
+    <!-- 9 attack grid -->
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px">
+
+      <div class="card" style="padding:8px 10px;border-color:#f8514922">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">01 · Fuga de info servidor</div>
+        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">X-Powered-By ausente</div><div class="result-code">→ ∅</div></div>
+        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">ETag ausente</div><div class="result-code">→ ∅</div></div>
+        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Cache-Control no-store</div><div class="result-code">→ ∅</div></div>
+      </div>
+
+      <div class="card" style="padding:8px 10px;border-color:#f8514922">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">02 · Sustitución de clave JWE</div>
+        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">Clave B inyectada bloqueada</div><div class="result-code">→ 403</div></div>
+        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Clave A original intacta</div><div class="result-code">→ 200</div></div>
+      </div>
+
+      <div class="card" style="padding:8px 10px;border-color:#f8514922">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">03 · Replay de operación</div>
+        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Reenvío marcado como duplicado</div><div class="result-code">→ Replayed</div></div>
+      </div>
+
+      <div class="card" style="padding:8px 10px;border-color:#f8514922">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">04 · POST sin idempotencia</div>
+        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Request rechazado sin UUID</div><div class="result-code">→ 400</div></div>
+      </div>
+
+      <div class="card" style="padding:8px 10px;border-color:#f8514922">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">05 · AuthZ Bypass (Odoo)</div>
+        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Cliente inactivo bloqueado</div><div class="result-code">→ 403</div></div>
+      </div>
+
+      <div class="card" style="padding:8px 10px;border-color:#f8514922">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">06 · Monto fuera de límite</div>
+        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">$99,999 &gt; $10,000 bloqueado</div><div class="result-code">→ 422</div></div>
+        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">$500 procesado correctamente</div><div class="result-code">→ 200</div></div>
+      </div>
+
+      <div class="card" style="padding:8px 10px;border-color:#f8514922">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">07 · Método de pago inválido</div>
+        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">method=crypto rechazado</div><div class="result-code">→ 422</div></div>
+        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">card / ach / wire aceptados</div><div class="result-code">→ 200</div></div>
+        <div class="result-row" style="padding:3px 0;font-size:11px;border:none;opacity:.6;font-size:10px"><span></span><div style="color:var(--muted)">3 métodos válidos verificados</div><div></div></div>
+      </div>
+
+      <div class="card" style="padding:8px 10px;border-color:#f8514922">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">08 · Cross-Channel Attack</div>
+        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">Token web en /mobile rechazado</div><div class="result-code">→ 401</div></div>
+        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Token mobile en /web rechazado</div><div class="result-code">→ 401</div></div>
+      </div>
+
+      <div class="card" style="padding:8px 10px;border-color:#f8514922">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">09 · Rate Limiting / Flood</div>
+        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">35 req → 35 bloqueadas (límite 30)</div><div class="result-code">→ 429</div></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -461,26 +508,26 @@ pre .v{color:#3fb950}
 <!-- ══ 7. COBERTURA ══ -->
 <div class="slide" id="s6">
   <div class="section-tag">Cobertura</div>
-  <h2>Mapa de cobertura de seguridad</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Estado de cada vector de ataque frente a los controles implementados</p>
+  <h2>Mapa de cobertura — 9/9 ataques bloqueados</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Cada fila es un ataque del script automatizado · 17 verificaciones individuales · 0 fallos</p>
 
   <table>
     <thead>
-      <tr><th>Vector de ataque</th><th>Control activo</th><th>Servicios</th><th>Estado</th></tr>
+      <tr><th>#</th><th>Ataque simulado</th><th>Control activo</th><th>Verificaciones</th><th>Resultado</th></tr>
     </thead>
     <tbody>
-      <tr><td>Reutilización de token (JWT Replay)</td><td>Validez 5 min · RS256 · rotación de llaves 24h</td><td>Los 3 servicios</td><td class="ok">✓ Cubierto</td></tr>
-      <tr><td>Uso de token en canal incorrecto</td><td>Audience por realm · issuers separados</td><td>Kong + servicios</td><td class="ok">✓ Cubierto</td></tr>
-      <tr><td>Sustitución de clave de cifrado</td><td>Binding de clave por usuario · TTL = validez del JWT</td><td>Los 3 servicios</td><td class="ok">✓ Cubierto</td></tr>
-      <tr><td>Replay de operación financiera</td><td>Clave de idempotencia requerida · TTL 5 min</td><td>transfers · payments</td><td class="ok">✓ Cubierto</td></tr>
-      <tr><td>Operación con cliente no autorizado</td><td>Verificación en ERP antes de procesar · active=false → 403</td><td>Los 3 servicios</td><td class="ok">✓ Cubierto</td></tr>
-      <tr><td>Fingerprinting de servidor</td><td>Sin cabeceras de framework · sin huellas de tamaño · sin caché</td><td>Los 3 servicios</td><td class="ok">✓ Cubierto</td></tr>
-      <tr><td>Flood de peticiones / abuso de tasa</td><td>Rate limiting por token · canales aislados</td><td>Kong</td><td class="ok">✓ Cubierto</td></tr>
-      <tr><td>Intercepción de tráfico (MitM)</td><td>TLS en Kong · cifrado JWE independiente del TLS</td><td>Kong + todos</td><td class="partial">~ Parcial (POC)</td></tr>
-      <tr><td>Montos fuera de límite</td><td>Máx. $10,000 transfers · $5,000 payments</td><td>transfers · payments</td><td class="ok">✓ Cubierto</td></tr>
-      <tr><td>Método de pago no permitido</td><td>Lista blanca: tarjeta, ACH, transferencia bancaria</td><td>payments</td><td class="ok">✓ Cubierto</td></tr>
-      <tr><td>Fallo en cascada (Odoo/Keycloak caído)</td><td>—</td><td>—</td><td class="pending">⏳ Roadmap P2</td></tr>
-      <tr><td>Token comprometido activo</td><td>—</td><td>—</td><td class="pending">⏳ Roadmap P2</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">01</td><td>Fuga de info del servidor (fingerprinting)</td><td>Sin X-Powered-By · Sin ETag · Cache-Control: no-store</td><td style="text-align:center">3</td><td class="ok">✓ 3/3</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">02</td><td>Sustitución de clave pública JWE</td><td>Binding TOFU por usuario · TTL = exp del JWT</td><td style="text-align:center">2</td><td class="ok">✓ 2/2</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">03</td><td>Replay de operación financiera (POST)</td><td>X-Idempotency-Key requerido · TTL 5 min · respuesta cacheada</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">04</td><td>POST sin clave de idempotencia</td><td>Header obligatorio · rechazo explícito → 400</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">05</td><td>Bypass de autorización (cliente inactivo)</td><td>Verificación en Odoo · active=false → 403 en los 3 servicios</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">06</td><td>Monto fuera de límites de negocio</td><td>Máx. $10,000 transfers · $5,000 payments · validación en servicio</td><td style="text-align:center">2</td><td class="ok">✓ 2/2</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">07</td><td>Método de pago no autorizado (cripto)</td><td>Lista blanca: card · ach · wire — cualquier otro → 422</td><td style="text-align:center">4</td><td class="ok">✓ 4/4</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">08</td><td>Cross-channel: token de un canal en el otro</td><td>Audience y issuer independientes por realm · Kong + servicios</td><td style="text-align:center">2</td><td class="ok">✓ 2/2</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">09</td><td>Flood / abuso de tasa (35 req, límite 30)</td><td>Rate limiting por token JWT · canales aislados</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
+      <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Intercepción de tráfico (MitM)</td><td>TLS en Kong · JWE E2E independiente del TLS</td><td style="text-align:center">—</td><td class="partial">~ Parcial (POC)</td></tr>
+      <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Fallo en cascada (Odoo/Keycloak caído)</td><td>—</td><td style="text-align:center">—</td><td class="pending">⏳ Roadmap P2</td></tr>
+      <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Token JWT comprometido y activo</td><td>—</td><td style="text-align:center">—</td><td class="pending">⏳ Roadmap P2</td></tr>
     </tbody>
   </table>
 </div>

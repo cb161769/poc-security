@@ -122,7 +122,7 @@ function validateJWT(req, res, next) {
         return res.status(403).json({ error: 'Rol insuficiente para el servicio de pagos' });
 
       req.channel = channel;
-      req.jwt = { sub: decoded.sub, email: decoded.email, roles, client_id: decoded.azp };
+      req.jwt = { sub: decoded.sub, email: decoded.email, roles, client_id: decoded.azp, exp: decoded.exp };
       next();
     }
   );

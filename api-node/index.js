@@ -121,6 +121,7 @@ async function validateJWT(req, res, next) {
         email:     decoded.email,
         roles:     decoded.realm_access?.roles || [],
         client_id: decoded.azp,
+        exp:       decoded.exp,
       };
 
       next();

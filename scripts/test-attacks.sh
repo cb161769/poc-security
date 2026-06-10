@@ -6,6 +6,12 @@
 
 set -uo pipefail
 
+# ── Resolver Python ──────────────────────────────────────
+if ! python3 -c "import sys" 2>/dev/null; then
+  python3() { python "$@"; }
+  export -f python3
+fi
+
 KC="http://localhost:8080"
 KONG="http://localhost:8000"
 

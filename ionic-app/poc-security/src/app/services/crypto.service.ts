@@ -7,11 +7,15 @@ export class CryptoService {
   private privateKey: CryptoKey | null = null;
   private publicKeyB64: string | null = null;
   private channel: Channel = 'web';
+  private initPromise: Promise<void> | null = null;
 
   async initialize(channel: Channel): Promise<void> {
     if (this.privateKey && this.publicKeyB64) return;
+    if (this.initPromise) return this.initPromise;
     this.channel = channel;
-    channel === 'web' ? await this.initWeb() : await this.initMobile();
+    this.initPromise = (channel === 'web' ? this.initWeb() : this.initMobile())
+      .finally(() => { this.initPromise = null; });
+    return this.initPromise;
   }
 
   /**
@@ -82,6 +86,7 @@ export class CryptoService {
   clearKey(): void {
     this.privateKey = null;
     this.publicKeyB64 = null;
+    this.initPromise = null;
     sessionStorage.removeItem('poc_keypair');
   }
 
