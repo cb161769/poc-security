@@ -60,11 +60,13 @@ App Ionic (Web / Mobile)
 
 **Python — librería requerida para el script de pruebas:**
 ```bash
-pip install cryptography
+pip3 install cryptography
 ```
 
 **Windows:** usar [Git Bash](https://git-scm.com/download/win) para ejecutar los scripts `.sh`.  
-**macOS/Linux:** bash nativo.
+**macOS/Linux:** bash nativo. Los scripts usan `python3` — disponible con cualquier instalación estándar de Python 3.
+
+> **macOS con Apple Silicon (M1/M2/M3):** Docker Desktop for Mac incluye soporte multi-arch; las imágenes (Keycloak, Kong, Odoo) tienen builds ARM64 nativos.
 
 ---
 
@@ -593,6 +595,8 @@ X-Client-Public-Key: <base64( JSON(JWK) )>   ← clave pública RSA como objeto 
 
 **Headers de respuesta reales (observados en vivo):**
 ```
+Content-Type: application/jose; charset=utf-8
+Cache-Control: no-store
 X-Request-Id: <uuid>              ← correlation ID (echo del plugin Kong correlation-id)
 X-Kong-Request-Id: <hex>          ← ID interno de Kong (diferente al anterior)
 X-Content-Type-Options: nosniff
@@ -600,9 +604,8 @@ X-Frame-Options: DENY
 Referrer-Policy: no-referrer
 Permissions-Policy: geolocation=()
 Via: kong/3.5.0
-X-Powered-By: Express             ⚠ fuga de framework — eliminar en producción
-ETag: W/"<hex>-<hash>"            ⚠ revela tamaño del JWE cifrado
 ```
+> `X-Powered-By` y `ETag` ausentes — desactivados en los 3 servicios (control P4 implementado).
 
 **JWE Protected Header real (decodificado):**
 ```json
@@ -716,10 +719,10 @@ bash scripts/setup.sh         # Volver a configurar
 | Certificados | Autofirmados | Let's Encrypt / CA corporativa |
 | Logging | Console stdout | ELK / Loki estructurado |
 | Rate limiting | Policy local (un nodo) | Redis backend (multi-nodo) |
-| `/internal/validate-user` | **Expuesto vía Kong sin JWT** (accesible en `/api/v1/mobile/internal/validate-user`) | Añadir middleware JWT + `X-Internal-Secret` |
-| `X-Powered-By: Express` | **Leakage de framework activo** | Añadir `app.disable('x-powered-by')` en todos los servicios Node |
-| ETag en respuestas JWE | **Revela tamaño del payload cifrado** | Deshabilitar ETag en rutas `/api/...` |
-| Odoo AuthZ | Solo en api-node; transfers/payments validan solo JWT + rol | Agregar validación Odoo en los tres servicios |
+| `/internal/validate-user` | Protegido con `validateJWT` + `X-Internal-Secret` | ✅ Implementado |
+| `X-Powered-By: Express` | Desactivado en los 3 servicios: `app.disable('x-powered-by')` | ✅ Implementado |
+| ETag en respuestas JWE | Desactivado en los 3 servicios: `app.set('etag', false)` | ✅ Implementado |
+| Odoo AuthZ | Activo en los 3 servicios: api-node + transfers + payments | ✅ Implementado |
 | Vault token | Archivo plano en disco | AppRole + TTL corto |
 
 ---

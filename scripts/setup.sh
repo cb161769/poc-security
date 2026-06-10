@@ -19,7 +19,7 @@ info "Verificando prerequisitos..."
 command -v docker  >/dev/null 2>&1 || die "Docker no encontrado. Instala Docker Desktop."
 command -v openssl >/dev/null 2>&1 || die "OpenSSL no encontrado."
 command -v curl    >/dev/null 2>&1 || die "curl no encontrado."
-command -v python  >/dev/null 2>&1 || die "Python no encontrado."
+command -v python3  >/dev/null 2>&1 || die "Python no encontrado."
 command -v node    >/dev/null 2>&1 || die "Node.js no encontrado."
 docker info >/dev/null 2>&1        || die "Docker no está corriendo. Inicia Docker Desktop."
 success "Prerequisitos OK"
@@ -96,7 +96,7 @@ info "Configurando Keycloak (reinos, clientes, usuarios)..."
 
 ADMIN_TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
   -d "client_id=admin-cli&username=admin&password=admin&grant_type=password" \
-  | python -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
+  | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
 
 [[ -z "$ADMIN_TOKEN" ]] && die "No se pudo obtener token de admin de Keycloak"
 
@@ -113,7 +113,7 @@ create_user() {
 
   ADMIN_TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
     -d "client_id=admin-cli&username=admin&password=admin&grant_type=password" \
-    | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
   # Crear usuario
   curl -s -X POST "http://localhost:8080/admin/realms/$REALM/users" \
@@ -124,7 +124,7 @@ create_user() {
   # Audience mapper
   CID=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
     "http://localhost:8080/admin/realms/$REALM/clients?clientId=$CLIENT_ID" \
-    | python -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if d else '')" 2>/dev/null)
+    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if d else '')" 2>/dev/null)
 
   [[ -n "$CID" ]] && curl -s -X POST \
     "http://localhost:8080/admin/realms/$REALM/clients/$CID/protocol-mappers/models" \
@@ -135,11 +135,11 @@ create_user() {
   # Asignar rol
   USER_ID=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
     "http://localhost:8080/admin/realms/$REALM/users?username=testuser" \
-    | python -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if d else '')" 2>/dev/null)
+    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if d else '')" 2>/dev/null)
 
   ROLE_ID=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
     "http://localhost:8080/admin/realms/$REALM/roles/$ROLE" \
-    | python -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null)
+    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null)
 
   [[ -n "$USER_ID" && -n "$ROLE_ID" ]] && curl -s -X POST \
     "http://localhost:8080/admin/realms/$REALM/users/$USER_ID/role-mappings/realm" \

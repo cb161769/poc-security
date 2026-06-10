@@ -29,12 +29,12 @@ echo -e "\n${GRAY}Preparando tokens...${NC}"
 
 WEB_TOKEN=$(curl -sf -X POST "$KC/realms/web-realm/protocol/openid-connect/token" \
   -d "client_id=web-app-client&username=testuser&password=Test1234!&grant_type=password" \
-  | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])") || {
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])") || {
   echo -e "${RED}ERROR: No se pudo obtener token web. ¿Está el stack levantado?${NC}"; exit 1; }
 
 MOB_TOKEN=$(curl -sf -X POST "$KC/realms/mobile-realm/protocol/openid-connect/token" \
   -d "client_id=mobile-app-client&username=testuser&password=Test1234!&grant_type=password" \
-  | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])") || {
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])") || {
   echo -e "${RED}ERROR: No se pudo obtener token mobile.${NC}"; exit 1; }
 
 echo -e "\n${GRAY}Reiniciando servicios para limpiar stores en memoria...${NC}"
@@ -59,7 +59,7 @@ done
 [ "$READY" -eq 0 ] && echo -e "${YELLOW}⚠  Readiness timeout — continuando de todas formas${NC}"
 
 # Extraer SUB del token mobile (para Odoo)
-MOB_SUB=$(echo "$MOB_TOKEN" | python -c "
+MOB_SUB=$(echo "$MOB_TOKEN" | python3 -c "
 import sys,base64,json
 t=sys.stdin.read().strip().split('.')[1]
 t+='=='*(4-len(t)%4)
@@ -67,7 +67,7 @@ print(json.loads(base64.b64decode(t))['sub'])
 ")
 
 # Generar DOS claves RSA distintas (para test de key substitution)
-KEYS=$(python -c "
+KEYS=$(python3 -c "
 import json,base64
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
@@ -131,9 +131,9 @@ CODE2=$(curl -s -o /dev/null -w "%{http_code}" \
   -H "X-Client-Public-Key: $KEY_B" \
   "$KONG/api/v1/mobile/transfers")
 
-if [ "$CODE2" = "403" ] && echo "$R2" | python -c "import sys,json; d=json.load(sys.stdin); exit(0 if 'Clave' in d.get('error','') else 1)" 2>/dev/null; then
+if [ "$CODE2" = "403" ] && echo "$R2" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if 'Clave' in d.get('error','') else 1)" 2>/dev/null; then
   pass "Key substitution bloqueada → 403 con clave distinta"
-  info "Response: $(echo "$R2" | python -c 'import sys,json; print(json.load(sys.stdin))' 2>/dev/null)"
+  info "Response: $(echo "$R2" | python3 -c 'import sys,json; print(json.load(sys.stdin))' 2>/dev/null)"
 else
   fail "Key substitution bloqueada" "Esperado 403, recibido $CODE2 — $(echo "$R2" | head -c 120)"
 fi
@@ -209,7 +209,7 @@ CODE4=$(curl -s -o /dev/null -w "%{http_code}" \
   -d '{"amount":100,"to":"ACC-001"}' \
   "$KONG/api/v1/web/transfers")
 
-if [ "$CODE4" = "400" ] && echo "$R4" | python -c "import sys,json; d=json.load(sys.stdin); exit(0 if 'Idempotency' in d.get('error','') else 1)" 2>/dev/null; then
+if [ "$CODE4" = "400" ] && echo "$R4" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if 'Idempotency' in d.get('error','') else 1)" 2>/dev/null; then
   pass "Sin X-Idempotency-Key → 400 requerido"
 else
   fail "Sin X-Idempotency-Key" "Esperado 400, recibido $CODE4 — $(echo "$R4" | head -c 100)"
@@ -243,7 +243,7 @@ if echo "$ODOO_RESULT" | grep -q "DEACTIVATED"; then
   # Obtener token fresco (el anterior podría estar cacheado)
   MOB_TOKEN2=$(curl -sf -X POST "$KC/realms/mobile-realm/protocol/openid-connect/token" \
     -d "client_id=mobile-app-client&username=testuser&password=Test1234!&grant_type=password" \
-    | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
   R5=$(curl -s \
     -H "Authorization: Bearer $MOB_TOKEN2" \
@@ -297,7 +297,7 @@ CODE6=$(curl -s -o /dev/null -w "%{http_code}" \
 
 if [ "$CODE6" = "422" ]; then
   pass "Amount limit bloqueado → 422 (amount=99999 > 10000)"
-  info "Response: $(echo "$R6" | python -c 'import sys,json; d=json.load(sys.stdin); print(d.get("error","?"))' 2>/dev/null)"
+  info "Response: $(echo "$R6" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("error","?"))' 2>/dev/null)"
 else
   fail "Amount limit" "Esperado 422, recibido $CODE6 — $(echo "$R6" | head -c 100)"
 fi
@@ -339,7 +339,7 @@ CODE7=$(curl -s -o /dev/null -w "%{http_code}" \
 
 if [ "$CODE7" = "422" ]; then
   pass "Método inválido bloqueado → 422 (method=crypto)"
-  info "Response: $(echo "$R7" | python -c 'import sys,json; d=json.load(sys.stdin); print(d.get("error","?"))' 2>/dev/null)"
+  info "Response: $(echo "$R7" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("error","?"))' 2>/dev/null)"
 else
   fail "Método inválido" "Esperado 422, recibido $CODE7 — $(echo "$R7" | head -c 100)"
 fi
@@ -392,7 +392,7 @@ info "Enviando 35 requests con mismo token mobile... (puede tardar ~15s)"
 # Token fresco para este test
 MOB_TOKEN3=$(curl -sf -X POST "$KC/realms/mobile-realm/protocol/openid-connect/token" \
   -d "client_id=mobile-app-client&username=testuser&password=Test1234!&grant_type=password" \
-  | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
 RATE_RESULTS=()
 for i in $(seq 1 35); do

@@ -24,7 +24,7 @@ jwe_parts() { echo "$1" | tr '.' '\n' | wc -l | tr -d ' '; }
 
 decode_jwe_header() {
   local h; h=$(echo "$1" | cut -d'.' -f1)
-  python -c "
+  python3 -c "
 import base64,json,sys
 h='$h'
 pad = 4 - len(h)%4
@@ -96,11 +96,11 @@ done
 echo -e "\n  Obteniendo tokens..."
 WEB_TOKEN=$(curl -s -X POST "$KC/realms/web-realm/protocol/openid-connect/token" \
   -d "client_id=web-app-client&username=testuser&password=Test1234!&grant_type=password" \
-  | python -c "import sys,json; d=json.load(sys.stdin); print(d.get('access_token','ERROR:'+str(d.get('error',d))))")
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('access_token','ERROR:'+str(d.get('error',d))))")
 
 MOB_TOKEN=$(curl -s -X POST "$KC/realms/mobile-realm/protocol/openid-connect/token" \
   -d "client_id=mobile-app-client&username=testuser&password=Test1234!&grant_type=password" \
-  | python -c "import sys,json; d=json.load(sys.stdin); print(d.get('access_token','ERROR:'+str(d.get('error',d))))")
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('access_token','ERROR:'+str(d.get('error',d))))")
 
 if [[ "$WEB_TOKEN" == ERROR* ]]; then fail "Token web-realm" "$WEB_TOKEN"
 else pass "Token web-realm obtenido  [iss=web-realm]"; fi
@@ -109,14 +109,14 @@ if [[ "$MOB_TOKEN" == ERROR* ]]; then fail "Token mobile-realm" "$MOB_TOKEN"
 else pass "Token mobile-realm obtenido  [iss=mobile-realm]"; fi
 
 # Validar claims
-WEB_AUD=$(echo "$WEB_TOKEN" | python -c "
+WEB_AUD=$(echo "$WEB_TOKEN" | python3 -c "
 import sys,base64,json
 t=sys.stdin.read().strip().split('.')[1]
 t+='=='*(4-len(t)%4)
 d=json.loads(base64.b64decode(t))
 print(d.get('aud','missing'))
 ")
-MOB_AUD=$(echo "$MOB_TOKEN" | python -c "
+MOB_AUD=$(echo "$MOB_TOKEN" | python3 -c "
 import sys,base64,json
 t=sys.stdin.read().strip().split('.')[1]
 t+='=='*(4-len(t)%4)
@@ -135,7 +135,7 @@ else fail "mobile-realm aud" "Esperado 'mobile-api' · Got: $MOB_AUD"; fi
 # ════════════════════════════════════════════════════════
 section "3/7 · CLAVE RSA — Simulación WebCrypto"
 
-PUB_KEY=$(python -c "
+PUB_KEY=$(python3 -c "
 import json,base64
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
@@ -243,7 +243,7 @@ section "7/7 · ENDPOINTS POST — Creación de Recursos"
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $WEB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
-       -H "X-Idempotency-Key: $(python -c 'import uuid; print(uuid.uuid4())')" \
+       -H "X-Idempotency-Key: $(python3 -c 'import uuid; print(uuid.uuid4())')" \
        -H "Content-Type: application/json" \
        -d '{"amount":500,"to":"ACC-9988","memo":"Test transfer"}' \
        "$KONG/api/v1/web/transfers")
@@ -253,7 +253,7 @@ check_jwe "POST /web/transfers  → crear transferencia web"  "$R" "transfers" "
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $MOB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
-       -H "X-Idempotency-Key: $(python -c 'import uuid; print(uuid.uuid4())')" \
+       -H "X-Idempotency-Key: $(python3 -c 'import uuid; print(uuid.uuid4())')" \
        -H "Content-Type: application/json" \
        -d '{"amount":200,"to":"ACC-1122","memo":"Test mobile"}' \
        "$KONG/api/v1/mobile/transfers")
@@ -263,7 +263,7 @@ check_jwe "POST /mobile/transfers → crear transferencia mobile" "$R" "transfer
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $WEB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
-       -H "X-Idempotency-Key: $(python -c 'import uuid; print(uuid.uuid4())')" \
+       -H "X-Idempotency-Key: $(python3 -c 'import uuid; print(uuid.uuid4())')" \
        -H "Content-Type: application/json" \
        -d '{"amount":99.99,"method":"card","merchant":"Test Corp"}' \
        "$KONG/api/v1/web/payments")
@@ -273,7 +273,7 @@ check_jwe "POST /web/payments   → crear pago web"           "$R" "payments" "w
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $MOB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
-       -H "X-Idempotency-Key: $(python -c 'import uuid; print(uuid.uuid4())')" \
+       -H "X-Idempotency-Key: $(python3 -c 'import uuid; print(uuid.uuid4())')" \
        -H "Content-Type: application/json" \
        -d '{"amount":49.99,"method":"ach","merchant":"Utility"}' \
        "$KONG/api/v1/mobile/payments")
