@@ -6,6 +6,8 @@ const { CompactEncrypt, importJWK } = require('jose');
 
 const app = express();
 app.use(express.json());
+app.disable('x-powered-by');
+app.set('etag', false);
 
 /* ================================
    CONFIG — dos reinos
@@ -41,6 +43,27 @@ const jwksClients = {
   web:    jwksClient({ jwksUri: REALMS.web.jwksUri,    ...jwksOpts }),
   mobile: jwksClient({ jwksUri: REALMS.mobile.jwksUri, ...jwksOpts }),
 };
+
+/* ================================
+   PUBKEY BINDING STORE — first-use registration
+   Map<sub, base64JWK> — persiste en memoria por lifetime del proceso
+================================ */
+const pubKeyStore = new Map(); // Map<sub, { key: string, exp: number }>
+
+function validatePubKeyBinding(req, res, next) {
+  const pubKeyB64 = req.headers['x-client-public-key'];
+  if (!pubKeyB64) return next();
+  const sub = req.jwt.sub;
+  const entry = pubKeyStore.get(sub);
+  const now = Math.floor(Date.now() / 1000);
+  if (!entry || now > entry.exp) {
+    pubKeyStore.set(sub, { key: pubKeyB64, exp: req.jwt.exp });
+    return next();
+  }
+  if (entry.key !== pubKeyB64)
+    return res.status(403).json({ error: 'Clave de cliente no coincide con la registrada' });
+  next();
+}
 
 /* ================================
    DETECT CHANNEL — peek sin verificar
@@ -146,7 +169,19 @@ async function encryptJWE(payload, clientPubKeyB64, channel) {
 /* ================================
    ENDPOINT PROTEGIDO
 ================================ */
-app.get('/api/v1/data', validateJWT, validateClientInOdoo, async (req, res) => {
+app.post('/api/v1/data/register-key', validateJWT, (req, res) => {
+  const pubKeyB64 = req.headers['x-client-public-key'];
+  if (!pubKeyB64) return res.status(400).json({ error: 'X-Client-Public-Key requerido' });
+  const sub = req.jwt.sub;
+  const existing = pubKeyStore.get(sub);
+  const now = Math.floor(Date.now() / 1000);
+  if (existing && now <= existing.exp && existing.key !== pubKeyB64)
+    return res.status(409).json({ error: 'Ya existe una clave registrada para este sub' });
+  pubKeyStore.set(sub, { key: pubKeyB64, exp: req.jwt.exp });
+  res.json({ registered: true, sub: req.jwt.sub });
+});
+
+app.get('/api/v1/data', validateJWT, validateClientInOdoo, validatePubKeyBinding, async (req, res) => {
   const clientPubKeyB64 = req.headers['x-client-public-key'];
 
   if (!clientPubKeyB64) {
@@ -163,8 +198,7 @@ app.get('/api/v1/data', validateJWT, validateClientInOdoo, async (req, res) => {
 
   try {
     const jwe = await encryptJWE(payload, clientPubKeyB64, req.channel);
-    res.set('Content-Type', 'application/jose');
-    res.send(jwe);
+    res.set('Content-Type', 'application/jose').set('Cache-Control', 'no-store').send(jwe);
   } catch (err) {
     console.error('JWE encrypt error:', err.message);
     res.status(400).json({ error: 'Clave de cliente inválida' });
@@ -174,7 +208,7 @@ app.get('/api/v1/data', validateJWT, validateClientInOdoo, async (req, res) => {
 /* ================================
    ENDPOINT INTERNO
 ================================ */
-app.post('/internal/validate-user', async (req, res) => {
+app.post('/internal/validate-user', validateJWT, async (req, res) => {
   const { username, password } = req.body;
   try {
     const response = await axios.post(`${ODOO_URL}/jsonrpc`, {

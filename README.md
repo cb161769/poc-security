@@ -5,12 +5,14 @@ Implementa autenticación federada, cifrado de payload de extremo a extremo y au
 
 ### Animaciones interactivas
 
-| Animación | Descripción |
-|-----------|-------------|
+| Animación / Presentación | Descripción |
+|--------------------------|-------------|
 | [docs/request-flow.html](docs/request-flow.html) | Flujo paso a paso: PKCE → JWT → RSA keygen → Kong → JWKS → Odoo AuthZ → JWE encrypt → decrypt (11 pasos animados) |
 | [docs/stride.html](docs/stride.html) | Modelo de amenazas STRIDE: vectores de ataque y contramedidas implementadas por categoría |
+| [docs/attack-repudiation.html](docs/attack-repudiation.html) | Presentación PPT (12 slides): 8 categorías de ataque, controles implementados, estado de mitigación y próximos pasos — apta para revisar con el equipo de seguridad |
 
-> Abre los archivos directamente en el navegador — no requieren servidor.
+> Abre los archivos directamente en el navegador — no requieren servidor.  
+> **Navegación en la presentación:** teclas `←` `→` o barra espaciadora.
 
 ---
 
@@ -327,7 +329,186 @@ npm start
 
 ---
 
+## Debugging en runtime (app Ionic en el navegador)
+
+Técnicas para modificar variables y estados en vivo desde las DevTools de Chrome/Edge sin tocar código.
+
+### 1. Breakpoint + consola del debugger (más potente)
+
+Abre **DevTools → Sources**, habilita source maps (`Enable JavaScript source maps`), busca el archivo con `Ctrl+P`:
+
+```
+Ctrl+P → "auth.service.ts"    # o crypto.service.ts, api.service.ts
+```
+
+Haz click en el número de línea para poner un breakpoint. Cuando el código se pause, la consola tiene acceso completo al scope:
+
+```javascript
+// Con ejecución pausada en login():
+this.token = "eyJhbGci..."         // reemplazar token
+decoded.exp = Date.now()/1000 + 9999  // extender expiración sin re-firmar
+channel = 'mobile'                 // cambiar canal en scope local
+```
+
+O añade `debugger;` temporalmente en el código donde necesites pausar.
+
+### 2. Acceder a servicios Angular desde la consola
+
+```javascript
+// Obtener cualquier componente
+const el  = document.querySelector('app-tab1')   // o 'app-root', 'ion-app'
+const comp = ng.getComponent(el)
+
+// Leer / escribir propiedades del componente
+comp.isLoggedIn               // leer
+comp.isLoggedIn = false       // escribir (fuerza estado visual)
+comp.channel = 'mobile'       // cambiar canal
+ng.applyChanges(comp)         // forzar detección de cambios en la UI
+
+// Obtener el injector para acceder a servicios singleton
+const injector = ng.getInjector(el)
+```
+
+### 3. Interceptar y modificar respuestas de la API (monkey-patch fetch)
+
+```javascript
+// Ver el JWE crudo antes de que Angular lo procese
+const _fetch = window.fetch
+window.fetch = async (...args) => {
+  const res = await _fetch(...args)
+  if (String(args[0]).includes('localhost:8000')) {
+    const clone = res.clone()
+    clone.text().then(body => console.log('Kong response:', args[0], '\n', body.slice(0,120)))
+  }
+  return res
+}
+
+// Simular error 403 de Odoo en transfers
+window.fetch = async (...args) => {
+  if (String(args[0]).includes('/transfers'))
+    return new Response(JSON.stringify({ error: 'Cliente no autorizado por Odoo' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } })
+  return _fetch(...args)
+}
+
+// Restaurar fetch original
+window.fetch = _fetch
+```
+
+### 4. Corromper el JWE para probar manejo de errores
+
+Con un breakpoint en `crypto.service.ts` dentro del método de descifrado:
+
+```javascript
+// Corromper el authentication tag (últimos 5 chars) → compactDecrypt debe lanzar error
+> jweToken = jweToken.slice(0, -5) + 'XXXXX'
+
+// Truncar el JWE a 3 partes → estructura inválida
+> jweToken = jweToken.split('.').slice(0, 3).join('.')
+
+// Sustituir con JWE de otro canal → debe dar 401 en el servicio
+> jweToken = tokenGuardadoDeOtroCanal
+```
+
+### 5. Inspeccionar / modificar el JWT en storage
+
+```javascript
+// Ver qué hay en storage
+Object.entries(localStorage)
+Object.entries(sessionStorage)
+
+// Inspeccionar claims del token guardado (sin verificar firma)
+const raw = localStorage.getItem('access_token')   // ajustar key según la app
+if (raw) {
+  const payload = JSON.parse(atob(raw.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))
+  console.table(payload)
+  console.log('Expira:', new Date(payload.exp * 1000))
+  console.log('TTL restante:', payload.exp - Date.now()/1000, 'seg')
+}
+
+// Forzar expiración inmediata para probar el timer de sesión de la UI
+// (solo afecta la lectura del storage, el servidor seguirá rechazando con 401)
+const parts = raw.split('.')
+const p = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')))
+p.exp = Math.floor(Date.now()/1000) - 1   // ya expirado
+// No se puede re-firmar, pero sirve para probar el comportamiento de la UI
+```
+
+### 6. Simular canal mobile desde el navegador web
+
+```javascript
+// Sobreescribir detección de Capacitor antes de que Angular arranque
+// (ejecutar en la consola ANTES de que cargue la app, o en el snippet de Sources)
+Object.defineProperty(window, 'Capacitor', {
+  get: () => ({ isNativePlatform: () => true, getPlatform: () => 'android' }),
+  configurable: true
+})
+location.reload()   // recargar para que platform.service.ts lo detecte al init
+
+// Restaurar
+delete window.Capacitor
+location.reload()
+```
+
+### Referencia rápida de comandos de consola
+
+| Objetivo | Comando |
+|----------|---------|
+| Obtener componente | `ng.getComponent(document.querySelector('app-tab1'))` |
+| Forzar re-render | `ng.applyChanges(comp)` |
+| Ver árbol de componentes | `ng.getOwningComponent(el)` |
+| Obtener injector | `ng.getInjector(document.querySelector('app-root'))` |
+| Tiempo restante del JWT | `payload.exp - Date.now()/1000` |
+| Interceptar fetch | `window.fetch = async (...a) => { /* ... */; return originalFetch(...a) }` |
+| Restaurar fetch | `window.fetch = _fetch` (guardar referencia antes) |
+
+> **Nota:** `ng.getComponent()` solo está disponible en builds de desarrollo (`ng serve`). En producción (`ng build`) Angular elimina estos helpers. Los monkey-patches de `fetch` se resetean al recargar la página.
+
+## Hardening against runtime tampering
+
+Practical steps to reduce the attack surface exposed by in-browser runtime debugging and monkey-patching.
+
+- **Build without source-maps for production** — prevents easy mapping from minified code to TS sources:
+
+```bash
+# production build (no source maps)
+ng build --configuration production --source-map=false
+```
+
+- **Enable Angular production mode** (already done by production build). Ensure `enableProdMode()` is used in `main.ts` for production bundles.
+
+- **Remove dev-only helpers** — do not expose Angular devtools globals in production (handled by production build/minification).
+
+- **Server-side hardening (Express / Node)** — enforce headers and disable dev leaks:
+
+```js
+// in your Express app
+app.disable('x-powered-by');
+app.set('etag', false); // avoid leaking ciphertext size
+res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; object-src 'none';");
+```
+
+- **Content Security Policy & SRI** — set strict `Content-Security-Policy` headers and use Subresource Integrity for any third-party scripts to reduce XSS/monkey-patch risk.
+
+- **Protect tokens & keys in the client** — avoid `localStorage` for long-lived tokens on web. Prefer secure, `HttpOnly` cookies or short-lived access tokens + refresh tokens stored safely on mobile (Keychain/Keystore).
+
+- **Do not trust the client for security** — assume an attacker can modify runtime state (DevTools, `fetch` monkey-patches, altered inputs). Enforce every business rule and authorization check on the server (identity, role, balance, recipient allow-list, per-user limits).
+
+- **Bind client public keys server-side** — when the client sends `X-Client-Public-Key`, require a server-side binding step (store ephemeral pubkey per session/sub) and refuse to encrypt to arbitrary, unbound keys.
+
+- **Sign important responses** — include a server-side signature (JWS) over critical fields (tx id, amount, recipient, timestamp) inside the JWE so tampering in transit is detectable.
+
+- **Handle JWE/JWT errors safely** — on decryption or verification failures return generic errors and do not leak internal details or stack traces.
+
+- **Operational measures** — enforce rate limits, anomaly detection, and log suspicious activity; keep `jose`/JWT libraries up-to-date and rotate keys regularly.
+
+These measures make runtime tampering harder and reduce the value of DevTools-based attacks, but they cannot fully prevent a malicious user who controls their browser. The authoritative controls must always be on the server.
+
+---
+
 ## Ejecutar las pruebas
+
+### Suite de integración (infraestructura + API)
 
 ```bash
 bash scripts/test-all.sh
@@ -343,6 +524,43 @@ Cubre:
 - 6 flujos JWE (3 servicios × 2 canales)
 - 5 rechazos de seguridad (cross-channel, sin token, firma inválida)
 - 4 endpoints POST (crear transferencia/pago por canal)
+
+### Suite de runtime debugging (Playwright)
+
+Valida las técnicas de debugging documentadas en la sección [Debugging en runtime](#debugging-en-runtime-app-ionic-en-el-navegador) contra la app en vivo.
+
+**Prerequisito:** la app Ionic debe estar corriendo en `http://localhost:4200`.
+
+```bash
+# Instalar dependencias (solo la primera vez — desde la raíz del proyecto)
+npm install
+
+# Descargar el binario de Chromium (solo la primera vez)
+npx playwright install chromium
+
+# Ejecutar
+node scripts/test-runtime-debug.js
+# o con el script npm:
+npm run test:runtime
+```
+
+**Resultado esperado: 10/10 PASS**
+
+| # | Test | Qué valida |
+|---|------|-----------|
+| 1 | `ng.getComponent()` | Angular debug API disponible en dev build |
+| 2 | `ng.applyChanges()` | Force change detection sin error |
+| 3 | `ng.getInjector()` | Acceso al DI container en runtime |
+| 4 | JWT en storage | JWT en memoria del servicio (no expuesto en localStorage) |
+| 5 | Monkey-patch fetch | Instalación y restauración del interceptor `window.fetch` |
+| 6 | fetch mock 403 | Simulación de error Odoo en `/transfers` |
+| 7 | Capacitor simulation | Override de `isNativePlatform` / `getPlatform` |
+| 8 | Modificar componente | `ng.getComponent('app-tab1')` → `Tab1Page` con 13 props |
+| 9 | App carga | 3 tabs visibles: Identidad / Transferencias / Pagos |
+| 10 | — | (incluido en checks combinados de los anteriores) |
+
+> Los screenshots de cada paso se guardan en `docs/debug-screenshots/`.  
+> La suite usa Chromium (headless). Si el navegador no está disponible: `npx playwright install chromium`.
 
 ---
 

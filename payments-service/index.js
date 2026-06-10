@@ -1,12 +1,17 @@
 const express = require('express');
+const axios   = require('axios');
 const jwt     = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 const { CompactEncrypt, importJWK } = require('jose');
 
 const app = express();
 app.use(express.json());
+app.disable('x-powered-by');
+app.set('etag', false);
 
 /* ── CONFIG ─────────────────────────────────────────── */
+const ODOO_URL = process.env.ODOO_URL || 'http://odoo-server:8069';
+
 const REALMS = {
   web: {
     issuer:   process.env.WEB_REALM_ISSUER  || 'http://localhost:8080/realms/web-realm',
@@ -26,6 +31,53 @@ const jwksClients = {
   web:    jwksClient({ jwksUri: REALMS.web.jwksUri,    ...JWKS_OPTS }),
   mobile: jwksClient({ jwksUri: REALMS.mobile.jwksUri, ...JWKS_OPTS }),
 };
+
+/* ── PUBKEY BINDING STORE ────────────────────────────── */
+const pubKeyStore = new Map(); // Map<sub, { key: string, exp: number }>
+
+function validatePubKeyBinding(req, res, next) {
+  const pubKeyB64 = req.headers['x-client-public-key'];
+  if (!pubKeyB64) return next();
+  const sub = req.jwt.sub;
+  const entry = pubKeyStore.get(sub);
+  const now = Math.floor(Date.now() / 1000);
+  if (!entry || now > entry.exp) {
+    pubKeyStore.set(sub, { key: pubKeyB64, exp: req.jwt.exp });
+    return next();
+  }
+  if (entry.key !== pubKeyB64)
+    return res.status(403).json({ error: 'Clave de cliente no coincide con la registrada' });
+  next();
+}
+
+/* ── IDEMPOTENCY STORE ───────────────────────────────── */
+const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
+const idempotencyStore = new Map();
+
+function checkIdempotency(req, res, next) {
+  const key = req.headers['x-idempotency-key'];
+  if (!key) return res.status(400).json({ error: 'X-Idempotency-Key requerido' });
+  const entry = idempotencyStore.get(key);
+  if (entry) {
+    return res.status(entry.statusCode)
+      .set('Content-Type', entry.contentType)
+      .set('X-Idempotency-Replayed', 'true')
+      .send(entry.body);
+  }
+  const originalSend = res.send.bind(res);
+  res.send = function(body) {
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      idempotencyStore.set(key, {
+        statusCode: res.statusCode,
+        contentType: res.getHeader('Content-Type') || 'application/json',
+        body,
+      });
+      setTimeout(() => idempotencyStore.delete(key), IDEMPOTENCY_TTL_MS);
+    }
+    return originalSend(body);
+  };
+  next();
+}
 
 /* ── DETECT CHANNEL ─────────────────────────────────── */
 function detectChannel(token) {
@@ -76,6 +128,24 @@ function validateJWT(req, res, next) {
   );
 }
 
+/* ── ODOO AUTHZ ──────────────────────────────────────── */
+async function validateClientInOdoo(req, res, next) {
+  try {
+    const response = await axios.post(
+      `${ODOO_URL}/api/validate-jwt-client`,
+      { sub: req.jwt.sub, email: req.jwt.email, client_id: req.jwt.client_id, roles: req.jwt.roles },
+      { headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.INTERNAL_SECRET || '' } }
+    );
+    if (!response.data || response.data.authorized !== true)
+      return res.status(403).json({ error: 'Cliente no autorizado por Odoo' });
+    req.client = response.data.client;
+    next();
+  } catch (error) {
+    console.error('[payments] Error Odoo:', error.message);
+    return res.status(502).json({ error: 'Error validando cliente en Odoo' });
+  }
+}
+
 /* ── HELPER: JWE ─────────────────────────────────────── */
 async function replyJWE(res, payload, pubKeyB64, channel) {
   const jwk = JSON.parse(Buffer.from(pubKeyB64, 'base64').toString());
@@ -83,13 +153,13 @@ async function replyJWE(res, payload, pubKeyB64, channel) {
   const jwe  = await new CompactEncrypt(new TextEncoder().encode(JSON.stringify(payload)))
     .setProtectedHeader({ alg: 'RSA-OAEP-256', enc: 'A256GCM', svc: 'payments', channel })
     .encrypt(pub);
-  res.set('Content-Type', 'application/jose').send(jwe);
+  res.set('Content-Type', 'application/jose').set('Cache-Control', 'no-store').send(jwe);
 }
 
 /* ── ENDPOINTS ───────────────────────────────────────── */
 
 // GET / — listar pagos
-app.get('/', validateJWT, async (req, res) => {
+app.get('/', validateJWT, validateClientInOdoo, validatePubKeyBinding, async (req, res) => {
   const pubKey = req.headers['x-client-public-key'];
   if (!pubKey) return res.status(400).json({ error: 'X-Client-Public-Key requerido' });
 
@@ -114,13 +184,21 @@ app.get('/', validateJWT, async (req, res) => {
 });
 
 // POST / — crear pago
-app.post('/', validateJWT, async (req, res) => {
+app.post('/', validateJWT, validateClientInOdoo, validatePubKeyBinding, checkIdempotency, async (req, res) => {
   const pubKey = req.headers['x-client-public-key'];
   if (!pubKey) return res.status(400).json({ error: 'X-Client-Public-Key requerido' });
 
   const { amount, currency = 'USD', method, merchant } = req.body;
   if (!amount || !method)
     return res.status(422).json({ error: 'amount y method son requeridos' });
+
+  const MAX_AMOUNT = parseFloat(process.env.MAX_PAYMENT_AMOUNT || '5000');
+  if (parseFloat(amount) <= 0 || parseFloat(amount) > MAX_AMOUNT)
+    return res.status(422).json({ error: `Monto fuera del rango permitido (0–${MAX_AMOUNT})` });
+
+  const validMethods = ['card', 'ach', 'wire'];
+  if (!validMethods.includes(method))
+    return res.status(422).json({ error: `Método inválido. Permitidos: ${validMethods.join(', ')}` });
 
   const payload = {
     service: 'payments',
@@ -146,7 +224,7 @@ app.post('/', validateJWT, async (req, res) => {
 });
 
 // GET /:id — detalle de un pago
-app.get('/:id', validateJWT, async (req, res) => {
+app.get('/:id', validateJWT, validateClientInOdoo, validatePubKeyBinding, async (req, res) => {
   const pubKey = req.headers['x-client-public-key'];
   if (!pubKey) return res.status(400).json({ error: 'X-Client-Public-Key requerido' });
 

@@ -41,11 +41,15 @@ export class Tab2Page {
   }
 
   async submit() {
-    if (!this.amount || !this.to) return;
+    if (this.amount == null || this.amount <= 0 || !this.to) {
+      this.error = 'Cantidad inválida o destinatario vacío';
+      return;
+    }
     this.sending = true;
     this.error = null;
     this.formResult = null;
     try {
+      // removed accidental debugger; keep logic lean for production
       const { jwe, data } = await this.api.createTransfer(this.amount, this.to, this.memo);
       this.lastJwe = jwe;
       this.formResult = data.transfer;

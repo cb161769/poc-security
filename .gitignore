@@ -98,3 +98,4 @@ shared-keys/kong.key
 shared-keys/priv.pem
 shared-keys/pub.pem
 .claude/settings.json
+.env

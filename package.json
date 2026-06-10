@@ -1,0 +1,13 @@
+{
+  "name": "poc-security-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Test runner for poc-security runtime debugging validation",
+  "scripts": {
+    "test:runtime": "node scripts/test-runtime-debug.js",
+    "playwright:install": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}

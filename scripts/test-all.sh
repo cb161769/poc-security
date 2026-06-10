@@ -243,6 +243,7 @@ section "7/7 · ENDPOINTS POST — Creación de Recursos"
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $WEB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
+       -H "X-Idempotency-Key: $(python -c 'import uuid; print(uuid.uuid4())')" \
        -H "Content-Type: application/json" \
        -d '{"amount":500,"to":"ACC-9988","memo":"Test transfer"}' \
        "$KONG/api/v1/web/transfers")
@@ -252,6 +253,7 @@ check_jwe "POST /web/transfers  → crear transferencia web"  "$R" "transfers" "
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $MOB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
+       -H "X-Idempotency-Key: $(python -c 'import uuid; print(uuid.uuid4())')" \
        -H "Content-Type: application/json" \
        -d '{"amount":200,"to":"ACC-1122","memo":"Test mobile"}' \
        "$KONG/api/v1/mobile/transfers")
@@ -261,6 +263,7 @@ check_jwe "POST /mobile/transfers → crear transferencia mobile" "$R" "transfer
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $WEB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
+       -H "X-Idempotency-Key: $(python -c 'import uuid; print(uuid.uuid4())')" \
        -H "Content-Type: application/json" \
        -d '{"amount":99.99,"method":"card","merchant":"Test Corp"}' \
        "$KONG/api/v1/web/payments")
@@ -270,6 +273,7 @@ check_jwe "POST /web/payments   → crear pago web"           "$R" "payments" "w
 R=$(curl -s -X POST \
        -H "Authorization: Bearer $MOB_TOKEN" \
        -H "X-Client-Public-Key: $PUB_KEY" \
+       -H "X-Idempotency-Key: $(python -c 'import uuid; print(uuid.uuid4())')" \
        -H "Content-Type: application/json" \
        -d '{"amount":49.99,"method":"ach","merchant":"Utility"}' \
        "$KONG/api/v1/mobile/payments")

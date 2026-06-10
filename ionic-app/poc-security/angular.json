@@ -55,6 +55,8 @@
                 }
               ],
               "outputHashing": "all"
+              ,
+              "sourceMap": false
             },
             "development": {
               "buildOptimizer": false,
@@ -136,7 +138,8 @@
   "cli": {
     "schematicCollections": [
       "@ionic/angular-toolkit"
-    ]
+    ],
+    "analytics": false
   },
   "schematics": {
     "@ionic/angular-toolkit:component": {
