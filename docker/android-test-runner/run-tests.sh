@@ -36,11 +36,24 @@ while true; do
 done
 
 echo "[runner] Installing APK..."
-adb -s "$SERIAL" install -r /apk-input/app-release.apk 2>&1 || {
+# Extract package name from APK manifest bytes, uninstall any previous version
+# (signing key changes between builds cause INSTALL_FAILED_UPDATE_INCOMPATIBLE)
+PKG=$(unzip -p /apk-input/app-release.apk AndroidManifest.xml 2>/dev/null \
+    | tr -dc '[:print:]' | grep -oE 'com\.[a-z0-9]+\.[a-z0-9]+' | head -1 || true)
+[ -z "$PKG" ] && PKG="com.keystone.mobile"
+echo "[runner] Package: $PKG — uninstalling any prior version..."
+adb -s "$SERIAL" uninstall "$PKG" 2>/dev/null || true
+adb -s "$SERIAL" install /apk-input/app-release.apk 2>&1 || {
     echo "[runner] WARN: APK install failed — tests will run without fresh install"
 }
 
 echo "[runner] Running security test suite..."
+mkdir -p /reports
+LOG="/reports/run-$(date -u +%Y%m%d-%H%M%S).log"
 pwsh -File /scripts/test-android-docker.ps1 \
     -AdbHost "$EMULATOR_HOST" \
-    -AdbPort "$EMULATOR_PORT"
+    -AdbPort "$EMULATOR_PORT" \
+    2>&1 | tee "$LOG"
+EXIT_CODE=${PIPESTATUS[0]}
+echo "[runner] Log saved → $LOG"
+exit "$EXIT_CODE"

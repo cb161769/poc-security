@@ -173,7 +173,7 @@ pre .v{color:#3fb950}
       <div class="stat-label">Ataques simulados<br>y bloqueados</div>
     </div>
     <div class="card stat hi-yellow">
-      <div class="stat-num" style="color:var(--yellow)">6</div>
+      <div class="stat-num" style="color:var(--yellow)">5</div>
       <div class="stat-label">Ítems prioritarios<br>para producción</div>
     </div>
   </div>
@@ -184,7 +184,8 @@ pre .v{color:#3fb950}
       <div style="font-size:12px;color:var(--muted);line-height:1.6">
         Cifrado E2E JWE (respuestas + requests POST) · Auth federada PKCE · AuthZ Odoo · Anti-replay ·
         Pubkey binding · Separación web/mobile · Validación inputs financieros + modal confirmación ·
-        Rate limiting login cliente · Hardening Android nativo (10 controles) · Ofuscación JS bundle
+        Rate limiting login cliente · Hardening Android nativo (10 controles) · Ofuscación JS bundle ·
+        Pipeline CI Android dockerizado — APK firmado + suite de seguridad 8 fases + reporte HTML
       </div>
     </div>
     <div class="card hi-yellow" style="padding:12px 14px">
@@ -192,7 +193,7 @@ pre .v{color:#3fb950}
       <div style="font-size:12px;color:var(--muted);line-height:1.6">
         Circuit breaker (Odoo/Keycloak) · Revocación de tokens en tiempo real ·
         Stores distribuidos en Redis · Certificate pinning (SHA-256 real) ·
-        Certificados TLS de CA real · Red interna aislada · Play Integrity API
+        Certificados TLS de CA real · Red interna aislada
       </div>
     </div>
     <div class="card" style="padding:12px 14px">
@@ -641,6 +642,7 @@ pre .v{color:#3fb950}
       <span class="badge b-gray">A4 · Odoo AuthZ</span>
       <span class="badge b-blue">A5 · Android Security</span>
       <span class="badge b-blue">A6 · JS Obfuscation</span>
+      <span class="badge b-blue">A7 · Android CI Pipeline</span>
     </div>
   </div>
 </div>
@@ -868,10 +870,29 @@ active = Boolean()
 <!-- ══ A5: ANDROID SECURITY ══ -->
 <div class="slide" id="s13">
   <div class="appendix-badge">A5 · Apéndice técnico</div>
-  <h2>Android Security Hardening — 10 controles nativos</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Implementados en <code>MainActivity.java</code> · <code>AndroidManifest.xml</code> · <code>build.gradle</code> · <code>proguard-rules.pro</code> — sin librerías de terceros</p>
+  <h2>Android Security Hardening — 10 controles nativos + CI pipeline</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Implementados en <code>MainActivity.java</code> · <code>AndroidManifest.xml</code> · <code>build.gradle</code> · <code>proguard-rules.pro</code> — sin librerías de terceros · verificados por suite de 8 fases</p>
 
   <div class="grid g3" style="flex:1;gap:9px">
+    <div class="card" style="padding:12px 14px;grid-column:1/-1;background:#1f6feb08;border-color:#1f6feb33">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.07em;text-transform:uppercase">🐳 Docker CI — suite automatizada 8 fases</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
+          <span class="badge b-gray" style="font-size:9px">Ph.1 APK estático</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.2 FLAG_SECURE</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.3 Root detect</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.4 Frida detect</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.5 Signature</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.6 WebView debug</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.7 Log leak</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.8 NSC</span>
+          <span class="badge b-green" style="font-size:9px">→ android-security-report.html</span>
+        </div>
+      </div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:6px">
+        <code>docker compose --profile android-tests up</code> — emulador Android 14 · APK firmado release · reporte HTML exportado a <code>docs/android-test-reports/</code>
+      </div>
+    </div>
     <div class="card" style="padding:12px 14px">
       <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🔍 Runtime checks (Java)</div>
       <div style="font-size:11px;line-height:1.9">
@@ -1001,13 +1022,87 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
   </div>
 </div>
 
+<!-- ══ A7: ANDROID CI PIPELINE ══ -->
+<div class="slide" id="s15">
+  <div class="appendix-badge">A7 · Apéndice técnico</div>
+  <h2>Android CI Pipeline — Build, sign &amp; test dockerizado</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Un solo comando levanta el emulador, construye el APK firmado y ejecuta las 8 fases de seguridad</p>
+
+  <div class="grid g3" style="gap:10px;margin-bottom:10px">
+    <div class="card hi-blue" style="padding:11px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">1 · android-build</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.75">
+        <code>node:22-bookworm</code> + Temurin JDK 21<br>
+        <code>npm ci</code> → <code>ng build</code> → <code>cap sync</code><br>
+        keytool test keystore → <code>gradlew assembleRelease</code><br>
+        ProGuard R8 · 2.4 MB APK firmado<br>
+        → volumen <code>android-apk</code>
+      </div>
+    </div>
+    <div class="card hi-blue" style="padding:11px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">2 · android-emulator</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.75">
+        <code>budtmo/docker-android:emulator_14.0</code><br>
+        Android 14 / API 34 · software renderer<br>
+        <code>privileged: true</code> para KVM<br>
+        Healthcheck: <code>sys.boot_completed=1</code><br>
+        ADB TCP port 5555
+      </div>
+    </div>
+    <div class="card hi-blue" style="padding:11px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">3 · android-test-runner</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.75">
+        <code>mcr.microsoft.com/powershell:7.4-ubuntu-22.04</code><br>
+        Espera emulador sano + build completo<br>
+        <code>adb install -r app-release.apk</code><br>
+        <code>pwsh test-android-docker.ps1</code><br>
+        → <code>docs/android-test-reports/</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="gap:10px">
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">8 fases de verificación</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:11px">
+        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P1</div><div>Static APK — HTTP cleartext · allowBackup · debuggable · ProGuard signal</div></div>
+        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P2</div><div>FLAG_SECURE — screencap → &lt;10 kB PNG negro</div></div>
+        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P3</div><div>Root detection — test-keys build + artefacto <code>/data/local/tmp/su</code></div></div>
+        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P4</div><div>Frida detection — artefacto <code>frida-server</code> en disco</div></div>
+        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P5</div><div>Signature — OS verifica firma en instalación</div></div>
+        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P6</div><div>WebView debug — socket <code>webview_devtools_remote</code> ausente</div></div>
+        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P7</div><div>Log leak — logcat PID filter → ProGuard strips logs</div></div>
+        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P8</div><div>Network Security Config — <code>dumpsys package</code> verifica NSC declarado</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">Artefactos generados</div>
+      <div class="card" style="padding:11px 14px;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;margin-bottom:5px">docs/android-build-reports/</div>
+        <div style="font-size:10.5px;color:var(--muted);line-height:1.6">Gradle problems report · Incubating feature · warnings + advice no críticos</div>
+      </div>
+      <div class="card" style="padding:11px 14px;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;margin-bottom:5px">docs/android-test-reports/android-security-report.html</div>
+        <div style="font-size:10.5px;color:var(--muted);line-height:1.6">Reporte HTML estilizado con badge PASSED/FAILED · tabla de resultados por fase · stats</div>
+      </div>
+      <div class="card" style="padding:11px 14px">
+        <pre style="font-size:9.5px">docker compose \
+  --profile android-tests up \
+  android-emulator \
+  android-test-runner</pre>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px"><code>android-build</code> corre una sola vez y reutiliza el APK en el volumen</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /deck -->
 
 <nav class="nav">
   <button class="nav-btn" id="btn-prev" onclick="go(-1)" disabled>← Prev</button>
   <div class="dots" id="dots"></div>
   <button class="nav-btn" id="btn-next" onclick="go(1)">Next →</button>
-  <span class="slide-num" id="slide-num">1 / 15</span>
+  <span class="slide-num" id="slide-num">1 / 8</span>
 </nav>
 
 <script>

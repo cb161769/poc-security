@@ -196,7 +196,7 @@ services:
   # --- ANDROID EMULATOR (Android 34, software renderer) ---
   # Requires: docker compose --profile android-tests up
   android-emulator:
-    image: budtmo/docker-android:emulator_34
+    image: budtmo/docker-android:emulator_14.0
     container_name: android-emulator
     privileged: true           # KVM passthrough on Linux hosts; falls back to swiftshader on Windows/WSL2
     environment:
@@ -225,6 +225,7 @@ services:
     volumes:
       - ./ionic-app/poc-security:/workspace:ro
       - android-apk:/output
+      - ./docs/android-build-reports:/build/android/build/reports
     networks:
       - secure-net
     profiles:
@@ -243,6 +244,7 @@ services:
       MAX_WAIT_SECONDS: "300"
     volumes:
       - android-apk:/apk-input:ro
+      - ./docs/android-test-reports:/reports
     networks:
       - secure-net
     profiles:

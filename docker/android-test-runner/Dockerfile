@@ -3,6 +3,7 @@ FROM mcr.microsoft.com/powershell:7.4-ubuntu-22.04
 RUN apt-get update && apt-get install -y --no-install-recommends \
     android-tools-adb \
     netcat-openbsd \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY run-tests.sh /run-tests.sh

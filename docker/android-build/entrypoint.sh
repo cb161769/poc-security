@@ -45,6 +45,8 @@ keytool -genkeypair -noprompt \
 echo "[android-build] Running Gradle assembleRelease..."
 cd android
 chmod +x gradlew
+# Point local.properties to the Docker SDK (overrides Windows host path)
+echo "sdk.dir=$ANDROID_HOME" > local.properties
 ./gradlew assembleRelease --no-daemon \
   "-Pandroid.injected.signing.store.file=$KEYSTORE" \
   "-Pandroid.injected.signing.store.password=testpass123" \
