@@ -182,16 +182,17 @@ pre .v{color:#3fb950}
     <div class="card hi-green" style="padding:12px 14px">
       <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">✓ Implementado y verificado</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.6">
-        Cifrado extremo a extremo · Autenticación federada · Autorización de negocio vía Odoo ·
-        Protección anti-replay · Binding de clave de cliente · Separación web / mobile
+        Cifrado E2E JWE (respuestas + requests POST) · Auth federada PKCE · AuthZ Odoo · Anti-replay ·
+        Pubkey binding · Separación web/mobile · Validación inputs financieros + modal confirmación ·
+        Rate limiting login cliente · Hardening Android nativo (10 controles) · Ofuscación JS bundle
       </div>
     </div>
     <div class="card hi-yellow" style="padding:12px 14px">
       <div style="font-size:11px;font-weight:700;color:var(--yellow);margin-bottom:6px">⚠ Pendiente para producción</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.6">
         Circuit breaker (Odoo/Keycloak) · Revocación de tokens en tiempo real ·
-        Stores distribuidos en Redis · Cifrado de requests POST (mobile) ·
-        Certificados TLS de CA real · Red interna aislada
+        Stores distribuidos en Redis · Certificate pinning (SHA-256 real) ·
+        Certificados TLS de CA real · Red interna aislada · Play Integrity API
       </div>
     </div>
     <div class="card" style="padding:12px 14px">
@@ -394,43 +395,81 @@ pre .v{color:#3fb950}
 <!-- ══ 5. CONTROLES IMPLEMENTADOS ══ -->
 <div class="slide" id="s4">
   <div class="section-tag">Controles implementados</div>
-  <h2>4 controles clave — implementados y probados</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:14px">Cada control bloquea un vector de ataque diferente, verificado con pruebas automatizadas</p>
+  <h2>8 controles clave — implementados y verificados</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Backend · Android nativo · Angular cliente — cada control bloquea un vector de ataque diferente</p>
 
-  <div class="ctrl-row hi-blue card">
-    <div class="ctrl-icon">🪪</div>
-    <div class="ctrl-body">
-      <div class="ctrl-title">Binding de clave pública (Pubkey Binding)</div>
-      <div class="ctrl-desc">La primera clave pública enviada por un usuario queda registrada. Si un atacante intenta inyectar una clave diferente para descifrar la respuesta, el servidor rechaza la operación con error 403.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;flex:1">
+    <div class="ctrl-row hi-blue card" style="margin-bottom:0">
+      <div class="ctrl-icon">🪪</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">Binding de clave pública (Pubkey Binding)</div>
+        <div class="ctrl-desc">Primera clave del usuario registrada con TTL = JWT exp. Cualquier sustitución → 403. Previene inyección de clave RSA propia para descifrar respuestas.</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Server</span></div>
+      </div>
     </div>
-    <span class="badge b-green">✓ Activo</span>
-  </div>
 
-  <div class="ctrl-row hi-blue card">
-    <div class="ctrl-icon">🔁</div>
-    <div class="ctrl-body">
-      <div class="ctrl-title">Anti-Replay — Clave de idempotencia</div>
-      <div class="ctrl-desc">Cada operación POST requiere una clave única. Si el mismo request se reenvía (ataque de replay), el servidor devuelve la respuesta original sin ejecutar la operación de nuevo, marcándola como duplicada.</div>
+    <div class="ctrl-row hi-blue card" style="margin-bottom:0">
+      <div class="ctrl-icon">🔁</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">Anti-Replay — Clave de idempotencia</div>
+        <div class="ctrl-desc">POST requiere UUID único. Reenvío dentro de 5 min devuelve respuesta original con <code>X-Idempotency-Replayed: true</code> sin re-ejecutar la operación.</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Server</span></div>
+      </div>
     </div>
-    <span class="badge b-green">✓ Activo</span>
-  </div>
 
-  <div class="ctrl-row hi-blue card">
-    <div class="ctrl-icon">🏢</div>
-    <div class="ctrl-body">
-      <div class="ctrl-title">Autorización de negocio en Odoo</div>
-      <div class="ctrl-desc">Tener un token válido no es suficiente. Los 3 servicios verifican que el usuario esté activo en el ERP antes de procesar cualquier operación. Un cliente suspendido en Odoo recibe error 403 aunque tenga JWT válido.</div>
+    <div class="ctrl-row hi-blue card" style="margin-bottom:0">
+      <div class="ctrl-icon">🏢</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">Autorización de negocio en Odoo</div>
+        <div class="ctrl-desc">JWT válido no es suficiente. Los 3 servicios validan <code>active=true</code> en el ERP. Cliente suspendido en Odoo → 403 aunque tenga token válido.</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Server</span></div>
+      </div>
     </div>
-    <span class="badge b-green">✓ Activo</span>
-  </div>
 
-  <div class="ctrl-row hi-blue card">
-    <div class="ctrl-icon">📡</div>
-    <div class="ctrl-body">
-      <div class="ctrl-title">Eliminación de metadatos del servidor</div>
-      <div class="ctrl-desc">Las respuestas no revelan qué tecnología usa el servidor (framework, versión), no generan huellas digitales basadas en el tamaño del payload, y no pueden ser cacheadas por proxies intermedios.</div>
+    <div class="ctrl-row hi-blue card" style="margin-bottom:0">
+      <div class="ctrl-icon">📡</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">Eliminación de metadatos del servidor</div>
+        <div class="ctrl-desc">Sin X-Powered-By · Sin ETag · Cache-Control: no-store · Content-Type: application/jose. No revela framework, versión ni tamaño del payload.</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Server</span></div>
+      </div>
     </div>
-    <span class="badge b-green">✓ Activo</span>
+
+    <div class="ctrl-row card" style="margin-bottom:0;border-color:#bc8cff33;background:#6e40c908">
+      <div class="ctrl-icon">🔐</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">Cifrado bidireccional JWE (requests + respuestas)</div>
+        <div class="ctrl-desc">Requests POST cifrados con RSA-OAEP-256 + A256GCM. Respuestas cifradas con clave del cliente. Independiente de TLS — protege si Kong es comprometido.</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-purple">Mobile + Web</span></div>
+      </div>
+    </div>
+
+    <div class="ctrl-row card" style="margin-bottom:0;border-color:#3fb95033;background:#23863608">
+      <div class="ctrl-icon">✅</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">Validación de inputs financieros + confirmación</div>
+        <div class="ctrl-desc">Monto 0.01–10,000 · regex cuenta ACC-XXXX · whitelist card/ach/wire · memo ≤255. Modal de confirmación antes de cada operación financiera (tab2 + tab3).</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Angular</span></div>
+      </div>
+    </div>
+
+    <div class="ctrl-row card" style="margin-bottom:0;border-color:#d2992233;background:#9e640008">
+      <div class="ctrl-icon">🔒</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">Rate limiting de login + lockout en cliente</div>
+        <div class="ctrl-desc">5 intentos fallidos → lockout 60s con countdown visible. Mitiga fuerza bruta antes de que llegue al backend. Complementa el rate limiting de Kong.</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Angular</span></div>
+      </div>
+    </div>
+
+    <div class="ctrl-row card" style="margin-bottom:0;border-color:#f0883e33;background:#f0883e08">
+      <div class="ctrl-icon">🤖</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">Hardening Android + ofuscación JS bundle</div>
+        <div class="ctrl-desc">FLAG_SECURE · root/Frida detection · ProGuard R8 + dict l/I · Log stripping · network_security_config · javascript-obfuscator (80% strings → Base64) · URLs en atob().</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Android</span><span class="badge b-gray">Bundle</span></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -563,13 +602,11 @@ pre .v{color:#3fb950}
     <div>
       <div style="font-size:10px;color:var(--blue);font-weight:700;margin-bottom:8px;letter-spacing:.06em;text-transform:uppercase">📋 Prioridad media — hardening de infraestructura</div>
       <div class="card hi-blue" style="margin-bottom:8px;padding:12px 14px">
-        <h3>Cifrado de requests POST (canal mobile)</h3>
-        <p>Los bodies de transferencias y pagos viajan en claro sobre TLS. En mobile, TLS puede ser comprometido mediante SSL pinning bypass (Frida). Cifrar el body como JWE con la clave pública del servidor
-        — rotada por <code>key-rotator</code> cada 24h — garantiza confidencialidad real extremo a extremo incluso si TLS cae.</p>
+        <h3>Certificate Pinning (SHA-256 real)</h3>
+        <p>El hardening Android actual bloquea cleartext vía <code>network_security_config</code>, pero no valida el fingerprint del certificado del servidor. En producción, añadir el SHA-256 del cert en <code>network_security_config.xml</code> con <code>&lt;pin-set&gt;</code> previene ataques MitM incluso con certs autofirmados válidos.</p>
         <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-          <span class="badge b-blue" style="font-size:9px">Prioridad: mobile</span>
-          <span class="badge b-gray" style="font-size:9px">Content-Type: application/jose</span>
-          <span class="badge b-gray" style="font-size:9px">key-rotator ya disponible</span>
+          <span class="badge b-blue" style="font-size:9px">Requiere cert SHA-256 real</span>
+          <span class="badge b-gray" style="font-size:9px">network_security_config ya creado</span>
         </div>
       </div>
       <div class="card hi-blue" style="margin-bottom:8px;padding:12px 14px">
@@ -602,6 +639,8 @@ pre .v{color:#3fb950}
       <span class="badge b-gray">A2 · Pubkey Binding</span>
       <span class="badge b-gray">A3 · Anti-Replay</span>
       <span class="badge b-gray">A4 · Odoo AuthZ</span>
+      <span class="badge b-blue">A5 · Android Security</span>
+      <span class="badge b-blue">A6 · JS Obfuscation</span>
     </div>
   </div>
 </div>
@@ -826,13 +865,149 @@ active = Boolean()
   </div>
 </div>
 
+<!-- ══ A5: ANDROID SECURITY ══ -->
+<div class="slide" id="s13">
+  <div class="appendix-badge">A5 · Apéndice técnico</div>
+  <h2>Android Security Hardening — 10 controles nativos</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Implementados en <code>MainActivity.java</code> · <code>AndroidManifest.xml</code> · <code>build.gradle</code> · <code>proguard-rules.pro</code> — sin librerías de terceros</p>
+
+  <div class="grid g3" style="flex:1;gap:9px">
+    <div class="card" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🔍 Runtime checks (Java)</div>
+      <div style="font-size:11px;line-height:1.9">
+        <div style="padding:5px 8px;background:#f8514908;border:1px solid #f8514922;border-radius:6px;margin-bottom:5px">
+          <div style="font-weight:700">Root detection</div>
+          <div style="color:var(--muted);font-size:10.5px">8 rutas su · Build.TAGS=test-keys · 7 paquetes root · ejecución "which su"</div>
+        </div>
+        <div style="padding:5px 8px;background:#f8514908;border:1px solid #f8514922;border-radius:6px;margin-bottom:5px">
+          <div style="font-weight:700">Frida detection</div>
+          <div style="color:var(--muted);font-size:10.5px">4 artefactos en disco + scan <code>/proc/self/maps</code> — frida-agent, gum-js-loop, linjector</div>
+        </div>
+        <div style="padding:5px 8px;background:#f8514908;border:1px solid #f8514922;border-radius:6px">
+          <div style="font-weight:700">Firma APK (signature check)</div>
+          <div style="color:var(--muted);font-size:10.5px">SHA-256 del certificado de firma · API 28+ con fallback API 27</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🖥️ OS · UI · Red</div>
+      <div style="font-size:11px;line-height:1.9">
+        <div style="padding:5px 8px;background:#1f6feb08;border:1px solid #1f6feb22;border-radius:6px;margin-bottom:5px">
+          <div style="font-weight:700">FLAG_SECURE</div>
+          <div style="color:var(--muted);font-size:10.5px">Bloquea capturas de pantalla y grabación de pantalla en la app</div>
+        </div>
+        <div style="padding:5px 8px;background:#1f6feb08;border:1px solid #1f6feb22;border-radius:6px;margin-bottom:5px">
+          <div style="font-weight:700">Tapjacking prevention</div>
+          <div style="color:var(--muted);font-size:10.5px"><code>setFilterTouchesWhenObscured(true)</code> — rechaza taps bajo overlays maliciosos</div>
+        </div>
+        <div style="padding:5px 8px;background:#1f6feb08;border:1px solid #1f6feb22;border-radius:6px;margin-bottom:5px">
+          <div style="font-weight:700">Task hijacking (StrandHogg)</div>
+          <div style="color:var(--muted);font-size:10.5px"><code>android:taskAffinity=""</code> — impide inyección en back stack de actividades</div>
+        </div>
+        <div style="padding:5px 8px;background:#1f6feb08;border:1px solid #1f6feb22;border-radius:6px">
+          <div style="font-weight:700">Clipboard clear en background</div>
+          <div style="color:var(--muted);font-size:10.5px"><code>onPause()</code> limpia portapapeles — evita fuga de datos financieros a otras apps</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">⚙️ Build hardening</div>
+      <div style="font-size:11px;line-height:1.9">
+        <div style="padding:5px 8px;background:#23863608;border:1px solid #23863622;border-radius:6px;margin-bottom:5px">
+          <div style="font-weight:700">ProGuard R8 full mode</div>
+          <div style="color:var(--muted);font-size:10.5px">Dict l/I (64 ids confusables) · log stripping · source attribute removed · -repackageclasses</div>
+        </div>
+        <div style="padding:5px 8px;background:#23863608;border:1px solid #23863622;border-radius:6px;margin-bottom:5px">
+          <div style="font-weight:700">network_security_config</div>
+          <div style="color:var(--muted);font-size:10.5px">cleartext bloqueado globalmente · solo localhost/10.0.2.2 permitidos en debug</div>
+        </div>
+        <div style="padding:5px 8px;background:#23863608;border:1px solid #23863622;border-radius:6px;margin-bottom:5px">
+          <div style="font-weight:700">WebView hardening</div>
+          <div style="color:var(--muted);font-size:10.5px">File URL access off · mixed content blocked · debug disabled · content access off</div>
+        </div>
+        <div style="padding:5px 8px;background:#23863608;border:1px solid #23863622;border-radius:6px">
+          <div style="font-weight:700">allowBackup=false</div>
+          <div style="color:var(--muted);font-size:10.5px">Bloquea ADB backup y backups automáticos de Google — datos no extraíbles</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ A6: JS OBFUSCATION ══ -->
+<div class="slide" id="s14">
+  <div class="appendix-badge">A6 · Apéndice técnico</div>
+  <h2>JavaScript Bundle Obfuscation — 3 capas de protección</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Postbuild automático: <code>npm run build</code> → <code>node scripts/obfuscate-bundle.js</code> — 66 archivos procesados · 2 saltados (runtime + polyfills)</p>
+
+  <div class="grid g3" style="flex:1;gap:9px">
+    <div class="card" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">📦 Capa 1 · javascript-obfuscator v5</div>
+      <pre style="font-size:9.5px;margin-bottom:8px"><span class="c">// Config segura para Angular AOT</span>
+<span class="n">stringArray</span>: <span class="k">true</span>,
+<span class="n">stringArrayEncoding</span>: [<span class="s">'base64'</span>],
+<span class="n">stringArrayThreshold</span>: <span class="v">0.8</span>,  <span class="c">// 80%</span>
+<span class="n">renameGlobals</span>:    <span class="k">false</span>, <span class="c">// DI</span>
+<span class="n">renameProperties</span>: <span class="k">false</span>, <span class="c">// CD</span>
+<span class="n">controlFlowFlattening</span>: <span class="k">false</span>,
+<span class="n">identifierNamesGenerator</span>: <span class="s">'mangled'</span></pre>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <div class="card" style="flex:1;padding:7px 9px;text-align:center;border-color:#6e40c933">
+          <div style="font-size:22px;font-weight:900;color:var(--purple)">80%</div>
+          <div style="font-size:9.5px;color:var(--muted)">strings → array<br>Base64 codificado</div>
+        </div>
+        <div class="card" style="flex:1;padding:7px 9px;text-align:center">
+          <div style="font-size:22px;font-weight:900;color:var(--orange)">+46%</div>
+          <div style="font-size:9.5px;color:var(--muted)">overhead bundle<br>(decoder array)</div>
+        </div>
+      </div>
+      <div style="font-size:10.5px;color:var(--muted)">66 archivos obfuscados · 1717 kB → 2504 kB</div>
+    </div>
+
+    <div class="card" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🔗 Capa 2 · URL encoding (environment.prod.ts)</div>
+      <div style="font-size:10.5px;color:var(--muted);margin-bottom:7px">Todos los endpoints codificados en Base64 en tiempo de compilación — invisibles a grep y strings</div>
+      <pre style="font-size:9.5px;margin-bottom:8px"><span class="c">// Antes (visible)</span>
+mobileApiUrl: <span class="s">'http://localhost:8000/api'</span>
+
+<span class="c">// Después (codificado)</span>
+<span class="k">const</span> d = (s: <span class="n">string</span>) => <span class="n">atob</span>(s)
+mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
+      <div style="padding:6px 9px;background:#1f6feb08;border:1px solid #1f6feb22;border-radius:6px">
+        <div style="font-size:10px;color:var(--blue)"><code>grep -r "api/v1/mobile" www/</code> → 0 resultados</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Los strings ya codificados + stringArray = doble capa de encoding</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🛡️ Capa 3 · Complementos Android</div>
+      <div style="font-size:11px;line-height:1.9">
+        <div style="padding:5px 8px;background:#23863608;border:1px solid #23863622;border-radius:5px;margin-bottom:5px">
+          <div style="font-weight:700;color:var(--green)">WebView debugger desactivado</div>
+          <div style="color:var(--muted);font-size:10.5px"><code>setWebContentsDebuggingEnabled(false)</code> en release — bloquea Chrome DevTools sobre el WebView</div>
+        </div>
+        <div style="padding:5px 8px;background:#23863608;border:1px solid #23863622;border-radius:5px;margin-bottom:5px">
+          <div style="font-weight:700;color:var(--green)">Obfuscation dictionary ProGuard</div>
+          <div style="color:var(--muted);font-size:10.5px">64 identificadores l/I visualmente idénticos en monospace: IIII, lllI, IlIl, IIll…</div>
+        </div>
+        <div style="padding:5px 8px;background:#23863608;border:1px solid #23863622;border-radius:5px">
+          <div style="font-weight:700;color:var(--green)">R8 full mode + Log stripping</div>
+          <div style="color:var(--muted);font-size:10.5px"><code>android.enableR8.fullMode=true</code> · <code>-assumenosideeffects android.util.Log.*</code> — todos los logs eliminados en release build</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /deck -->
 
 <nav class="nav">
   <button class="nav-btn" id="btn-prev" onclick="go(-1)" disabled>← Prev</button>
   <div class="dots" id="dots"></div>
   <button class="nav-btn" id="btn-next" onclick="go(1)">Next →</button>
-  <span class="slide-num" id="slide-num">1 / 13</span>
+  <span class="slide-num" id="slide-num">1 / 15</span>
 </nav>
 
 <script>

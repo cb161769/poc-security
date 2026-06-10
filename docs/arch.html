@@ -339,6 +339,19 @@ tr:last-child td{border-bottom:none}
       <div class="adr-col"><div class="adr-col-label">Trade-off aceptado</div>Kong OSS usa store en memoria para los contadores (no Redis). Reinicio de Kong resetea los contadores. Mitigación: Kong rara vez se reinicia; para producción, Kong Gateway + Redis plugin.</div>
     </div>
   </div>
+
+  <div class="adr">
+    <div class="adr-head">
+      <span class="adr-num">ADR-05</span>
+      <span class="adr-title">javascript-obfuscator (postbuild hook) con stringArray:true — renameGlobals/Properties:false</span>
+      <span class="badge b-green" style="margin-left:auto">Activo</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-col"><div class="adr-col-label">Rationale</div>Sin ofuscación, <code>jadx</code> + <code>strings</code> en el APK expone todos los endpoints API, lógica de validación y textos de error. <code>stringArray+base64</code> mueve el 80% de los string literals a un array codificado — el decompilador ya no puede buscar strings con grep.</div>
+      <div class="adr-col"><div class="adr-col-label">Alternativa descartada</div><code>renameGlobals:true</code> y <code>renameProperties:true</code>. Descartadas porque Angular AOT resuelve el DI por nombre de propiedad en runtime; renombrarlos rompe la inyección de dependencias silenciosamente en producción.</div>
+      <div class="adr-col"><div class="adr-col-label">Trade-off aceptado</div>+46% de tamaño del bundle (decoder array Base64). Impacto inicial de carga ~200ms en conexión 3G. Aceptable porque la ofuscación es una capa complementaria — no reemplaza el cifrado JWE ni los controles del servidor.</div>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════
@@ -579,21 +592,85 @@ res.send = <span class="k">function</span>(body) &#123;
         <div style="padding:5px 8px;background:#23863608;border:1px solid #23863633;border-radius:5px;margin-bottom:4px">
           <span style="color:var(--green)">Capa 4 — Binding:</span> Pubkey TOFU · anti-replay idempotency
         </div>
-        <div style="padding:5px 8px;background:#06b6d408;border:1px solid #06b6d433;border-radius:5px">
+        <div style="padding:5px 8px;background:#06b6d408;border:1px solid #06b6d433;border-radius:5px;margin-bottom:4px">
           <span style="color:var(--teal)">Capa 5 — Payload:</span> JWE E2E · no-store · sin metadatos
+        </div>
+        <div style="padding:5px 8px;background:#3fb95008;border:1px solid #3fb95033;border-radius:5px;margin-bottom:4px">
+          <span style="color:var(--green)">Capa 6 — Cliente:</span> Input validation · modal confirm · rate limiting login
+        </div>
+        <div style="padding:5px 8px;background:#f0883e08;border:1px solid #f0883e33;border-radius:5px">
+          <span style="color:var(--orange)">Capa 7 — Dispositivo:</span> FLAG_SECURE · root detection · Frida detection · ProGuard R8
         </div>
       </div>
       <div style="font-size:10.5px;color:var(--muted);margin-top:6px">
-        Un atacante necesita comprometer <strong>todas las capas</strong> simultáneamente para obtener datos en claro.
+        Un atacante necesita comprometer <strong>todas las 7 capas</strong> simultáneamente para obtener datos en claro.
       </div>
     </div>
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════
-     SLIDE 6: GAPS DE PRODUCCIÓN
+     SLIDE 6: HARDENING MÓVIL Y CLIENTE
 ══════════════════════════════════════════════════════ -->
 <div class="slide" id="s5">
+  <div class="section-tag">Seguridad en el cliente</div>
+  <h2>Hardening móvil y cliente — 3 bloques · 20+ controles</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;flex:1">
+
+    <div class="card" style="padding:12px 14px;border-color:#f8514933">
+      <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🤖 Android nativo (MainActivity)</div>
+      <div style="font-size:11px;line-height:1.85;color:var(--muted)">
+        <div><span style="color:var(--text)">FLAG_SECURE</span> — screenshots y grabación bloqueados</div>
+        <div><span style="color:var(--text)">Root detection</span> — su paths · test-keys · paquetes root</div>
+        <div><span style="color:var(--text)">Frida detection</span> — /proc/self/maps + artefactos disco</div>
+        <div><span style="color:var(--text)">APK signature check</span> — SHA-256 certificado de firma</div>
+        <div><span style="color:var(--text)">Tapjacking</span> — filterTouchesWhenObscured</div>
+        <div><span style="color:var(--text)">Task hijacking</span> — taskAffinity="" (StrandHogg)</div>
+        <div><span style="color:var(--text)">WebView hardening</span> — file access off · mixed content blocked</div>
+        <div><span style="color:var(--text)">Clipboard clear</span> — limpieza en onPause()</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:12px 14px;border-color:#6e40c933">
+      <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">📦 JS bundle (postbuild hook)</div>
+      <div style="font-size:11px;line-height:1.85;color:var(--muted)">
+        <div><span style="color:var(--text)">javascript-obfuscator v5</span> — 80% strings → Base64 array</div>
+        <div><span style="color:var(--text)">URL encoding</span> — endpoints en atob() en environment.prod.ts</div>
+        <div><span style="color:var(--text)">Mangled identifiers</span> — nombres cortos (a, b, aa…)</div>
+        <div><span style="color:var(--text)">ProGuard obf. dict</span> — 64 ids l/I visualmente idénticos</div>
+        <div><span style="color:var(--text)">R8 full mode</span> — dead-code elimination agresivo</div>
+        <div><span style="color:var(--text)">Log stripping</span> — -assumenosideeffects Log.* en release</div>
+        <div><span style="color:var(--text)">Source map off</span> — sin mapas de fuente en producción</div>
+      </div>
+      <div style="margin-top:6px;padding:4px 8px;background:#6e40c908;border:1px solid #6e40c933;border-radius:5px">
+        <div style="font-size:10px;color:var(--purple)"><code>grep "api/v1" www/</code> → 0 coincidencias</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:12px 14px;border-color:#1f6feb33">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">⚡ Angular / Ionic (cliente)</div>
+      <div style="font-size:11px;line-height:1.85;color:var(--muted)">
+        <div><span style="color:var(--text)">Input validation</span> — monto/cuenta/método/memo (tab2+tab3)</div>
+        <div><span style="color:var(--text)">Confirmation modal</span> — AlertController antes de ops financieras</div>
+        <div><span style="color:var(--text)">Login rate limiting</span> — 5 intentos → lockout 60s · countdown</div>
+        <div><span style="color:var(--text)">Error mapping</span> — mensajes genéricos; sin detalles del servidor</div>
+        <div><span style="color:var(--text)">CSP hardening</span> — base-uri · form-action · ws:// permitidos</div>
+        <div><span style="color:var(--text)">allowNavigation: []</span> — sin navegación externa (capacitor.config)</div>
+        <div><span style="color:var(--text)">setTimeout preciso</span> — reemplaza interval(1000); expiry exacto</div>
+      </div>
+      <div style="margin-top:6px;padding:4px 8px;background:#1f6feb08;border:1px solid #1f6feb22;border-radius:5px">
+        <div style="font-size:10px;color:var(--blue)">network_security_config: cleartext bloqueado globalmente</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SLIDE 7: GAPS DE PRODUCCIÓN
+══════════════════════════════════════════════════════ -->
+<div class="slide" id="s6">
   <div class="section-tag">Producción</div>
   <h2>Gap analysis — producción vs. POC</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Clasificado por riesgo de seguridad y esfuerzo de implementación. Los bloqueantes deben resolverse antes del primer deploy</p>
@@ -668,6 +745,24 @@ res.send = <span class="k">function</span>(body) &#123;
           <div class="gap-meta"><span class="effort-M">Esfuerzo M</span> <span class="badge b-yellow">Secretos en disco</span> <span class="badge b-gray">HashiCorp Vault · AWS Secrets Manager</span></div>
         </div>
       </div>
+
+      <div class="gap-row">
+        <div style="font-size:20px;flex-shrink:0;width:28px">📌</div>
+        <div class="gap-body">
+          <div class="gap-title">Certificate Pinning (SHA-256 real)</div>
+          <div class="gap-desc">network_security_config bloquea cleartext pero no valida el fingerprint del servidor. Sin pinning, un MitM con cert válido de CA pública no es detectado por el cliente Android.</div>
+          <div class="gap-meta"><span class="effort-S">Esfuerzo S</span> <span class="badge b-yellow">Riesgo MitM avanzado</span> <span class="badge b-gray">network_security_config pin-set</span></div>
+        </div>
+      </div>
+
+      <div class="gap-row">
+        <div style="font-size:20px;flex-shrink:0;width:28px">🏪</div>
+        <div class="gap-body">
+          <div class="gap-title">Play Integrity API (device attestation)</div>
+          <div class="gap-desc">La detección de root actual es heurística — puede bypassearse con Magisk DenyList. Play Integrity API provee attestation firmada por Google que verifica integridad del dispositivo y del app en el servidor.</div>
+          <div class="gap-meta"><span class="effort-M">Esfuerzo M</span> <span class="badge b-yellow">Requiere Google Play</span> <span class="badge b-gray">PlayIntegrityManager · server-side verify</span></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -678,7 +773,7 @@ res.send = <span class="k">function</span>(body) &#123;
   <button class="nav-btn" id="btn-prev" onclick="go(-1)" disabled>← Prev</button>
   <div class="dots" id="dots"></div>
   <button class="nav-btn" id="btn-next" onclick="go(1)">Next →</button>
-  <span class="slide-num" id="slide-num">1 / 6</span>
+  <span class="slide-num" id="slide-num">1 / 7</span>
 </nav>
 
 <script>
@@ -688,6 +783,7 @@ const TITLES = [
   'Cadena de middlewares',
   'Estado y escalabilidad',
   'Patrones de seguridad',
+  'Hardening móvil y cliente',
   'Gap analysis — producción',
 ];
 const slides = document.querySelectorAll('.slide');
