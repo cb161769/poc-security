@@ -1516,6 +1516,153 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════
+     APÉNDICE: COMPARATIVA PRODUCCIÓN ACTUAL vs POC
+══════════════════════════════════════════════════════ -->
+<div class="slide" id="s-compare">
+  <div class="section-tag">Análisis comparativo</div>
+  <h2>Producción actual vs. POC — Análisis de brecha criptográfica</h2>
+  <p style="color:var(--muted);font-size:11.5px;margin-bottom:10px">Basado en análisis del tráfico real capturado. Cada fila es un vector de riesgo independiente.</p>
+
+  <div style="overflow-y:auto;flex:1">
+  <table style="width:100%;border-collapse:collapse;font-size:11px">
+    <thead>
+      <tr style="border-bottom:2px solid #30363d">
+        <th style="text-align:left;padding:7px 10px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;width:18%">Dimensión</th>
+        <th style="text-align:left;padding:7px 10px;color:#f85149;font-size:10px;text-transform:uppercase;letter-spacing:.06em;width:36%">⚠ Producción actual</th>
+        <th style="text-align:left;padding:7px 10px;color:#3fb950;font-size:10px;text-transform:uppercase;letter-spacing:.06em;width:36%">✓ Este POC</th>
+        <th style="text-align:left;padding:7px 10px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;width:10%">Riesgo</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <tr style="border-bottom:1px solid #21262d;background:#f8514908">
+        <td style="padding:8px 10px;font-weight:700;color:var(--text)">Algoritmo JWT</td>
+        <td style="padding:8px 10px;color:#f85149">
+          <code style="background:#f8514920;padding:2px 5px;border-radius:3px">HS256</code> — clave simétrica compartida.<br>
+          <span style="color:var(--muted);font-size:10px">Quien tenga el secreto del servidor puede forjar cualquier token. No hay separación cliente/servidor.</span>
+        </td>
+        <td style="padding:8px 10px;color:#3fb950">
+          <code style="background:#3fb95020;padding:2px 5px;border-radius:3px">RS256</code> — par asimétrico RSA.<br>
+          <span style="color:var(--muted);font-size:10px">Clave privada solo en Keycloak. Clave pública en JWKS verificable por cualquier servicio. Imposible forjar sin la privada.</span>
+        </td>
+        <td style="padding:8px 10px"><span style="background:#5a1d1d;color:#f85149;padding:2px 6px;border-radius:3px;font-size:9.5px;font-weight:700">CRÍTICO</span></td>
+      </tr>
+
+      <tr style="border-bottom:1px solid #21262d;background:#f8514908">
+        <td style="padding:8px 10px;font-weight:700;color:var(--text)">Vida del token</td>
+        <td style="padding:8px 10px;color:#f85149">
+          <code style="background:#f8514920;padding:2px 5px;border-radius:3px">1,096 días</code> (3 años).<br>
+          <span style="color:var(--muted);font-size:10px">Token emitido 2022-06-14 · exp 2025-06-14 — ya vencido, pero el servidor lo acepta. Sin rotación, sin revocación.</span>
+        </td>
+        <td style="padding:8px 10px;color:#3fb950">
+          <code style="background:#3fb95020;padding:2px 5px;border-radius:3px">5 minutos</code> (300 s).<br>
+          <span style="color:var(--muted);font-size:10px">PKCE flow — token emitido por Keycloak en cada sesión. Ventana mínima de exposición. Expiración validada criptográficamente.</span>
+        </td>
+        <td style="padding:8px 10px"><span style="background:#5a1d1d;color:#f85149;padding:2px 6px;border-radius:3px;font-size:9.5px;font-weight:700">CRÍTICO</span></td>
+      </tr>
+
+      <tr style="border-bottom:1px solid #21262d;background:#9e640008">
+        <td style="padding:8px 10px;font-weight:700;color:var(--text)">Cifrado de payload</td>
+        <td style="padding:8px 10px;color:var(--yellow)">
+          <code style="background:#d2992220;padding:2px 5px;border-radius:3px">box + nonce</code> — AES-CBC clave compartida.<br>
+          <span style="color:var(--muted);font-size:10px">Esquema propietario. Clave AES fija en servidor. Sin forward secrecy — comprometer la clave expone todo el historial.</span>
+        </td>
+        <td style="padding:8px 10px;color:#3fb950">
+          <code style="background:#3fb95020;padding:2px 5px;border-radius:3px">JWE RSA-OAEP-256 + A256GCM</code>.<br>
+          <span style="color:var(--muted);font-size:10px">RFC 7516. Clave AES efímera por sesión cifrada con RSA público del cliente. AEAD — autenticidad + confidencialidad. Estándar auditable.</span>
+        </td>
+        <td style="padding:8px 10px"><span style="background:#3d2e00;color:#d29922;padding:2px 6px;border-radius:3px;font-size:9.5px;font-weight:700">ALTO</span></td>
+      </tr>
+
+      <tr style="border-bottom:1px solid #21262d">
+        <td style="padding:8px 10px;font-weight:700;color:var(--text)">Separación de canales</td>
+        <td style="padding:8px 10px;color:var(--yellow)">
+          <code style="background:#d2992220;padding:2px 5px;border-radius:3px">channel: IB-WEB</code> — header no firmado.<br>
+          <span style="color:var(--muted);font-size:10px">Cualquier cliente puede enviar un header diferente. No hay binding criptográfico del token al canal.</span>
+        </td>
+        <td style="padding:8px 10px;color:#3fb950">
+          <code style="background:#3fb95020;padding:2px 5px;border-radius:3px">claim "aud" + realms separados</code>.<br>
+          <span style="color:var(--muted);font-size:10px">web-realm / mobile-realm — audiencias distintas firmadas en el JWT. Token web rechazado en /mobile/** con 401. Probado en vivo.</span>
+        </td>
+        <td style="padding:8px 10px"><span style="background:#3d2e00;color:#d29922;padding:2px 6px;border-radius:3px;font-size:9.5px;font-weight:700">ALTO</span></td>
+      </tr>
+
+      <tr style="border-bottom:1px solid #21262d">
+        <td style="padding:8px 10px;font-weight:700;color:var(--text)">Proveedor de identidad</td>
+        <td style="padding:8px 10px;color:var(--yellow)">
+          <code style="background:#d2992220;padding:2px 5px;border-radius:3px">Custom / sin estándar</code>.<br>
+          <span style="color:var(--muted);font-size:10px">Emisor: string opaco. Sin JWKS, sin discovery endpoint, sin rotación de claves. Auditoría de tokens imposible externamente.</span>
+        </td>
+        <td style="padding:8px 10px;color:#3fb950">
+          <code style="background:#3fb95020;padding:2px 5px;border-radius:3px">Keycloak 26 · OpenID Connect</code>.<br>
+          <span style="color:var(--muted);font-size:10px">JWKS públicos — cualquier servicio puede verificar sin secreto compartido. Rotación de claves automática. PKCE, roles, audience mappers.</span>
+        </td>
+        <td style="padding:8px 10px"><span style="background:#3d2e00;color:#d29922;padding:2px 6px;border-radius:3px;font-size:9.5px;font-weight:700">ALTO</span></td>
+      </tr>
+
+      <tr style="border-bottom:1px solid #21262d">
+        <td style="padding:8px 10px;font-weight:700;color:var(--text)">Anti-Replay</td>
+        <td style="padding:8px 10px;color:#58a6ff">
+          <code style="background:#1f6feb20;padding:2px 5px;border-radius:3px">x-nonce + x-signature + x-timestamp</code>.<br>
+          <span style="color:var(--muted);font-size:10px">Firma HMAC del request — enfoque correcto. Depende de que el servidor rechace nonces repetidos y valide el timestamp.</span>
+        </td>
+        <td style="padding:8px 10px;color:#3fb950">
+          <code style="background:#3fb95020;padding:2px 5px;border-radius:3px">X-Idempotency-Key + pubkey binding</code>.<br>
+          <span style="color:var(--muted);font-size:10px">UUID único por POST — replay → respuesta cacheada con X-Idempotency-Replayed. Pubkey binding: clave diferente → 403.</span>
+        </td>
+        <td style="padding:8px 10px"><span style="background:#102c1a;color:#3fb950;padding:2px 6px;border-radius:3px;font-size:9.5px;font-weight:700">SIMILAR</span></td>
+      </tr>
+
+      <tr style="border-bottom:1px solid #21262d">
+        <td style="padding:8px 10px;font-weight:700;color:var(--text)">Validación exp</td>
+        <td style="padding:8px 10px;color:#f85149">
+          Token expiró en <code style="background:#f8514920;padding:2px 5px;border-radius:3px">2025-06-14</code> — aún aceptado.<br>
+          <span style="color:var(--muted);font-size:10px">El servidor no valida el claim <code>exp</code>. Un token robado es válido indefinidamente.</span>
+        </td>
+        <td style="padding:8px 10px;color:#3fb950">
+          <code style="background:#3fb95020;padding:2px 5px;border-radius:3px">exp validado con clockTolerance: 30s</code>.<br>
+          <span style="color:var(--muted);font-size:10px">jwt.verify() rechaza tokens expirados. TTL de 5 min — ventana mínima para robo y uso.</span>
+        </td>
+        <td style="padding:8px 10px"><span style="background:#5a1d1d;color:#f85149;padding:2px 6px;border-radius:3px;font-size:9.5px;font-weight:700">CRÍTICO</span></td>
+      </tr>
+
+      <tr>
+        <td style="padding:8px 10px;font-weight:700;color:var(--text)">Autorización de negocio</td>
+        <td style="padding:8px 10px;color:var(--muted)">
+          <code style="background:#30363d;padding:2px 5px;border-radius:3px">No visible en tráfico</code>.<br>
+          <span style="color:var(--muted);font-size:10px">No se observa validación de estado del cliente en el ERP (activo/inactivo). El token es suficiente para operar.</span>
+        </td>
+        <td style="padding:8px 10px;color:#3fb950">
+          <code style="background:#3fb95020;padding:2px 5px;border-radius:3px">Odoo AuthZ en los 3 servicios</code>.<br>
+          <span style="color:var(--muted);font-size:10px">JWT válido no basta — consulta active=true en x_api_clientes. Cliente suspendido → 403 incluso con token vigente.</span>
+        </td>
+        <td style="padding:8px 10px"><span style="background:#3d2e00;color:#d29922;padding:2px 6px;border-radius:3px;font-size:9.5px;font-weight:700">ALTO</span></td>
+      </tr>
+
+    </tbody>
+  </table>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
+    <div style="padding:8px 12px;background:#5a1d1d;border:1px solid #f8514940;border-radius:8px;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:#f85149">3</div>
+      <div style="font-size:10px;color:#f85149;font-weight:700">hallazgos CRÍTICOS</div>
+      <div style="font-size:9.5px;color:var(--muted);margin-top:2px">HS256 · exp ignorado · token 3 años</div>
+    </div>
+    <div style="padding:8px 12px;background:#3d2e00;border:1px solid #d2992240;border-radius:8px;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:#d29922">4</div>
+      <div style="font-size:10px;color:#d29922;font-weight:700">hallazgos ALTOS</div>
+      <div style="font-size:9.5px;color:var(--muted);margin-top:2px">AES compartido · canal sin binding · IdP custom · sin AuthZ ERP</div>
+    </div>
+    <div style="padding:8px 12px;background:#102c1a;border:1px solid #3fb95040;border-radius:8px;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:#3fb950">1</div>
+      <div style="font-size:10px;color:#3fb950;font-weight:700">punto SIMILAR</div>
+      <div style="font-size:9.5px;color:var(--muted);margin-top:2px">Anti-replay: nonce + firma HMAC</div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /deck -->
 
 <nav class="nav">
