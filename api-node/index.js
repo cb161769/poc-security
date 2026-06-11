@@ -18,14 +18,18 @@ const KEYCLOAK_BASE = process.env.KEYCLOAK_BASE || 'http://keycloak:8080';
 
 const REALMS = {
   web: {
-    issuer:  process.env.WEB_REALM_ISSUER  || 'http://localhost:8080/realms/web-realm',
-    jwksUri: process.env.WEB_REALM_JWKS   || `${KEYCLOAK_BASE}/realms/web-realm/protocol/openid-connect/certs`,
-    audience: 'web-api',
+    issuer:    process.env.WEB_REALM_ISSUER  || 'http://localhost:8080/realms/web-realm',
+    jwksUri:   process.env.WEB_REALM_JWKS   || `${KEYCLOAK_BASE}/realms/web-realm/protocol/openid-connect/certs`,
+    audience:  'web-api',
+    realmName: 'web-realm',
+    clientId:  'web-app-client',
   },
   mobile: {
-    issuer:  process.env.MOBILE_REALM_ISSUER  || 'http://localhost:8080/realms/mobile-realm',
-    jwksUri: process.env.MOBILE_REALM_JWKS   || `${KEYCLOAK_BASE}/realms/mobile-realm/protocol/openid-connect/certs`,
-    audience: 'mobile-api',
+    issuer:    process.env.MOBILE_REALM_ISSUER  || 'http://localhost:8080/realms/mobile-realm',
+    jwksUri:   process.env.MOBILE_REALM_JWKS   || `${KEYCLOAK_BASE}/realms/mobile-realm/protocol/openid-connect/certs`,
+    audience:  'mobile-api',
+    realmName: 'mobile-realm',
+    clientId:  'mobile-app-client',
   },
 };
 
@@ -118,11 +122,12 @@ async function validateJWT(req, res, next) {
 
       req.channel = channel;
       req.jwt = {
-        sub:       decoded.sub,
-        email:     decoded.email,
-        roles:     decoded.realm_access?.roles || [],
+        sub:      decoded.sub,
+        username: decoded.preferred_username,
+        email:    decoded.email,
+        roles:    decoded.realm_access?.roles || [],
         client_id: decoded.azp,
-        exp:       decoded.exp,
+        exp:      decoded.exp,
       };
 
       next();
@@ -224,6 +229,80 @@ app.post('/internal/validate-user', validateJWT, async (req, res) => {
     }
   } catch {
     res.status(500).json({ status: 'error', message: 'Error de conexión con Odoo' });
+  }
+});
+
+/* ================================
+   CHANGE PASSWORD
+   1. Re-autentica con contraseña actual → verifica que es correcta
+   2. Obtiene admin token del master realm
+   3. Admin API: PUT /admin/realms/{realm}/users/{sub}/reset-password
+================================ */
+const KEYCLOAK_ADMIN_USER = process.env.KEYCLOAK_ADMIN_USER || 'admin';
+const KEYCLOAK_ADMIN_PASS = process.env.KEYCLOAK_ADMIN_PASS || 'admin';
+
+app.post('/change-password', validateJWT, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword)
+    return res.status(400).json({ error: 'currentPassword y newPassword son requeridos' });
+  if (newPassword.length < 8)
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
+  if (currentPassword === newPassword)
+    return res.status(400).json({ error: 'La nueva contraseña debe ser diferente a la actual' });
+
+  const realm = REALMS[req.channel];
+  const tokenUrl = `${KEYCLOAK_BASE}/realms/${realm.realmName}/protocol/openid-connect/token`;
+
+  // Paso 1: re-autenticar con la contraseña actual para verificarla
+  try {
+    await axios.post(
+      tokenUrl,
+      new URLSearchParams({
+        client_id:  realm.clientId,
+        grant_type: 'password',
+        username:   req.jwt.username,
+        password:   currentPassword,
+      }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+  } catch (err) {
+    if (err.response?.status === 401)
+      return res.status(400).json({ error: 'Contraseña actual incorrecta' });
+    console.error('[change-password] re-auth error:', err.response?.data || err.message);
+    return res.status(502).json({ error: 'Error verificando credenciales' });
+  }
+
+  // Paso 2: obtener admin token del master realm
+  let adminToken;
+  try {
+    const adminResp = await axios.post(
+      `${KEYCLOAK_BASE}/realms/master/protocol/openid-connect/token`,
+      new URLSearchParams({
+        client_id:  'admin-cli',
+        grant_type: 'password',
+        username:   KEYCLOAK_ADMIN_USER,
+        password:   KEYCLOAK_ADMIN_PASS,
+      }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+    adminToken = adminResp.data.access_token;
+  } catch (err) {
+    console.error('[change-password] admin token error:', err.response?.data || err.message);
+    return res.status(500).json({ error: 'Error interno al actualizar contraseña' });
+  }
+
+  // Paso 3: admin API reset-password — el sub del JWT es el userId de Keycloak
+  try {
+    await axios.put(
+      `${KEYCLOAK_BASE}/admin/realms/${realm.realmName}/users/${req.jwt.sub}/reset-password`,
+      { type: 'password', value: newPassword, temporary: false },
+      { headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[change-password] reset-password error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Error actualizando contraseña' });
   }
 });
 

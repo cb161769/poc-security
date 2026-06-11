@@ -90,10 +90,85 @@
       </ion-card-content>
     </ion-card>
 
-    <ion-button expand="block" [disabled]="loading" (click)="loadData()" [color]="channelColor">
-      <ion-spinner *ngIf="loading" name="crescent" slot="start"></ion-spinner>
-      Solicitar datos cifrados (JWE)
-    </ion-button>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <ion-button expand="block" style="flex:1" [disabled]="loading" (click)="loadData()" [color]="channelColor">
+        <ion-spinner *ngIf="loading" name="crescent" slot="start"></ion-spinner>
+        Solicitar datos cifrados (JWE)
+      </ion-button>
+      <ion-button expand="block" style="flex:0 0 auto" fill="outline" [color]="channelColor" (click)="toggleChangePwd()">
+        <ion-icon name="key-outline" slot="start"></ion-icon>
+        {{ showChangePwd ? 'Cancelar' : 'Cambiar contraseña' }}
+      </ion-button>
+    </div>
+
+    <!-- CAMBIO DE CONTRASEÑA -->
+    <ion-card *ngIf="showChangePwd" class="ion-margin-top">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="key-outline" [color]="channelColor"></ion-icon>
+          Cambiar contraseña
+        </ion-card-title>
+        <ion-card-subtitle>La nueva contraseña se aplica en Keycloak inmediatamente</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+
+        <ion-item>
+          <ion-label position="floating">Contraseña actual</ion-label>
+          <ion-input
+            [(ngModel)]="currentPwd"
+            type="password"
+            autocomplete="current-password"
+            (keyup.enter)="changePassword()">
+          </ion-input>
+        </ion-item>
+
+        <ion-item class="ion-margin-top">
+          <ion-label position="floating">Nueva contraseña</ion-label>
+          <ion-input
+            [(ngModel)]="newPwd"
+            type="password"
+            autocomplete="new-password"
+            (keyup.enter)="changePassword()">
+          </ion-input>
+        </ion-item>
+        <ion-note *ngIf="newPwd && newPwd.length < 8" color="warning" style="font-size:11px;padding:4px 16px;display:block">
+          Mínimo 8 caracteres
+        </ion-note>
+
+        <ion-item class="ion-margin-top">
+          <ion-label position="floating">Confirmar nueva contraseña</ion-label>
+          <ion-input
+            [(ngModel)]="confirmPwd"
+            type="password"
+            autocomplete="new-password"
+            (keyup.enter)="changePassword()">
+          </ion-input>
+        </ion-item>
+        <ion-note *ngIf="confirmPwd && newPwd !== confirmPwd" color="danger" style="font-size:11px;padding:4px 16px;display:block">
+          Las contraseñas no coinciden
+        </ion-note>
+
+        <ion-button
+          expand="block"
+          class="ion-margin-top"
+          [disabled]="changePwdLoading"
+          (click)="changePassword()"
+          [color]="channelColor">
+          <ion-spinner *ngIf="changePwdLoading" name="crescent" slot="start"></ion-spinner>
+          Actualizar contraseña
+        </ion-button>
+
+        <ion-text color="danger" *ngIf="changePwdError">
+          <p class="ion-text-center ion-margin-top">{{ changePwdError }}</p>
+        </ion-text>
+
+        <ion-item lines="none" *ngIf="changePwdSuccess" class="ion-margin-top" style="background:#1a2e1a;border-radius:8px">
+          <ion-icon name="checkmark-circle-outline" slot="start" color="success"></ion-icon>
+          <ion-label color="success">Contraseña actualizada correctamente</ion-label>
+        </ion-item>
+
+      </ion-card-content>
+    </ion-card>
 
     <ion-text color="danger" *ngIf="error">
       <p class="ion-text-center ion-margin-top">{{ error }}</p>

@@ -320,6 +320,7 @@ npm start
    - Muestra el canal detectado (Web/Mobile), el reino y la estrategia JWE
    - Timer de expiración de sesión con alerta automática
    - Botón "Solicitar datos cifrados" para probar el endpoint de identidad
+   - Botón "Cambiar contraseña" → formulario inline con validaciones en tiempo real; el backend verifica la contraseña actual via re-auth Keycloak antes de aplicar el cambio
 
 2. **Tab "Transferencias" 💸** → (requiere login)
    - Carga la lista de transferencias recientes (JWE descifrado)
@@ -528,6 +529,7 @@ Cubre:
 - 6 flujos JWE (3 servicios × 2 canales)
 - 5 rechazos de seguridad (cross-channel, sin token, firma inválida)
 - 4 endpoints POST (crear transferencia/pago por canal)
+- Change-password: 8 casos (sin token, contraseña incorrecta, validaciones, cambio exitoso, verificación en Keycloak, reversión)
 
 ### Suite de runtime debugging (Playwright)
 
@@ -584,6 +586,8 @@ npm run test:runtime
 | `POST /api/v1/web/payments` | payments-service | web | 60/min |
 | `GET /api/v1/mobile/payments` | payments-service | mobile | 30/min |
 | `POST /api/v1/mobile/payments` | payments-service | mobile | 30/min |
+| `POST /api/v1/web/change-password` | api-node | web | 60/min |
+| `POST /api/v1/mobile/change-password` | api-node | mobile | 30/min |
 
 **Headers requeridos en todas las peticiones:**
 ```
@@ -633,11 +637,11 @@ poc-security/
 │   └── poc-security/      # App Ionic/Angular (web + mobile)
 │       └── src/app/
 │           ├── services/
-│           │   ├── auth.service.ts      # Login Keycloak + JWT expiry
+│           │   ├── auth.service.ts      # Login Keycloak + JWT expiry + changePassword()
 │           │   ├── api.service.ts       # Llamadas JWE a los servicios
 │           │   ├── crypto.service.ts    # WebCrypto RSA-OAEP + compactDecrypt
 │           │   └── platform.service.ts  # Detección web vs Capacitor
-│           ├── tab1/     # Login + Identity + Timer de sesión
+│           ├── tab1/     # Login + Identity + Timer de sesión + Cambio de contraseña
 │           ├── tab2/     # Transferencias
 │           └── tab3/     # Pagos
 ├── odoo-custom-addons/
@@ -715,6 +719,7 @@ bash scripts/setup.sh         # Volver a configurar
 |------|-----|------------|
 | Credenciales DB | Hardcodeadas en docker-compose | Docker Secrets / Vault |
 | Keycloak admin | `admin/admin` | Contraseña fuerte + MFA |
+| Keycloak admin-cli (change-password) | Credenciales del POC en `api-node` env vars | `KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASS` en Vault |
 | `secure-net` | `internal: false` | `internal: true` |
 | Certificados | Autofirmados | Let's Encrypt / CA corporativa |
 | Logging | Console stdout | ELK / Loki estructurado |

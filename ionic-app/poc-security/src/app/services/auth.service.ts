@@ -64,6 +64,23 @@ export class AuthService {
     return !!this.expiresAt && Date.now() >= this.expiresAt;
   }
 
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const apiBase = this.channel === 'web'
+      ? environment.webApiUrl
+      : environment.mobileApiUrl;
+    await firstValueFrom(
+      this.http.post(
+        `${apiBase}/change-password`,
+        { currentPassword, newPassword },
+        { headers: new HttpHeaders({
+            Authorization: `Bearer ${this.token}`,
+            'Content-Type': 'application/json',
+          })
+        }
+      )
+    );
+  }
+
   logout(): void {
     this.token = null;
     this.expiresAt = null;

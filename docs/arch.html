@@ -596,7 +596,7 @@ res.send = <span class="k">function</span>(body) &#123;
           <span style="color:var(--teal)">Capa 5 — Payload:</span> JWE E2E · no-store · sin metadatos
         </div>
         <div style="padding:5px 8px;background:#3fb95008;border:1px solid #3fb95033;border-radius:5px;margin-bottom:4px">
-          <span style="color:var(--green)">Capa 6 — Cliente:</span> Input validation · modal confirm · rate limiting login
+          <span style="color:var(--green)">Capa 6 — Cliente:</span> Input validation · modal confirm · rate limiting login · cambio contraseña (backend-verified)
         </div>
         <div style="padding:5px 8px;background:#f0883e08;border:1px solid #f0883e33;border-radius:5px">
           <span style="color:var(--orange)">Capa 7 — Dispositivo:</span> FLAG_SECURE · root/Frida detection · JDWP block · ProGuard R8 · MASVS v2 · 30 fases · 26 Pass / 0 Fail / 9 Warn
@@ -665,6 +665,7 @@ res.send = <span class="k">function</span>(body) &#123;
         <div><span style="color:var(--text)">CSP hardening</span> — base-uri · form-action · ws:// permitidos</div>
         <div><span style="color:var(--text)">allowNavigation: []</span> — sin navegación externa (capacitor.config)</div>
         <div><span style="color:var(--text)">setTimeout preciso</span> — reemplaza interval(1000); expiry exacto</div>
+        <div><span style="color:var(--text)">Cambio de contraseña</span> — re-auth + Admin API · verificación server-side obligatoria</div>
       </div>
       <div style="margin-top:6px;padding:4px 8px;background:#1f6feb08;border:1px solid #1f6feb22;border-radius:5px">
         <div style="font-size:10px;color:var(--blue)">network_security_config: cleartext bloqueado globalmente</div>

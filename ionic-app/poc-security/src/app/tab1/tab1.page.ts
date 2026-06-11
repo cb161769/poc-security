@@ -26,6 +26,15 @@ export class Tab1Page implements OnInit, OnDestroy {
   private loginAttempts = 0;
   private lockoutUntil = 0;
 
+  // Change password
+  showChangePwd = false;
+  currentPwd = '';
+  newPwd = '';
+  confirmPwd = '';
+  changePwdLoading = false;
+  changePwdError: string | null = null;
+  changePwdSuccess = false;
+
   constructor(
     public auth: AuthService,
     private api: ApiService,
@@ -117,6 +126,46 @@ export class Tab1Page implements OnInit, OnDestroy {
     }
   }
 
+  toggleChangePwd() {
+    this.showChangePwd = !this.showChangePwd;
+    this.currentPwd = '';
+    this.newPwd = '';
+    this.confirmPwd = '';
+    this.changePwdError = null;
+    this.changePwdSuccess = false;
+  }
+
+  private validateChangePwd(): string | null {
+    if (!this.currentPwd) return 'Ingresa tu contraseña actual';
+    if (!this.newPwd || this.newPwd.length < 8) return 'La nueva contraseña debe tener al menos 8 caracteres';
+    if (this.newPwd === this.currentPwd) return 'La nueva contraseña debe ser diferente a la actual';
+    if (this.newPwd !== this.confirmPwd) return 'Las contraseñas no coinciden';
+    return null;
+  }
+
+  async changePassword() {
+    const err = this.validateChangePwd();
+    if (err) { this.changePwdError = err; return; }
+
+    this.changePwdLoading = true;
+    this.changePwdError = null;
+    this.changePwdSuccess = false;
+    try {
+      await this.auth.changePassword(this.currentPwd, this.newPwd);
+      this.changePwdSuccess = true;
+      this.currentPwd = '';
+      this.newPwd = '';
+      this.confirmPwd = '';
+    } catch (e: any) {
+      if (e?.status === 400) this.changePwdError = e?.error?.error ?? 'Contraseña actual incorrecta';
+      else if (e?.status === 401) this.changePwdError = 'Sesión expirada, vuelve a iniciar sesión';
+      else if (e?.status === 403) this.changePwdError = 'No tienes permiso para cambiar la contraseña';
+      else this.changePwdError = 'Error al cambiar la contraseña, intenta nuevamente';
+    } finally {
+      this.changePwdLoading = false;
+    }
+  }
+
   logout() {
     this.auth.logout();
     this.data = null;
@@ -125,5 +174,6 @@ export class Tab1Page implements OnInit, OnDestroy {
     this.timeRemaining = '';
     this.loginAttempts = 0;
     this.lockoutUntil = 0;
+    this.showChangePwd = false;
   }
 }
