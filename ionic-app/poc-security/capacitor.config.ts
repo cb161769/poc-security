@@ -6,6 +6,9 @@ const config: CapacitorConfig = {
   webDir: 'www',
   server: {
     allowNavigation: []
+  },
+  android: {
+    webContentsDebuggingEnabled: false
   }
 };
 
