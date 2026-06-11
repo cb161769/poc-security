@@ -100,4 +100,5 @@ shared-keys/pub.pem
 .claude/settings.json
 .env
 docs/android-build-reports/problems/problems-report.html
-docs/android-test-reports/run-20260610-201948.log
+docs/android-test-reports/*
+docs/android-test-reports/run-20260611-150039.log
