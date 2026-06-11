@@ -599,7 +599,7 @@ res.send = <span class="k">function</span>(body) &#123;
           <span style="color:var(--green)">Capa 6 — Cliente:</span> Input validation · modal confirm · rate limiting login
         </div>
         <div style="padding:5px 8px;background:#f0883e08;border:1px solid #f0883e33;border-radius:5px">
-          <span style="color:var(--orange)">Capa 7 — Dispositivo:</span> FLAG_SECURE · root detection · Frida detection · ProGuard R8
+          <span style="color:var(--orange)">Capa 7 — Dispositivo:</span> FLAG_SECURE · root/Frida detection · JDWP block · ProGuard R8 · MASVS v2 · 30 fases · 26 Pass / 0 Fail / 9 Warn
         </div>
       </div>
       <div style="font-size:10.5px;color:var(--muted);margin-top:6px">
@@ -614,21 +614,28 @@ res.send = <span class="k">function</span>(body) &#123;
 ══════════════════════════════════════════════════════ -->
 <div class="slide" id="s5">
   <div class="section-tag">Seguridad en el cliente</div>
-  <h2>Hardening móvil y cliente — 3 bloques · 20+ controles</h2>
+  <h2>Hardening móvil y cliente — MASVS v2 · 30 fases · 3 bloques · 30+ controles</h2>
 
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;flex:1">
 
     <div class="card" style="padding:12px 14px;border-color:#f8514933">
-      <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🤖 Android nativo (MainActivity)</div>
-      <div style="font-size:11px;line-height:1.85;color:var(--muted)">
-        <div><span style="color:var(--text)">FLAG_SECURE</span> — screenshots y grabación bloqueados</div>
+      <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🤖 Android nativo — OWASP MASVS v2</div>
+      <div style="font-size:11px;line-height:1.75;color:var(--muted)">
+        <div><span style="color:var(--text)">FLAG_SECURE</span> — screenshots y grabación de pantalla bloqueados</div>
         <div><span style="color:var(--text)">Root detection</span> — su paths · test-keys · paquetes root</div>
-        <div><span style="color:var(--text)">Frida detection</span> — /proc/self/maps + artefactos disco</div>
-        <div><span style="color:var(--text)">APK signature check</span> — SHA-256 certificado de firma</div>
+        <div><span style="color:var(--text)">Frida / hook detection</span> — /proc/self/maps + artefactos Xposed/LSPosed/Zygisk</div>
+        <div><span style="color:var(--text)">JDWP block</span> — debugger attach bloqueado en release (MASVS-RESILIENCE-3)</div>
+        <div><span style="color:var(--text)">APK signature check</span> — V1/V2/V3/V4 · SHA-256 cert</div>
         <div><span style="color:var(--text)">Tapjacking</span> — filterTouchesWhenObscured</div>
-        <div><span style="color:var(--text)">Task hijacking</span> — taskAffinity="" (StrandHogg)</div>
-        <div><span style="color:var(--text)">WebView hardening</span> — file access off · mixed content blocked</div>
-        <div><span style="color:var(--text)">Clipboard clear</span> — limpieza en onPause()</div>
+        <div><span style="color:var(--text)">WebView hardening</span> — file access off · mixed content blocked · CDP bloqueado</div>
+        <div><span style="color:var(--text)">ADB backup bloqueado</span> — allowBackup=false en manifest</div>
+        <div><span style="color:var(--text)">SharedPrefs / SQLite audit</span> — sin credenciales en claro (MASVS-STORAGE)</div>
+        <div><span style="color:var(--text)">Anti-tamper</span> — PackageManager signature check · ProGuard R8</div>
+        <div><span style="color:var(--text)">Secrets scan</span> — 9 patrones regex: API keys, JWT, AWS, Firebase, PEM</div>
+        <div><span style="color:var(--text)">Deep link / intent fuzzing</span> — path traversal + SQL + XSS en extras</div>
+      </div>
+      <div style="margin-top:6px;padding:4px 8px;background:#f8514908;border:1px solid #f8514933;border-radius:5px">
+        <div style="font-size:10px;color:var(--red)">CI Docker: 26 Pass / 0 Fail / 9 Warn — 30 fases automatizadas</div>
       </div>
     </div>
 
@@ -750,17 +757,26 @@ res.send = <span class="k">function</span>(body) &#123;
         <div style="font-size:20px;flex-shrink:0;width:28px">📌</div>
         <div class="gap-body">
           <div class="gap-title">Certificate Pinning (SHA-256 real)</div>
-          <div class="gap-desc">network_security_config bloquea cleartext pero no valida el fingerprint del servidor. Sin pinning, un MitM con cert válido de CA pública no es detectado por el cliente Android.</div>
-          <div class="gap-meta"><span class="effort-S">Esfuerzo S</span> <span class="badge b-yellow">Riesgo MitM avanzado</span> <span class="badge b-gray">network_security_config pin-set</span></div>
+          <div class="gap-desc">network_security_config bloquea cleartext pero no valida el fingerprint del servidor. Sin pinning, un MitM con cert válido de CA pública no es detectado. Identificado como Warn en Phase 14 del CI Android (MASVS-NETWORK-2).</div>
+          <div class="gap-meta"><span class="effort-S">Esfuerzo S</span> <span class="badge b-yellow">Warn Ph.14 CI Android</span> <span class="badge b-gray">OkHttp CertificatePinner · NSC pin-set SHA-256</span></div>
         </div>
       </div>
 
       <div class="gap-row">
         <div style="font-size:20px;flex-shrink:0;width:28px">🏪</div>
         <div class="gap-body">
-          <div class="gap-title">Play Integrity API (device attestation)</div>
-          <div class="gap-desc">La detección de root actual es heurística — puede bypassearse con Magisk DenyList. Play Integrity API provee attestation firmada por Google que verifica integridad del dispositivo y del app en el servidor.</div>
-          <div class="gap-meta"><span class="effort-M">Esfuerzo M</span> <span class="badge b-yellow">Requiere Google Play</span> <span class="badge b-gray">PlayIntegrityManager · server-side verify</span></div>
+          <div class="gap-title">Play Integrity API + emulator detection</div>
+          <div class="gap-desc">La detección de root es heurística — bypasseable con Magisk DenyList. Play Integrity API provee attestation firmada por Google. La detección de emulador (ro.kernel.qemu) también está pendiente — identificada en Phase 28 del CI Android (MASVS-RESILIENCE-1).</div>
+          <div class="gap-meta"><span class="effort-M">Esfuerzo M</span> <span class="badge b-yellow">Warn Ph.28 CI Android</span> <span class="badge b-gray">PlayIntegrityManager · ro.kernel.qemu check</span></div>
+        </div>
+      </div>
+
+      <div class="gap-row">
+        <div style="font-size:20px;flex-shrink:0;width:28px">🔏</div>
+        <div class="gap-body">
+          <div class="gap-title">Certificate Transparency (NSC requireCertificateTransparency)</div>
+          <div class="gap-desc">NSC no tiene requireCertificateTransparency configurado — un cert mis-issued por una CA pero sin entrada SCT pasaría sin detección. Identificado en Phase 26 del CI Android (MASVS-NETWORK-1).</div>
+          <div class="gap-meta"><span class="effort-S">Esfuerzo S</span> <span class="badge b-yellow">Warn Ph.26 CI Android</span> <span class="badge b-gray">NSC requireCertificateTransparency</span></div>
         </div>
       </div>
     </div>

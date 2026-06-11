@@ -70,7 +70,8 @@ header h1{font-size:16px;font-weight:700;color:#58a6ff}
   <span style="font-size:20px">🛡️</span>
   <h1>POC Security — STRIDE Threat Model</h1>
   <span class="badge">6 categorías</span>
-  <div style="margin-left:auto;font-size:11px;color:#6e7681">Amenazas vs. Contramedidas implementadas</div>
+  <span class="badge" style="background:#f0883e22;border-color:#f0883e66;color:#f0883e">API Backend + Mobile Android</span>
+  <div style="margin-left:auto;font-size:11px;color:#6e7681">Amenazas vs. Contramedidas — arquitectura + MASVS v2</div>
 </header>
 
 <div class="main">
@@ -111,37 +112,47 @@ const THREATS = [
   {
     letter:'S', name:'Spoofing', es:'Suplantación de Identidad',
     color:'#ef4444', icon:'👤', risk:'ALTA',
-    scenario:'Un atacante intenta autenticarse como un usuario legítimo o forja un JWT para acceder a la API sin credenciales válidas.',
+    scenario:'Un atacante intenta autenticarse como un usuario legítimo, forja un JWT para acceder a la API, o re-empaqueta el APK con identidad falsa para interceptar credenciales.',
     attacks:[
       'Forjar un JWT modificando el payload (sub, rol) sin la clave RS256 de Keycloak',
       'Reutilizar un JWT caducado o robado de otra sesión',
       'Usar un token de web-realm en el endpoint mobile-realm (cross-realm spoofing)',
-      'Suplantar el servicio api-node para capturar JWTs de los clientes'
+      'Suplantar el servicio api-node para capturar JWTs de los clientes',
+      '[Mobile] APK repackaging — clonar y re-firmar el APK con cert de atacante para distribuir versión troyana',
+      '[Mobile] Frida impersonation — hook de funciones de autenticación para bypassear validación de identidad'
     ],
     defenses:[
       '✓ JWT RS256: firma criptográfica verificada con clave pública de Keycloak (JWKS)',
       '✓ Claim "aud" validado: token de web-realm rechazado en endpoints mobile y viceversa',
       '✓ Claim "exp": TTL 5 min en AMBOS canales (verificado en vivo: expires_in: 300s) — ventana mínima para replay',
       '✓ TLS 1.3 en Kong: impide intercepción de JWT en tránsito',
-      '✓ PKCE (RFC 7636): protege el flujo de código de autorización'
+      '✓ PKCE (RFC 7636): protege el flujo de código de autorización',
+      '✓ [Mobile] APK signature check — V1/V2/V3 verificados; re-signed APK detectado (MASVS-CODE-1, Ph.5)',
+      '✓ [Mobile] Frida/hook detection — artefactos Xposed/LSPosed/Zygisk en DEX y /proc/maps (Ph.4, Ph.22)'
     ]
   },
   {
     letter:'T', name:'Tampering', es:'Manipulación de Datos',
     color:'#f97316', icon:'✏️', risk:'ALTA',
-    scenario:'Un atacante intercepta y modifica el cuerpo de una respuesta API (saldo, datos de transferencia) o el JWT en tránsito.',
+    scenario:'Un atacante intercepta y modifica el cuerpo de una respuesta API, el JWT en tránsito, o manipula la aplicación directamente en memoria o a nivel de APK.',
     attacks:[
       'MITM que modifica el JSON de respuesta (saldo: 1000 → 999999) antes de que llegue a la app',
       'Inyección de campos falsos en el JWT (añadir "admin":true al payload)',
       'Modificación del campo "amount" en una petición de transferencia',
-      'Flip de bits en el ciphertext JWE para alterar los datos descifrados'
+      'Flip de bits en el ciphertext JWE para alterar los datos descifrados',
+      '[Mobile] Memory patching con Frida/JDWP — modificar amount o JWT token en heap en tiempo de ejecución',
+      '[Mobile] APK modification — reemplazar clases DEX para bypassear validación de autenticación',
+      '[Mobile] ADB backup + restore con datos alterados — extraer DB, modificarla offline, restaurar'
     ],
     defenses:[
       '✓ JWE con A256GCM (AEAD): authentication tag de 128 bits — cualquier modificación invalida el mensaje',
       '✓ RSA-OAEP-256: la clave AES efímera está cifrada con la clave pública del cliente',
       '✓ Firma RS256 del JWT: cualquier modificación del payload invalida la firma',
       '✓ TLS 1.3 en Kong: cifrado + integridad de extremo a extremo hasta el gateway',
-      '✓ compactDecrypt falla con error si el authentication tag no coincide'
+      '✓ compactDecrypt falla con error si el authentication tag no coincide',
+      '✓ [Mobile] JDWP bloqueado en release — adb jdwp no lista el PID de la app (MASVS-RESILIENCE-3, Ph.9)',
+      '✓ [Mobile] ADB backup bloqueado — allowBackup=false, ApplicationInfo flag verificado (Ph.11)',
+      '✓ [Mobile] Anti-tamper — PackageManager signature check + R8 full mode (Ph.29, MASVS-RESILIENCE-2)'
     ]
   },
   {
@@ -165,12 +176,17 @@ const THREATS = [
   {
     letter:'I', name:'Information Disclosure', es:'Divulgación de Información',
     color:'#06b6d4', icon:'👁️', risk:'ALTA',
-    scenario:'Datos sensibles (saldo, historial, datos personales) son interceptados en tránsito o accedidos sin autorización desde el servidor.',
+    scenario:'Datos sensibles (saldo, historial, datos personales) son interceptados en tránsito, accedidos desde el servidor, o expuestos desde el dispositivo móvil por storage inseguro o UI leaks.',
     attacks:[
       'MITM que captura respuestas HTTP con saldos y transacciones en JSON plano',
       'Acceso a logs del servidor donde el JSON de respuesta está impreso en claro',
       'Robo de la clave privada RSA del cliente desde el storage del dispositivo',
-      'Exfiltración de la base de datos de PostgreSQL con historial de operaciones'
+      'Exfiltración de la base de datos de PostgreSQL con historial de operaciones',
+      '[Mobile] SharedPreferences en claro — credenciales/tokens en /data/data/<pkg>/shared_prefs accesibles con adb root',
+      '[Mobile] SQLite en claro — tablas con columnas sensibles (token, password, session) sin SQLCipher',
+      '[Mobile] ADB screencap — captura de pantalla con datos financieros sin FLAG_SECURE activo',
+      '[Mobile] Clipboard leak — ClipboardManager expone contraseñas copiadas a cualquier app en foreground',
+      '[Mobile] Memory scan — JWT y RSA keys legibles en /proc/<pid>/mem regiones heap (MASVS-STORAGE-2)'
     ],
     defenses:[
       '✓ JWE RSA-OAEP-256 + A256GCM: payload 100% cifrado, ilegible sin la clave privada del cliente',
@@ -178,7 +194,11 @@ const THREATS = [
       '✓ extractable:false (web): la clave privada RSA no puede exportarse ni leerse en JS',
       '✓ ETag deshabilitado en los 3 servicios: app.set("etag", false) — no filtra tamaño del JWE',
       '✓ X-Powered-By desactivado en los 3 servicios: app.disable("x-powered-by") — sin fingerprint de framework',
-      '✓ Cache-Control: no-store en todas las respuestas JWE — sin caching intermedio'
+      '✓ Cache-Control: no-store en todas las respuestas JWE — sin caching intermedio',
+      '✓ [Mobile] FLAG_SECURE activo — screencap devuelve frame negro; verificado con adb screencap (Ph.2)',
+      '✓ [Mobile] Secrets scan — 9 patrones regex en binario/DEX/assets; 0 hallazgos (Ph.13, MASVS-STORAGE-1)',
+      '✓ [Mobile] Log stripping — ProGuard -assumenosideeffects Log.*; logcat sin datos sensibles (Ph.7)',
+      '⚠ [Mobile] SharedPrefs/SQLite — auditar con EncryptedSharedPreferences y SQLCipher en prod (Ph.17, Ph.18)'
     ]
   },
   {
@@ -202,19 +222,28 @@ const THREATS = [
   {
     letter:'E', name:'Elevation of Privilege', es:'Elevación de Privilegios',
     color:'#ec4899', icon:'⬆️', risk:'ALTA',
-    scenario:'Un usuario normal accede a recursos de administrador, o un cliente web usa su token para acceder a endpoints del canal mobile (acceso cross-channel).',
+    scenario:'Un usuario normal accede a recursos de administrador, usa un token cross-channel, o explota controles de plataforma Android para ganar privilegios dentro o fuera de la app.',
     attacks:[
       'Token de web-realm (aud: web-api) presentado al endpoint /api/v1/mobile/** ',
       'Usuario con rol "user-api" modifica el JWT para añadir "admin-api" (sin firma válida)',
       'Cliente no registrado en Odoo accede a transfers/payments con un JWT válido (no hay Odoo AuthZ ahí)',
-      'IDOR: usuario A accede a transferencias del usuario B cambiando un ID en la URL'
+      'IDOR: usuario A accede a transferencias del usuario B cambiando un ID en la URL',
+      '[Mobile] JDWP attach — conectar debugger al proceso release para leer/escribir variables críticas en heap',
+      '[Mobile] Intent injection — am start con extras authenticated=true, role=admin para bypassear lógica de auth',
+      '[Mobile] Deep link path traversal — am start con scheme://../../admin para acceder a actividades internas',
+      '[Mobile] Content provider unauthenticated — query a content://com.keystone.mobile.* sin permisos (Ph.21)',
+      '[Mobile] Root exploit — adb root + acceso a /data/data/<pkg>/ para leer tokens y operar como cualquier usuario'
     ],
     defenses:[
       '✓ Claim "aud" validado: aud["web-api","account"] rechazado en /mobile/** y viceversa (probado en vivo: 401)',
       '✓ Roles Keycloak validados en cada servicio: user-api/user-web requerido; cross-channel rechazado',
       '✓ Odoo AuthZ en los 3 servicios: api-node + transfers-service + payments-service consultan x_api_clientes',
       '✓ X-Channel inyectado por Kong según ruta: imposible falsificar el canal desde el cliente',
-      '✓ /internal/validate-user requiere JWT válido: validateJWT middleware aplicado al endpoint interno'
+      '✓ /internal/validate-user requiere JWT válido: validateJWT middleware aplicado al endpoint interno',
+      '✓ [Mobile] JDWP bloqueado en release build — adb jdwp no lista PID de la app (Ph.9, MASVS-RESILIENCE-3)',
+      '✓ [Mobile] Exported components audit — actividades/receivers/providers no exported innecesariamente (Ph.10)',
+      '✓ [Mobile] Deep link fuzzing — path traversal/SQL/XSS en am start extras: sin escalada de privilegios (Ph.19)',
+      '✓ [Mobile] Root / tamper detection — su paths + test-keys + ro.kernel.qemu checks (Ph.3, MASVS-RESILIENCE-1)'
     ]
   }
 ];
