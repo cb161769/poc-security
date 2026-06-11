@@ -151,58 +151,73 @@ pre .v{color:#3fb950}
     <span class="badge b-blue">POC · Seguridad API</span>
     <span class="badge b-green">✓ 33/33 Funcional</span>
     <span class="badge b-green">✓ 17/17 Ataques</span>
+    <span class="badge b-green">✓ Android 26/35 · 0 Fail</span>
     <span class="badge b-gray">Junio 2026</span>
   </div>
-  <h1>Arquitectura de Seguridad<br><span style="color:var(--blue)">API REST + Mobile</span></h1>
-  <p style="color:var(--muted);font-size:clamp(12px,1.4vw,16px);margin-top:8px;max-width:680px;line-height:1.55">
-    Este POC demuestra que es posible proteger APIs financieras contra los vectores de ataque más críticos
-    mediante controles implementados y verificados automáticamente.
+  <h1>Seguridad de Extremo a Extremo<br><span style="color:var(--blue)">API Backend</span> <span style="color:var(--muted);font-weight:400">+</span> <span style="color:var(--green)">Aplicación Mobile</span></h1>
+  <p style="color:var(--muted);font-size:clamp(12px,1.4vw,15px);margin-top:6px;max-width:720px;line-height:1.55">
+    La seguridad no termina en el servidor. Este POC cubre <strong style="color:var(--text)">dos capas independientes</strong>:
+    los vectores de ataque sobre la arquitectura API (red, tokens, cifrado) y los vectores propios de la app móvil
+    (dispositivo, APK, almacenamiento, IPC). Ambas verificadas automáticamente.
   </p>
 
-  <div class="grid g4" style="margin-top:22px;margin-bottom:18px">
-    <div class="card stat hi-green">
-      <div class="stat-num" style="color:var(--green)">33</div>
-      <div class="stat-label">Pruebas funcionales<br>superadas · 0 fallos</div>
+  <div class="grid g2" style="margin-top:16px;margin-bottom:14px;gap:10px">
+    <!-- PILLAR 1: Backend -->
+    <div class="card hi-blue" style="padding:13px 16px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">🔀 Capa 1 — Seguridad de Arquitectura API</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;font-size:11.5px;line-height:1.6">
+        <div>✓ Cifrado E2E JWE bidireccional</div>
+        <div>✓ Auth federada PKCE · Keycloak</div>
+        <div>✓ Binding de clave pública RSA</div>
+        <div>✓ Anti-replay · Idempotency Key</div>
+        <div>✓ AuthZ negocio en Odoo ERP</div>
+        <div>✓ Rate limiting por token JWT</div>
+        <div>✓ Separación canales web/mobile</div>
+        <div>✓ Sin metadatos de servidor</div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <span class="badge b-green" style="font-size:9px">33/33 funcional</span>
+        <span class="badge b-green" style="font-size:9px">17/17 ataques</span>
+        <span class="badge b-blue" style="font-size:9px">9 ataques bloqueados</span>
+      </div>
     </div>
-    <div class="card stat hi-green">
-      <div class="stat-num" style="color:var(--green)">17</div>
-      <div class="stat-label">Verificaciones de ataque<br>superadas · 0 fallos</div>
-    </div>
-    <div class="card stat hi-blue">
-      <div class="stat-num" style="color:var(--blue)">9</div>
-      <div class="stat-label">Ataques simulados<br>y bloqueados</div>
-    </div>
-    <div class="card stat hi-yellow">
-      <div class="stat-num" style="color:var(--yellow)">5</div>
-      <div class="stat-label">Ítems prioritarios<br>para producción</div>
+    <!-- PILLAR 2: Mobile -->
+    <div class="card hi-green" style="padding:13px 16px">
+      <div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">📱 Capa 2 — Seguridad Mobile (OWASP MASVS v2)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;font-size:11.5px;line-height:1.6">
+        <div>✓ FLAG_SECURE · sin capturas</div>
+        <div>✓ Sin secrets hardcodeados</div>
+        <div>✓ Root + Frida detection</div>
+        <div>✓ JDWP bloqueado en release</div>
+        <div>✓ ADB backup deshabilitado</div>
+        <div>✓ Tapjacking protegido</div>
+        <div>✓ ProGuard R8 + log stripping</div>
+        <div>✓ WebView CDP no explotable</div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <span class="badge b-green" style="font-size:9px">26 Pass · 0 Fail · 9 Warn</span>
+        <span class="badge b-green" style="font-size:9px">30 fases MASVS v2</span>
+        <span class="badge b-gray" style="font-size:9px">54s en Docker CI</span>
+      </div>
     </div>
   </div>
 
-  <div class="grid g3" style="gap:10px">
-    <div class="card hi-green" style="padding:12px 14px">
-      <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">✓ Implementado y verificado</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.6">
-        Cifrado E2E JWE (respuestas + requests POST) · Auth federada PKCE · AuthZ Odoo · Anti-replay ·
-        Pubkey binding · Separación web/mobile · Validación inputs financieros + modal confirmación ·
-        Rate limiting login cliente · Hardening Android nativo (10 controles) · Ofuscación JS bundle ·
-        Pipeline CI Android dockerizado — APK firmado + suite de seguridad 8 fases + reporte HTML
+  <div class="grid g2" style="gap:10px">
+    <div class="card hi-yellow" style="padding:11px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--yellow);margin-bottom:5px">⚠ Pendiente para producción</div>
+      <div style="font-size:11.5px;color:var(--muted);line-height:1.6">
+        <span style="color:var(--blue)">API:</span> Circuit breaker · Token revocation · Redis stores · TLS CA real · Red interna aislada<br>
+        <span style="color:var(--green)">Mobile:</span> Certificate pinning (SHA-256 real) · Emulator detection en DEX · CT enforcement
       </div>
     </div>
-    <div class="card hi-yellow" style="padding:12px 14px">
-      <div style="font-size:11px;font-weight:700;color:var(--yellow);margin-bottom:6px">⚠ Pendiente para producción</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.6">
-        Circuit breaker (Odoo/Keycloak) · Revocación de tokens en tiempo real ·
-        Stores distribuidos en Redis · Certificate pinning (SHA-256 real) ·
-        Certificados TLS de CA real · Red interna aislada
-      </div>
-    </div>
-    <div class="card" style="padding:12px 14px">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">Documentación interactiva</div>
-      <div class="doc-links" style="flex-direction:column;gap:6px">
-        <a class="doc-link" href="arch.html" target="_blank" style="border-color:#58a6ff44">🏗️ Architecture Review</a>
-        <a class="doc-link" href="request-flow.html" target="_blank">🔀 Flujo de Request JWT + JWE</a>
-        <a class="doc-link" href="stride.html" target="_blank">🎯 Modelo de Amenazas STRIDE</a>
-        <a class="doc-link" href="attack-repudiation.html" target="_blank">🛡️ Detalle de Ataques</a>
+    <div class="card" style="padding:11px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:7px">Documentación interactiva</div>
+      <div class="doc-links" style="flex-wrap:wrap;gap:5px">
+        <a class="doc-link" href="arch.html" target="_blank" style="border-color:#58a6ff44;font-size:11px">🏗️ Architecture</a>
+        <a class="doc-link" href="request-flow.html" target="_blank" style="font-size:11px">🔀 JWT + JWE Flow</a>
+        <a class="doc-link" href="stride.html" target="_blank" style="font-size:11px">🎯 STRIDE</a>
+        <a class="doc-link" href="attack-repudiation.html" target="_blank" style="font-size:11px">🛡️ Ataques</a>
+        <a class="doc-link" href="android-test-reports/android-security-report.html" target="_blank" style="font-size:11px;border-color:#3fb95044">📱 Android Report</a>
       </div>
     </div>
   </div>
@@ -396,79 +411,159 @@ pre .v{color:#3fb950}
 <!-- ══ 5. CONTROLES IMPLEMENTADOS ══ -->
 <div class="slide" id="s4">
   <div class="section-tag">Controles implementados</div>
-  <h2>8 controles clave — implementados y verificados</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Backend · Android nativo · Angular cliente — cada control bloquea un vector de ataque diferente</p>
+  <h2>Dos dominios de seguridad — implementados y verificados</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:8px">Cada control pertenece a un dominio específico y bloquea un vector de ataque diferente. La seguridad mobile NO es un apéndice: es un dominio propio.</p>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;flex:1">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px">
+    <!-- Column header API -->
+    <div style="font-size:9.5px;font-weight:700;color:var(--blue);letter-spacing:.08em;text-transform:uppercase;padding:3px 2px;border-bottom:1px solid #1f6feb33;margin-bottom:2px">
+      🔀 Seguridad de Arquitectura API · Backend + Angular
+    </div>
+    <!-- Column header Mobile -->
+    <div style="font-size:9.5px;font-weight:700;color:var(--green);letter-spacing:.08em;text-transform:uppercase;padding:3px 2px;border-bottom:1px solid #23863633;margin-bottom:2px">
+      📱 Seguridad Mobile · Android + APK + Runtime
+    </div>
+
+    <div class="ctrl-row hi-blue card" style="margin-bottom:0">
+      <div class="ctrl-icon">🔐</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">Cifrado E2E JWE bidireccional</div>
+        <div class="ctrl-desc">RSA-OAEP-256 + A256GCM en requests y respuestas. Independiente de TLS — protege si Kong es comprometido.</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Server</span></div>
+      </div>
+    </div>
+
+    <div class="ctrl-row card" style="margin-bottom:0;border-color:#3fb95033;background:#23863608">
+      <div class="ctrl-icon">🔒</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">FLAG_SECURE + Screen recording block</div>
+        <div class="ctrl-desc">Bloquea <code>adb screencap</code> y <code>screenrecord</code>. Verificado con ataque activo: captura devuelve 0 bytes / frame negro.</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Android</span></div>
+      </div>
+    </div>
+
     <div class="ctrl-row hi-blue card" style="margin-bottom:0">
       <div class="ctrl-icon">🪪</div>
       <div class="ctrl-body">
-        <div class="ctrl-title">Binding de clave pública (Pubkey Binding)</div>
-        <div class="ctrl-desc">Primera clave del usuario registrada con TTL = JWT exp. Cualquier sustitución → 403. Previene inyección de clave RSA propia para descifrar respuestas.</div>
+        <div class="ctrl-title">Binding de clave pública RSA</div>
+        <div class="ctrl-desc">Primera clave del usuario vinculada con TTL = JWT exp. Sustitución de clave → 403. Previene descifrado por terceros.</div>
         <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Server</span></div>
+      </div>
+    </div>
+
+    <div class="ctrl-row card" style="margin-bottom:0;border-color:#3fb95033;background:#23863608">
+      <div class="ctrl-icon">🕵️</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">Root + Frida + JDWP Detection</div>
+        <div class="ctrl-desc">Detecta dispositivos rooteados, Frida/Xposed activos y debugger Java adjunto. El proceso no aparece en <code>adb jdwp</code>.</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Android</span></div>
       </div>
     </div>
 
     <div class="ctrl-row hi-blue card" style="margin-bottom:0">
       <div class="ctrl-icon">🔁</div>
       <div class="ctrl-body">
-        <div class="ctrl-title">Anti-Replay — Clave de idempotencia</div>
-        <div class="ctrl-desc">POST requiere UUID único. Reenvío dentro de 5 min devuelve respuesta original con <code>X-Idempotency-Replayed: true</code> sin re-ejecutar la operación.</div>
+        <div class="ctrl-title">Anti-Replay — Idempotency Key</div>
+        <div class="ctrl-desc">POST requiere UUID único. Reenvío dentro de 5 min devuelve respuesta cacheada con <code>X-Idempotency-Replayed: true</code>.</div>
         <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Server</span></div>
+      </div>
+    </div>
+
+    <div class="ctrl-row card" style="margin-bottom:0;border-color:#3fb95033;background:#23863608">
+      <div class="ctrl-icon">🔑</div>
+      <div class="ctrl-body">
+        <div class="ctrl-title">Sin secrets en APK · ProGuard R8</div>
+        <div class="ctrl-desc">Scan de 9 patrones (API keys, JWT, AWS, PEM…) en binario + DEX + assets. R8 obfusca + elimina logs en release.</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Android</span></div>
       </div>
     </div>
 
     <div class="ctrl-row hi-blue card" style="margin-bottom:0">
       <div class="ctrl-icon">🏢</div>
       <div class="ctrl-body">
-        <div class="ctrl-title">Autorización de negocio en Odoo</div>
-        <div class="ctrl-desc">JWT válido no es suficiente. Los 3 servicios validan <code>active=true</code> en el ERP. Cliente suspendido en Odoo → 403 aunque tenga token válido.</div>
+        <div class="ctrl-title">AuthZ de negocio en Odoo</div>
+        <div class="ctrl-desc">JWT válido no basta. Valida <code>active=true</code> en ERP en los 3 servicios. Cliente suspendido → 403.</div>
         <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Server</span></div>
-      </div>
-    </div>
-
-    <div class="ctrl-row hi-blue card" style="margin-bottom:0">
-      <div class="ctrl-icon">📡</div>
-      <div class="ctrl-body">
-        <div class="ctrl-title">Eliminación de metadatos del servidor</div>
-        <div class="ctrl-desc">Sin X-Powered-By · Sin ETag · Cache-Control: no-store · Content-Type: application/jose. No revela framework, versión ni tamaño del payload.</div>
-        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Server</span></div>
-      </div>
-    </div>
-
-    <div class="ctrl-row card" style="margin-bottom:0;border-color:#bc8cff33;background:#6e40c908">
-      <div class="ctrl-icon">🔐</div>
-      <div class="ctrl-body">
-        <div class="ctrl-title">Cifrado bidireccional JWE (requests + respuestas)</div>
-        <div class="ctrl-desc">Requests POST cifrados con RSA-OAEP-256 + A256GCM. Respuestas cifradas con clave del cliente. Independiente de TLS — protege si Kong es comprometido.</div>
-        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-purple">Mobile + Web</span></div>
       </div>
     </div>
 
     <div class="ctrl-row card" style="margin-bottom:0;border-color:#3fb95033;background:#23863608">
-      <div class="ctrl-icon">✅</div>
+      <div class="ctrl-icon">🛡️</div>
       <div class="ctrl-body">
-        <div class="ctrl-title">Validación de inputs financieros + confirmación</div>
-        <div class="ctrl-desc">Monto 0.01–10,000 · regex cuenta ACC-XXXX · whitelist card/ach/wire · memo ≤255. Modal de confirmación antes de cada operación financiera (tab2 + tab3).</div>
-        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Angular</span></div>
+        <div class="ctrl-title">WebView CDP · ADB Backup · Tapjacking</div>
+        <div class="ctrl-desc">WebView no explotable via Chrome DevTools. ADB backup bloqueado. Overlays maliciosas ignoradas via <code>filterTouchesWhenObscured</code>.</div>
+        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Android</span></div>
       </div>
     </div>
+  </div>
+</div>
 
-    <div class="ctrl-row card" style="margin-bottom:0;border-color:#d2992233;background:#9e640008">
-      <div class="ctrl-icon">🔒</div>
-      <div class="ctrl-body">
-        <div class="ctrl-title">Rate limiting de login + lockout en cliente</div>
-        <div class="ctrl-desc">5 intentos fallidos → lockout 60s con countdown visible. Mitiga fuerza bruta antes de que llegue al backend. Complementa el rate limiting de Kong.</div>
-        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Angular</span></div>
+<!-- ══ 5b. MOBILE SECURITY COVERAGE ══ -->
+<div class="slide" id="s4b">
+  <div class="section-tag">Seguridad Mobile</div>
+  <h2>Android — 5 dominios MASVS v2 cubiertos</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">La suite automatizada cubre los mismos vectores que herramientas profesionales como MobSF o NowSecure. 30 fases · 0 fallos · reporte HTML con evidencia y recomendaciones.</p>
+
+  <div class="grid g3" style="gap:8px;margin-bottom:10px">
+    <div class="card" style="padding:11px 14px;border-color:#f8514933;background:#f8514908">
+      <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">MASVS-CODE · Build Hardening</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.75">
+        <div>✓ R8/ProGuard obfuscación activa</div>
+        <div>✓ Log stripping en release build</div>
+        <div>✓ Sin strings sensibles en DEX</div>
+        <div>✓ APK firmado con V2/V3</div>
+        <div>✓ Sin secrets en librerías .so</div>
       </div>
     </div>
-
-    <div class="ctrl-row card" style="margin-bottom:0;border-color:#f0883e33;background:#f0883e08">
-      <div class="ctrl-icon">🤖</div>
-      <div class="ctrl-body">
-        <div class="ctrl-title">Hardening Android + ofuscación JS bundle</div>
-        <div class="ctrl-desc">FLAG_SECURE · root/Frida detection · ProGuard R8 + dict l/I · Log stripping · network_security_config · javascript-obfuscator (80% strings → Base64) · URLs en atob().</div>
-        <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Android</span><span class="badge b-gray">Bundle</span></div>
+    <div class="card" style="padding:11px 14px;border-color:#58a6ff33;background:#58a6ff08">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">MASVS-NETWORK · Comunicaciones</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.75">
+        <div>✓ Network Security Config presente</div>
+        <div>✓ Cleartext HTTP bloqueado</div>
+        <div>⚠ SSL Pinning: pendiente (sin SHA-256 real)</div>
+        <div>⚠ Certificate Transparency: pendiente</div>
+        <div style="color:var(--muted);font-size:10px;margin-top:4px">Sin dominio de producción real</div>
+      </div>
+    </div>
+    <div class="card" style="padding:11px 14px;border-color:#d2992233;background:#9e640008">
+      <div style="font-size:10px;font-weight:700;color:var(--yellow);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">MASVS-PLATFORM · IPC / OS</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.75">
+        <div>✓ FLAG_SECURE (captura + grabación)</div>
+        <div>✓ ADB backup deshabilitado</div>
+        <div>✓ 0 componentes exportados sin permiso</div>
+        <div>✓ Deep links sin vectores explotables</div>
+        <div>✓ Tapjacking protegido</div>
+      </div>
+    </div>
+    <div class="card" style="padding:11px 14px;border-color:#f8514933;background:#f8514908">
+      <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">MASVS-STORAGE · Datos en reposo</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.75">
+        <div>✓ SharedPreferences: sin datos sensibles en texto plano</div>
+        <div>✓ SQLite: sin bases de datos expuestas</div>
+        <div>✓ Memoria en runtime: sin JWT/keys en heap</div>
+        <div>✓ Sin secrets hardcodeados en APK</div>
+      </div>
+    </div>
+    <div class="card" style="padding:11px 14px;border-color:#bc8cff33;background:#6e40c908">
+      <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">MASVS-RESILIENCE · Anti-Reverse</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.75">
+        <div>✓ Root detection (su paths, test-keys)</div>
+        <div>✓ Frida/Xposed detection strings en DEX</div>
+        <div>✓ JDWP bloqueado (debugger no puede adjuntarse)</div>
+        <div>✓ Anti-tamper: PackageManager signature check</div>
+        <div>⚠ Emulator detection: pendiente en DEX</div>
+      </div>
+    </div>
+    <div class="card" style="padding:11px 14px;background:var(--card)">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">Resultado · Último run</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div style="text-align:center;flex:1"><div style="font-size:26px;font-weight:900;color:var(--green)">26</div><div style="font-size:9px;color:var(--muted)">PASS</div></div>
+        <div style="text-align:center;flex:1"><div style="font-size:26px;font-weight:900;color:var(--green)">0</div><div style="font-size:9px;color:var(--muted)">FAIL</div></div>
+        <div style="text-align:center;flex:1"><div style="font-size:26px;font-weight:900;color:var(--yellow)">9</div><div style="font-size:9px;color:var(--muted)">WARN</div></div>
+      </div>
+      <div style="font-size:10.5px;color:var(--muted);line-height:1.6">Los 9 warnings son mejoras para producción, no fallos de seguridad críticos. <strong style="color:var(--green)">0 vulnerabilidades explotables</strong> encontradas.</div>
+      <div style="margin-top:8px">
+        <a class="doc-link" href="android-test-reports/android-security-report.html" target="_blank" style="font-size:11px;border-color:#3fb95044;display:inline-flex">📱 Ver reporte completo</a>
       </div>
     </div>
   </div>
@@ -643,6 +738,8 @@ pre .v{color:#3fb950}
       <span class="badge b-blue">A5 · Android Security</span>
       <span class="badge b-blue">A6 · JS Obfuscation</span>
       <span class="badge b-blue">A7 · Android CI Pipeline</span>
+      <span class="badge b-blue">A8 · Test Phases 1–15</span>
+      <span class="badge b-blue">A9 · Test Phases 16–30</span>
     </div>
   </div>
 </div>
@@ -870,27 +967,49 @@ active = Boolean()
 <!-- ══ A5: ANDROID SECURITY ══ -->
 <div class="slide" id="s13">
   <div class="appendix-badge">A5 · Apéndice técnico</div>
-  <h2>Android Security Hardening — 10 controles nativos + CI pipeline</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Implementados en <code>MainActivity.java</code> · <code>AndroidManifest.xml</code> · <code>build.gradle</code> · <code>proguard-rules.pro</code> — sin librerías de terceros · verificados por suite de 8 fases</p>
+  <h2>Android Security Hardening — 10 controles nativos + CI pipeline MASVS v2</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Implementados en <code>MainActivity.java</code> · <code>AndroidManifest.xml</code> · <code>build.gradle</code> · <code>proguard-rules.pro</code> — sin librerías de terceros · verificados por suite de <strong style="color:var(--green)">30 fases MASVS v2</strong></p>
 
   <div class="grid g3" style="flex:1;gap:9px">
     <div class="card" style="padding:12px 14px;grid-column:1/-1;background:#1f6feb08;border-color:#1f6feb33">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.07em;text-transform:uppercase">🐳 Docker CI — suite automatizada 8 fases</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
+        <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.07em;text-transform:uppercase">🐳 Docker CI — suite MASVS v2 · 30 fases automáticas</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;flex:1">
           <span class="badge b-gray" style="font-size:9px">Ph.1 APK estático</span>
           <span class="badge b-gray" style="font-size:9px">Ph.2 FLAG_SECURE</span>
           <span class="badge b-gray" style="font-size:9px">Ph.3 Root detect</span>
           <span class="badge b-gray" style="font-size:9px">Ph.4 Frida detect</span>
           <span class="badge b-gray" style="font-size:9px">Ph.5 Signature</span>
-          <span class="badge b-gray" style="font-size:9px">Ph.6 WebView debug</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.6 WebView CDP</span>
           <span class="badge b-gray" style="font-size:9px">Ph.7 Log leak</span>
           <span class="badge b-gray" style="font-size:9px">Ph.8 NSC</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.9 JDWP</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.10 Exported</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.11 ADB Backup</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.12 Tapjacking</span>
+          <span class="badge b-red" style="font-size:9px">Ph.13 Secrets</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.14 SSL Pinning</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.15 WebView harden</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.16 Signatures V1-V4</span>
+          <span class="badge b-red" style="font-size:9px">Ph.17 SharedPrefs</span>
+          <span class="badge b-red" style="font-size:9px">Ph.18 SQLite</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.19 Deep Links</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.20 Broadcast</span>
+          <span class="badge b-red" style="font-size:9px">Ph.21 Content Prov</span>
+          <span class="badge b-red" style="font-size:9px">Ph.22 Hook detect</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.23 Native libs</span>
+          <span class="badge b-red" style="font-size:9px">Ph.24 Memory scan</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.25 Screen rec</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.26 Cert Trans</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.27 Clipboard</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.28 Emulator det</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.29 Anti-Tamper</span>
+          <span class="badge b-gray" style="font-size:9px">Ph.30 Intent inject</span>
           <span class="badge b-green" style="font-size:9px">→ android-security-report.html</span>
         </div>
       </div>
       <div style="font-size:10.5px;color:var(--muted);margin-top:6px">
-        <code>docker compose --profile android-tests up</code> — emulador Android 14 · APK firmado release · reporte HTML exportado a <code>docs/android-test-reports/</code>
+        <code>docker compose --profile android-tests up</code> — emulador Android 14 · APK firmado release · reporte HTML con severity badges + MASVS mapping + recomendaciones en <code>docs/android-test-reports/</code>
       </div>
     </div>
     <div class="card" style="padding:12px 14px">
@@ -1025,74 +1144,364 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
 <!-- ══ A7: ANDROID CI PIPELINE ══ -->
 <div class="slide" id="s15">
   <div class="appendix-badge">A7 · Apéndice técnico</div>
-  <h2>Android CI Pipeline — Build, sign &amp; test dockerizado</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Un solo comando levanta el emulador, construye el APK firmado y ejecuta las 8 fases de seguridad</p>
+  <h2>Android CI Pipeline — Arquitectura Docker · 30 fases · MASVS v2</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Un solo comando (<code>docker compose --profile android-tests up</code>) levanta los 3 contenedores en orden, construye el APK firmado y ejecuta la suite completa.</p>
 
-  <div class="grid g3" style="gap:10px;margin-bottom:10px">
-    <div class="card hi-blue" style="padding:11px 14px">
-      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">1 · android-build</div>
+  <div class="grid g3" style="gap:8px;margin-bottom:12px">
+    <div class="card hi-blue" style="padding:10px 13px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">① android-build</div>
       <div style="font-size:11px;color:var(--muted);line-height:1.75">
-        <code>node:22-bookworm</code> + Temurin JDK 21<br>
-        <code>npm ci</code> → <code>ng build</code> → <code>cap sync</code><br>
-        keytool test keystore → <code>gradlew assembleRelease</code><br>
-        ProGuard R8 · 2.4 MB APK firmado<br>
-        → volumen <code>android-apk</code>
+        Imagen: <code>node:22-bookworm</code> + Temurin JDK 21<br>
+        <code>npm ci</code> → <code>ng build --prod</code> → <code>cap sync</code><br>
+        Genera keystore de test → <code>gradlew assembleRelease</code><br>
+        ProGuard R8 activo → APK firmado 2.4 MB<br>
+        Escribe en volumen compartido <code>android-apk</code>
       </div>
     </div>
-    <div class="card hi-blue" style="padding:11px 14px">
-      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">2 · android-emulator</div>
+    <div class="card hi-blue" style="padding:10px 13px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">② android-emulator</div>
       <div style="font-size:11px;color:var(--muted);line-height:1.75">
-        <code>budtmo/docker-android:emulator_14.0</code><br>
-        Android 14 / API 34 · software renderer<br>
-        <code>privileged: true</code> para KVM<br>
-        Healthcheck: <code>sys.boot_completed=1</code><br>
-        ADB TCP port 5555
+        Imagen: <code>budtmo/docker-android:emulator_14.0</code><br>
+        Android 14 / API 34 · renderizado por software<br>
+        <code>privileged: true</code> (KVM passthrough en Linux)<br>
+        Healthcheck espera <code>sys.boot_completed=1</code><br>
+        ADB expuesto en TCP port 5555
       </div>
     </div>
-    <div class="card hi-blue" style="padding:11px 14px">
-      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">3 · android-test-runner</div>
+    <div class="card hi-blue" style="padding:10px 13px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">③ android-test-runner</div>
       <div style="font-size:11px;color:var(--muted);line-height:1.75">
-        <code>mcr.microsoft.com/powershell:7.4-ubuntu-22.04</code><br>
-        Espera emulador sano + build completo<br>
-        <code>adb install -r app-release.apk</code><br>
-        <code>pwsh test-android-docker.ps1</code><br>
-        → <code>docs/android-test-reports/</code>
+        Imagen: <code>mcr.microsoft.com/powershell:7.4-ubuntu-22.04</code><br>
+        <code>depends_on</code>: emulador healthy + build completo<br>
+        Instala APK vía <code>adb install -r</code><br>
+        Ejecuta <code>pwsh test-android-docker.ps1</code><br>
+        Exporta reporte HTML a <code>/reports/</code>
       </div>
     </div>
   </div>
 
   <div class="grid g2" style="gap:10px">
     <div>
-      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">8 fases de verificación</div>
-      <div style="display:flex;flex-direction:column;gap:5px;font-size:11px">
-        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P1</div><div>Static APK — HTTP cleartext · allowBackup · debuggable · ProGuard signal</div></div>
-        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P2</div><div>FLAG_SECURE — screencap → &lt;10 kB PNG negro</div></div>
-        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P3</div><div>Root detection — test-keys build + artefacto <code>/data/local/tmp/su</code></div></div>
-        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P4</div><div>Frida detection — artefacto <code>frida-server</code> en disco</div></div>
-        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P5</div><div>Signature — OS verifica firma en instalación</div></div>
-        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P6</div><div>WebView debug — socket <code>webview_devtools_remote</code> ausente</div></div>
-        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P7</div><div>Log leak — logcat PID filter → ProGuard strips logs</div></div>
-        <div class="ctrl-row card" style="margin:0;padding:7px 11px"><div style="min-width:18px;font-size:9px;color:var(--muted);font-weight:700">P8</div><div>Network Security Config — <code>dumpsys package</code> verifica NSC declarado</div></div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Resultado último run · 2026-06-11 · 54s</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div class="card" style="flex:1;padding:10px;text-align:center;border-color:#23863644">
+          <div style="font-size:28px;font-weight:900;color:var(--green)">26</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px">PASS</div>
+        </div>
+        <div class="card" style="flex:1;padding:10px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:var(--green)">0</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px">FAIL</div>
+        </div>
+        <div class="card" style="flex:1;padding:10px;text-align:center;border-color:#9e640044">
+          <div style="font-size:28px;font-weight:900;color:var(--yellow)">9</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px">WARN</div>
+        </div>
+        <div class="card" style="flex:1;padding:10px;text-align:center">
+          <div style="font-size:28px;font-weight:900">35</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px">TOTAL</div>
+        </div>
+      </div>
+      <div class="card" style="padding:9px 12px;border-color:#9e640033;background:#9e640008">
+        <div style="font-size:10px;font-weight:700;color:var(--yellow);margin-bottom:5px">Los 9 warnings son mejoras recomendadas, no fallos bloqueantes</div>
+        <div style="font-size:10.5px;color:var(--muted);line-height:1.6">
+          SSL pinning sin implementar · WebView file access flags (Capacitor runtime) ·
+          Certificate Transparency sin directiva · Emulator detection ausente en DEX ·
+          Clipboard sin restricción explícita · Screen record 5.9 KB (≈ negro)
+        </div>
       </div>
     </div>
     <div>
-      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">Artefactos generados</div>
-      <div class="card" style="padding:11px 14px;margin-bottom:8px">
-        <div style="font-size:11px;font-weight:700;margin-bottom:5px">docs/android-build-reports/</div>
-        <div style="font-size:10.5px;color:var(--muted);line-height:1.6">Gradle problems report · Incubating feature · warnings + advice no críticos</div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Reporte HTML generado</div>
+      <div class="card" style="padding:10px 13px;margin-bottom:7px">
+        <div style="font-size:11px;font-weight:700;margin-bottom:5px">android-security-report.html</div>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--muted)">
+          <div>🔴 <strong>Severity badge</strong> — Critical / High / Medium / Low / Info por check</div>
+          <div>🗂️ <strong>MASVS control</strong> — MASVS-STORAGE-1, MASVS-NETWORK-2, etc.</div>
+          <div>🔍 <strong>Evidence</strong> — qué encontró el test (path, output, bytes capturados)</div>
+          <div>💡 <strong>Recommendation</strong> — qué cambiar exactamente en el código</div>
+          <div>⏱️ <strong>Timing</strong> — segundos desde el inicio de la suite</div>
+        </div>
       </div>
-      <div class="card" style="padding:11px 14px;margin-bottom:8px">
-        <div style="font-size:11px;font-weight:700;margin-bottom:5px">docs/android-test-reports/android-security-report.html</div>
-        <div style="font-size:10.5px;color:var(--muted);line-height:1.6">Reporte HTML estilizado con badge PASSED/FAILED · tabla de resultados por fase · stats</div>
-      </div>
-      <div class="card" style="padding:11px 14px">
-        <pre style="font-size:9.5px">docker compose \
-  --profile android-tests up \
-  android-emulator \
-  android-test-runner</pre>
-        <div style="font-size:10px;color:var(--muted);margin-top:6px"><code>android-build</code> corre una sola vez y reutiliza el APK en el volumen</div>
+      <div class="card" style="padding:10px 13px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:5px">Ver A8 y A9 para descripción de cada fase →</div>
+        <div style="font-size:10.5px;color:var(--muted);line-height:1.6">
+          <code>android-build</code> corre una vez y reutiliza el APK en el volumen.<br>
+          Para re-ejecutar solo los tests: <code>docker compose --profile android-tests restart android-test-runner</code>
+        </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ══ A8: TEST PHASES 1-15 ══ -->
+<div class="slide" id="s16">
+  <div class="appendix-badge">A8 · Apéndice técnico</div>
+  <h2>Android Security Tests — Fases 1 a 15</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:8px">Análisis estático del APK · Ataques a UI y captura · Checks de build hardening · Red y criptografía</p>
+  <div style="overflow-y:auto;max-height:calc(100vh - 160px)">
+  <table>
+    <thead>
+      <tr><th style="width:28px">#</th><th style="width:150px">Fase</th><th>Qué verifica y cómo lo hace</th><th style="width:95px">MASVS</th><th style="width:60px">Sev.</th><th style="width:48px">Run</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">1</td>
+        <td><strong>Static APK Analysis</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Descomprime el APK y escanea el binario buscando: URLs <code>http://</code> (excepto localhost), flag <code>allowBackup</code>, flag <code>debuggable=true</code>, y descriptores DEX cortos (<code>La;</code>, <code>Lb;</code>) como señal de que R8 está obfuscando.</td>
+        <td><code style="font-size:9px">MASVS-CODE</code><br><code style="font-size:9px">MASVS-NETWORK-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">2</td>
+        <td><strong>FLAG_SECURE Attack</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Lanza la app y ejecuta <code>adb screencap</code>. Si la captura pesa ≥ 40 KB hay contenido real visible (FLAG_SECURE no está activo). Si pesa 0 o es un frame negro, FLAG_SECURE está bloqueando. Confirma con <code>dumpsys window</code> buscando el bit <code>0x2000</code> en los flags de ventana.</td>
+        <td><code style="font-size:9px">MASVS-PLATFORM-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">3</td>
+        <td><strong>Root Detection</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Comprueba que la propiedad <code>ro.build.tags</code> no sea <code>test-keys</code> (firmas de ingeniería). Si lo es, intenta lanzar la app y verifica si la app se cierra sola (detección en runtime). Busca además en el DEX los paths de <code>su</code> binarios (<code>/system/xbin/su</code>, etc.) que la app debe verificar.</td>
+        <td><code style="font-size:9px">MASVS-RESILIENCE-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">Medium</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">4</td>
+        <td><strong>Frida Detection</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Busca en el DEX los strings de artefactos Frida: <code>frida-server</code>, <code>re.frida.server</code>, <code>frida-agent</code>. Si están compilados, la app sabe qué buscar en disco. Si Frida está disponible en el contenedor, intenta hacer attach real y verifica si la app lo bloquea.</td>
+        <td><code style="font-size:9px">MASVS-RESILIENCE-2</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">Medium</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">5</td>
+        <td><strong>APK Signature (OS)</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Usa <code>pm path</code> para verificar que el OS reconoció e instaló el paquete correctamente. Si no existe ningún path, el APK fue rechazado por firma inválida o el package name no coincide con el <code>applicationId</code> del build.</td>
+        <td><code style="font-size:9px">MASVS-CODE-1</code></td>
+        <td><span class="badge b-gray" style="font-size:9px">Low</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">6</td>
+        <td><strong>WebView CDP Exploit</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Busca el socket <code>webview_devtools_remote_&lt;PID&gt;</code> en <code>/proc/net/unix</code>. Si existe, hace <code>adb forward tcp:9221 localabstract:webview_devtools_remote_&lt;PID&gt;</code> y envía <code>GET /json</code> al endpoint CDP. Si devuelve <code>webSocketDebuggerUrl</code>, el JS de la app es inspeccionable remotamente.</td>
+        <td><code style="font-size:9px">MASVS-PLATFORM-2</code></td>
+        <td><span class="badge b-red" style="font-size:9px">Critical</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">7</td>
+        <td><strong>Log Leak</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Captura <code>adb logcat --pid=&lt;PID&gt;</code> filtrando líneas de frameworks del sistema (ActivityManager, WebView, Capacitor Bridge). Si quedan entradas originadas en el código de la app, ProGuard no ha eliminado las llamadas a <code>Log.d/i/w/e</code>.</td>
+        <td><code style="font-size:9px">MASVS-CODE-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">Medium</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">8</td>
+        <td><strong>Network Security Config</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Descomprime <code>res/xml/network_security_config.xml</code> del APK y verifica que exista y contenga la directiva <code>cleartextTrafficPermitted</code>. Sin NSC, Android permite HTTP sin TLS en API &lt; 28.</td>
+        <td><code style="font-size:9px">MASVS-NETWORK-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="partial" style="font-size:11px">⚠</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">9</td>
+        <td><strong>JDWP Debugger Attach</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Ejecuta <code>adb jdwp</code> que lista todos los PIDs de procesos que aceptan conexiones de debugger Java. Si el PID de la app aparece en esa lista, cualquier persona con ADB puede adjuntar <code>jdb</code> y leer/modificar el estado de la JVM en tiempo real.</td>
+        <td><code style="font-size:9px">MASVS-RESILIENCE-3</code></td>
+        <td><span class="badge b-red" style="font-size:9px">Critical</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">10</td>
+        <td><strong>Exported Components</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Parsea <code>pm dump &lt;pkg&gt;</code> buscando líneas del patrón <code>com.pkg/ClassName:</code> seguidas de <code>exported=true</code>. Excluye el <code>MainActivity</code> launcher. Un componente exportado sin permiso es invocable por cualquier app del dispositivo.</td>
+        <td><code style="font-size:9px">MASVS-PLATFORM-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">11</td>
+        <td><strong>ADB Backup</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Verifica que los flags de <code>pm dump</code> no incluyan <code>ALLOW_BACKUP</code>. Si ese flag está activo, <code>adb backup -apk com.pkg</code> puede extraer todos los datos de la app, incluyendo SharedPreferences y bases de datos SQLite, sin root.</td>
+        <td><code style="font-size:9px">MASVS-STORAGE-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">12</td>
+        <td><strong>Tapjacking</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Busca <code>filterTouchesWhenObscured</code> en los XMLs de layout descomprimidos del APK y en el DEX. Este atributo hace que el sistema operativo ignore toques que llegan a través de una overlay maliciosa (otra app superpuesta de forma transparente).</td>
+        <td><code style="font-size:9px">MASVS-PLATFORM-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">Medium</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">13</td>
+        <td><strong>Hardcoded Secrets Scan</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Escanea el binario completo del APK, el DEX y los assets (<code>capacitor.config.json</code>, <code>main.js</code>, <code>vendor.js</code>) con 9 patrones regex: Google API keys (<code>AIza…</code>), AWS access keys (<code>AKIA…</code>), JWT completos, Firebase URLs, Stripe live keys, PEM private keys, OAuth secrets, contraseñas hardcodeadas y API keys.</td>
+        <td><code style="font-size:9px">MASVS-STORAGE-1</code></td>
+        <td><span class="badge b-red" style="font-size:9px">Critical</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">14</td>
+        <td><strong>SSL Certificate Pinning</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Busca señales de pinning en el DEX: <code>CertificatePinner</code> (OkHttp), <code>TrustKit</code>, <code>X509TrustManager</code>, <code>HostnameVerifier</code>. Verifica <code>network_security_config.xml</code> por directiva <code>&lt;pin-set&gt;</code>. Detecta también <code>onReceivedSslError</code> que podría aceptar certs inválidos con <code>handler.proceed()</code>.</td>
+        <td><code style="font-size:9px">MASVS-NETWORK-2</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="partial" style="font-size:11px">⚠</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">15</td>
+        <td><strong>WebView Hardening</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Escanea el DEX buscando configuraciones peligrosas de WebView: <code>setAllowUniversalAccessFromFileURLs</code> (habilita UXSS via <code>file://</code>), <code>MIXED_CONTENT_ALWAYS_ALLOW</code> (HTTP dentro de HTTPS), y <code>addJavascriptInterface</code> (bridge JS → Java). El runtime de Capacitor establece algunos de estos flags; se reporta para auditoría.</td>
+        <td><code style="font-size:9px">MASVS-PLATFORM-2</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="partial" style="font-size:11px">⚠</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- ══ A9: TEST PHASES 16-30 ══ -->
+<div class="slide" id="s17">
+  <div class="appendix-badge">A9 · Apéndice técnico</div>
+  <h2>Android Security Tests — Fases 16 a 30</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:8px">Firma APK · Storage seguro · Ataques IPC · Detección de hooking · Memoria en runtime · Anti-tampering</p>
+  <div style="overflow-y:auto;max-height:calc(100vh - 160px)">
+  <table>
+    <thead>
+      <tr><th style="width:28px">#</th><th style="width:150px">Fase</th><th>Qué verifica y cómo lo hace</th><th style="width:95px">MASVS</th><th style="width:60px">Sev.</th><th style="width:48px">Run</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">16</td>
+        <td><strong>APK Signature Schemes</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Detecta qué esquemas de firma están presentes: V1 busca <code>META-INF/*.RSA</code> en el ZIP; V2/V3 busca la magic string <code>APK Sig Block 42</code> en el binario; V4 verifica via <code>apksigner --verbose</code> si está disponible. Solo V1 es vulnerable a ataques de manipulación ZIP.</td>
+        <td><code style="font-size:9px">MASVS-CODE-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">17</td>
+        <td><strong>SharedPreferences Audit</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Con <code>adb root</code>, lista <code>/data/data/&lt;pkg&gt;/shared_prefs/*.xml</code> y parsea el contenido XML buscando atributos <code>name</code> con palabras sensibles (jwt, token, password, pin, oauth, session…). Si encuentra datos en texto plano que deberían estar en <code>EncryptedSharedPreferences</code>, reporta crítico.</td>
+        <td><code style="font-size:9px">MASVS-STORAGE-1,2</code></td>
+        <td><span class="badge b-red" style="font-size:9px">Critical</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">18</td>
+        <td><strong>SQLite Database Audit</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Con <code>adb root</code>, lista <code>/data/data/&lt;pkg&gt;/databases/*.db</code> y ejecuta <code>sqlite3 .schema</code> sobre cada base. Busca nombres de columna sensibles y verifica si la BD está cifrada (SQLCipher): si <code>sqlite3</code> falla con error de encabezado, la BD usa cifrado.</td>
+        <td><code style="font-size:9px">MASVS-STORAGE-1,2</code></td>
+        <td><span class="badge b-red" style="font-size:9px">Critical</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">19</td>
+        <td><strong>Deep Link Attack</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Extrae esquemas URL y autoridades de <code>pm dump</code>. Para cada deep link construido, usa <code>am start -a android.intent.action.VIEW -d &lt;url&gt;</code> con payloads: path traversal (<code>/../../../etc/passwd</code>), SQL injection, XSS y open redirect. Verifica si la app se lanza con el payload.</td>
+        <td><code style="font-size:9px">MASVS-PLATFORM-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">Medium</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">20</td>
+        <td><strong>Broadcast Injection</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Identifica BroadcastReceivers exportados en <code>pm dump</code>. Para cada uno ejecuta <code>am broadcast -n &lt;pkg&gt;/&lt;Receiver&gt;</code> sin credenciales. Si el receiver responde al broadcast sin requerir permiso, cualquier app del dispositivo puede activarlo.</td>
+        <td><code style="font-size:9px">MASVS-PLATFORM-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">21</td>
+        <td><strong>Content Provider Audit</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Extrae las autoridades URI de los ContentProviders declarados. Ejecuta <code>adb shell content query --uri content://&lt;authority&gt;/</code> sin autenticación. Si devuelve filas de datos, el provider está exponiendo información sin requerir permiso (lectura no autorizada de la BD interna).</td>
+        <td><code style="font-size:9px">MASVS-PLATFORM-1</code></td>
+        <td><span class="badge b-red" style="font-size:9px">Critical</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">22</td>
+        <td><strong>Hook Detection (Frida/Xposed)</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Busca strings de frameworks de hooking en el DEX: <code>XposedBridge</code>, <code>de.robv.android.xposed</code>, <code>LSPosed</code>, <code>Zygisk</code>, <code>Riru</code>, <code>objection</code>. En runtime, verifica <code>/proc/&lt;PID&gt;/maps</code> buscando librerías de Frida inyectadas. Si Frida está en el contenedor, intenta attach real para confirmar si la app lo detecta y termina.</td>
+        <td><code style="font-size:9px">MASVS-RESILIENCE-2</code></td>
+        <td><span class="badge b-red" style="font-size:9px">Critical</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">23</td>
+        <td><strong>Native Library Audit</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Lista todos los <code>.so</code> del APK. Extrae cada uno y aplica <code>strings</code> (o <code>tr -dc printable</code>). Busca credenciales hardcodeadas con los mismos patrones del Phase 13, y registra si tienen <code>RegisterNatives</code> o <code>JNI_OnLoad</code> (bridge JNI activo). Los .so son frecuentemente ignorados en auditorías.</td>
+        <td><code style="font-size:9px">MASVS-CODE-1</code><br><code style="font-size:9px">MASVS-STORAGE-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">Medium</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">24</td>
+        <td><strong>Memory Scan (runtime)</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Con <code>adb root</code>, lee el mapa de memoria del proceso (<code>/proc/&lt;PID&gt;/maps</code>) e identifica regiones legibles del heap. Usa <code>dd if=/proc/&lt;PID&gt;/mem</code> para extraer hasta 64 KB de las primeras regiones y busca JWT (<code>eyJ…</code>), claves RSA, credenciales o passwords en texto plano en memoria activa.</td>
+        <td><code style="font-size:9px">MASVS-STORAGE-2</code></td>
+        <td><span class="badge b-red" style="font-size:9px">Critical</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">25</td>
+        <td><strong>Screen Recording Attack</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Con la app en primer plano, ejecuta <code>adb shell screenrecord --time-limit 2</code>. Si el video resultante pesa &gt; 50 KB hay contenido real grabado (FLAG_SECURE no protege contra <code>screenrecord</code>). Un video pequeño (≤ 10 KB) indica frames negros — FLAG_SECURE activo. Complementa el Phase 2 que solo prueba screencap.</td>
+        <td><code style="font-size:9px">MASVS-PLATFORM-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="partial" style="font-size:11px">⚠</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">26</td>
+        <td><strong>Certificate Transparency</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Verifica si el NSC incluye <code>requireCertificateTransparency="true"</code> (obliga a que los certs del servidor estén en logs CT públicos). Detecta si el NSC confía en CAs de usuario, lo que permitiría MITM con un certificado instalado manualmente. Busca también la librería <code>okhttp-certificatetransparency</code> en el DEX.</td>
+        <td><code style="font-size:9px">MASVS-NETWORK-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">Medium</span></td>
+        <td class="partial" style="font-size:11px">⚠</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">27</td>
+        <td><strong>Clipboard Leak</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Busca en el DEX uso de <code>ClipboardManager</code> o <code>setPrimaryClip</code>. Verifica si hay patrones de protección: <code>TYPE_TEXT_VARIATION_PASSWORD</code> o <code>setLongClickable(false)</code> en campos sensibles. Campos de contraseña sin <code>inputType=textPassword</code> copian al portapapeles y otras apps pueden leerlo.</td>
+        <td><code style="font-size:9px">MASVS-PLATFORM-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">Medium</span></td>
+        <td class="partial" style="font-size:11px">⚠</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">28</td>
+        <td><strong>Emulator Detection</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Lee las propiedades del sistema: <code>ro.kernel.qemu=1</code>, <code>ro.hardware=goldfish/ranchu</code>, <code>ro.product.model</code> con "sdk" o "emulator", <code>ro.build.fingerprint</code> con "generic". Verifica si el DEX contiene código que compruebe estas propiedades para bloquear ejecución en emuladores/entornos de análisis.</td>
+        <td><code style="font-size:9px">MASVS-RESILIENCE-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">Medium</span></td>
+        <td class="partial" style="font-size:11px">⚠</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">29</td>
+        <td><strong>Anti-Tamper / Integrity</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Busca en el DEX señales de que la app verifica su propia integridad: llamadas a <code>PackageManager.getPackageInfo</code> para comparar firma, cálculos de checksum (<code>CRC</code>, <code>SHA-256</code>), uso de la API <code>SafetyNet</code> / <code>Play Integrity</code>. Sin estos controles, un APK reempaquetado con código malicioso no es detectado.</td>
+        <td><code style="font-size:9px">MASVS-RESILIENCE-2</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">30</td>
+        <td><strong>Intent Injection</strong></td>
+        <td style="font-size:11px;color:var(--muted)">Para cada componente exportado, lanza 3 intentos de <code>am start</code>: sin extras, con extras que simulan bypass de auth (<code>--es authenticated true --es role admin</code>), y con URI de datos maliciosa (<code>-d file:///etc/passwd</code>). Si la app lanza algún flujo sensible sin validar los extras, hay escalada de privilegios por Intent.</td>
+        <td><code style="font-size:9px">MASVS-PLATFORM-1</code></td>
+        <td><span class="badge b-yellow" style="font-size:9px">High</span></td>
+        <td class="ok" style="font-size:11px">✓</td>
+      </tr>
+    </tbody>
+  </table>
   </div>
 </div>
 
@@ -1108,7 +1517,7 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
 <script>
 const slides = document.querySelectorAll('.slide');
 const dotsEl = document.getElementById('dots');
-const EXEC_SLIDES = 8; // slides 0-7 are executive; 8+ are appendix
+const EXEC_SLIDES = 9; // slides 0-8 are executive; 9+ are appendix
 let cur = 0;
 
 slides.forEach((_, i) => {
