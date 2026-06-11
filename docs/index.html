@@ -179,6 +179,9 @@ pre .v{color:#3fb950}
     los vectores de ataque sobre la arquitectura API (red, tokens, cifrado) y los vectores propios de la app móvil
     (dispositivo, APK, almacenamiento, IPC). Ambas verificadas automáticamente.
   </p>
+  <p style="color:var(--muted);font-size:clamp(12px,1.2vw,14px);margin-top:8px;max-width:720px;line-height:1.55">
+    El objetivo es proponer un target de autenticación web/mobile con <strong>Keycloak como broker de identidades</strong>, mientras que Odoo mantiene la autorización de negocio y el directorio de clientes.
+  </p>
 
   <div class="grid g2" style="margin-top:16px;margin-bottom:14px;gap:10px">
     <!-- PILLAR 1: Backend -->
@@ -186,7 +189,7 @@ pre .v{color:#3fb950}
       <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">🔀 Capa 1 — Seguridad de Arquitectura API</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;font-size:11.5px;line-height:1.6">
         <div>✓ Cifrado E2E JWE bidireccional</div>
-        <div>✓ Auth federada PKCE · Keycloak</div>
+        <div>✓ Auth federada PKCE · Keycloak (POC target web/mobile)</div>
         <div>✓ Binding de clave pública RSA</div>
         <div>✓ Anti-replay · Idempotency Key</div>
         <div>✓ AuthZ negocio en Odoo ERP</div>
@@ -226,7 +229,7 @@ pre .v{color:#3fb950}
       <div style="font-size:10px;font-weight:700;color:var(--yellow);margin-bottom:5px">⚠ Pendiente para producción</div>
       <div style="font-size:11.5px;color:var(--muted);line-height:1.6">
         <span style="color:var(--blue)">API:</span> Circuit breaker · Token revocation · Redis stores · TLS CA real · Red interna aislada<br>
-        <span style="color:var(--green)">Mobile:</span> Certificate pinning (SHA-256 real) · Emulator detection en DEX · CT enforcement
+        <span style="color:var(--green)">Mobile:</span> SSL pinning activo · Emulator detection en DEX · CT enforcement
       </div>
     </div>
     <div class="card" style="padding:11px 14px">
@@ -243,11 +246,44 @@ pre .v{color:#3fb950}
   </div>
 </div>
 
+<!-- ══ 1b. ESTADO ACTUAL VS TARGET ══ -->
+<div class="slide" id="s0b">
+  <div class="slide-body">
+  <div class="section-tag">Estado actual / Objetivo</div>
+  <h2>Odoo hoy vs Keycloak target</h2>
+  <p style="color:var(--muted);font-size:12px;max-width:720px;line-height:1.55">El POC valida la migración de web/mobile a Keycloak como broker de identidades, mientras Odoo permanece como motor de autorización de negocio y directorio de clientes.</p>
+
+  <div class="grid g2" style="gap:12px;margin-top:14px">
+    <div class="card" style="padding:12px 14px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">Estado actual</div>
+      <ul style="font-size:12px;line-height:1.6;color:var(--muted);padding-left:18px;margin:0">
+        <li>Odoo gestiona usuarios, contraseñas y dispositivos, etc.</li>
+        <li>Keycloak hoy solo federado con Azure AD para herramientas internas.</li>
+        <li>Kong expone las mismas rutas para web y mobile.</li>
+        <li>El directorio de negocio sigue siendo el repositorio de verdad.</li>
+      </ul>
+    </div>
+    <div class="card hi-blue" style="padding:12px 14px">
+      <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:8px">Objetivo POC</div>
+      <ul style="font-size:12px;line-height:1.6;color:var(--muted);padding-left:18px;margin:0">
+        <li>Web/mobile autenticados por Keycloak + PKCE/OIDC.</li>
+        <li>Odoo retiene la autorización de negocio y validación de cliente.</li>
+        <li>Kong separa rutas y audiencias por canal.</li>
+        <li>Se reduce el blast radius de contraseñas en Odoo.</li>
+      </ul>
+    </div>
+  </div>
+  </div>
+</div>
+
 <!-- ══ 2. ARQUITECTURA C4 ══ -->
 <div class="slide" id="s1">
   <div class="slide-body">
   <div class="section-tag">Arquitectura</div>
   <h2>Stack Tecnológico — 5 capas de defensa</h2>
+  <p style="color:var(--muted);font-size:12px;max-width:720px;line-height:1.55;margin-bottom:12px">
+    En este POC, Keycloak es el objetivo para autenticar web y mobile. Odoo sigue aportando la autorización de negocio y la verificación de clientes activos, mientras se valida la transición segura del directorio de usuarios.
+  </p>
 
   <!-- Auth flow -->
     <div class="arch-flow" style="margin-bottom:8px">
@@ -263,7 +299,7 @@ pre .v{color:#3fb950}
       <div class="arch-box" style="border-color:#f59e0b66">
         <div style="font-size:15px">🔑</div>
         <div style="font-weight:700;font-size:11px">Keycloak 26</div>
-        <div style="color:var(--muted);font-size:10px">web-realm · mobile-realm</div>
+        <div style="color:var(--muted);font-size:10px">web/mobile target · herramientas internas actuales</div>
       </div>
       <div class="arch-arrow">
         <div style="font-size:9px;color:var(--muted)">JWT · 5 min TTL</div>
@@ -435,7 +471,10 @@ pre .v{color:#3fb950}
   <div class="slide-body">
   <div class="section-tag">Seguridad en profundidad</div>
   <h2>9 controles activos en cada request</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Un request sin autenticar no llega al servicio; uno autenticado pasa por 7 validaciones antes de recibir respuesta</p>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Un request sin autenticar no llega al servicio; uno autenticado pasa por 9 validaciones antes de recibir respuesta.</p>
+  <p style="color:var(--muted);font-size:11.5px;margin-bottom:14px;max-width:720px;line-height:1.5">
+    Este flujo describe el objetivo del POC: Keycloak como emisor de identidad para web/mobile y Odoo como motor de autorización de negocio / validación de cliente activo.
+  </p>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="flow">
@@ -539,8 +578,8 @@ pre .v{color:#3fb950}
     <div class="ctrl-row hi-blue card" style="margin-bottom:0">
       <div class="ctrl-icon">🏢</div>
       <div class="ctrl-body">
-        <div class="ctrl-title">AuthZ de negocio en Odoo</div>
-        <div class="ctrl-desc">JWT válido no basta. Valida <code>active=true</code> en ERP en los 3 servicios. Cliente suspendido → 403.</div>
+        <div class="ctrl-title">Odoo AuthZ + directorio de clientes</div>
+        <div class="ctrl-desc">JWT válido no basta. Valida <code>active=true</code> en ERP en los 3 servicios. Odoo también gestiona actualmente el directorio de usuarios/contraseñas; el POC propone delegar la autenticación web/mobile a Keycloak mientras mantiene Odoo para reglas de negocio.</div>
         <div class="ctrl-badges"><span class="badge b-green">✓ Activo</span><span class="badge b-gray">Server</span></div>
       </div>
     </div>
@@ -591,7 +630,7 @@ pre .v{color:#3fb950}
       <div style="font-size:11px;color:var(--muted);line-height:1.75">
         <div>✓ Network Security Config presente</div>
         <div>✓ Cleartext HTTP bloqueado</div>
-        <div>⚠ SSL Pinning: pendiente (sin SHA-256 real)</div>
+        <div>✓ SSL pinning activo</div>
         <div>⚠ Certificate Transparency: pendiente</div>
         <div style="color:var(--muted);font-size:10px;margin-top:4px">Sin dominio de producción real</div>
       </div>
@@ -764,6 +803,10 @@ pre .v{color:#3fb950}
         <p>Si Odoo o Keycloak fallan, actualmente todos los endpoints fallan con ellos. Necesitamos un mecanismo que degrade gracefully y proteja la disponibilidad del servicio.</p>
       </div>
       <div class="card hi-yellow" style="margin-bottom:8px;padding:12px 14px">
+        <h3>Transición Odoo → Keycloak</h3>
+        <p>Formalizar el plan de migración del acceso web/mobile a Keycloak, mientras Odoo conserva la autorización de negocio y la validación de cliente activo.</p>
+      </div>
+      <div class="card hi-yellow" style="margin-bottom:8px;padding:12px 14px">
         <h3>Revocación de tokens en tiempo real</h3>
         <p>Un token comprometido hoy es válido hasta que expira (5 min). Necesitamos poder invalidarlo inmediatamente desde el servidor (logout forzado, cuenta bloqueada).</p>
       </div>
@@ -775,11 +818,11 @@ pre .v{color:#3fb950}
     <div>
       <div style="font-size:10px;color:var(--blue);font-weight:700;margin-bottom:8px;letter-spacing:.06em;text-transform:uppercase">📋 Prioridad media — hardening de infraestructura</div>
       <div class="card hi-blue" style="margin-bottom:8px;padding:12px 14px">
-        <h3>Certificate Pinning (SHA-256 real)</h3>
-        <p>El hardening Android actual bloquea cleartext vía <code>network_security_config</code>, pero no valida el fingerprint del certificado del servidor. En producción, añadir el SHA-256 del cert en <code>network_security_config.xml</code> con <code>&lt;pin-set&gt;</code> previene ataques MitM incluso con certs autofirmados válidos.</p>
+        <h3>Segregar rutas Web / Mobile</h3>
+        <p>Kong actualmente expone las mismas rutas para los canales web y mobile. En producción, separar rutas, audiencias y permisos reduce el riesgo de cross-channel token reuse y mejora la trazabilidad de seguridad.</p>
         <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-          <span class="badge b-blue" style="font-size:9px">Requiere cert SHA-256 real</span>
-          <span class="badge b-gray" style="font-size:9px">network_security_config ya creado</span>
+          <span class="badge b-blue" style="font-size:9px">Kong ya en uso</span>
+          <span class="badge b-gray" style="font-size:9px">Web/Mobile comparten endpoints</span>
         </div>
       </div>
       <div class="card hi-blue" style="margin-bottom:8px;padding:12px 14px">
@@ -1758,13 +1801,13 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
   <button class="nav-btn" id="btn-prev" onclick="go(-1)" disabled>← Prev</button>
   <div class="dots" id="dots"></div>
   <button class="nav-btn" id="btn-next" onclick="go(1)">Next →</button>
-  <span class="slide-num" id="slide-num">1 / 10</span>
+  <span class="slide-num" id="slide-num"></span>
 </nav>
 
 <script>
 const slides = document.querySelectorAll('.slide');
 const dotsEl = document.getElementById('dots');
-const EXEC_SLIDES = 10; // slides 0-9 are executive; 10+ are appendix
+const EXEC_SLIDES = 11; // slides 0-10 are executive; 11+ are appendix
 let cur = 0;
 
 slides.forEach((_, i) => {
@@ -1774,6 +1817,15 @@ slides.forEach((_, i) => {
   d.onclick = () => goTo(i);
   dotsEl.appendChild(d);
 });
+
+updateSlideNum();
+
+function updateSlideNum() {
+  const isApp = cur >= EXEC_SLIDES;
+  document.getElementById('slide-num').textContent = isApp
+    ? `Apéndice A${cur - EXEC_SLIDES + 1} / A${slides.length - EXEC_SLIDES}`
+    : `${cur + 1} / ${EXEC_SLIDES}`;
+}
 
 function goTo(n) {
   if (n < 0 || n >= slides.length) return;
@@ -1786,10 +1838,7 @@ function goTo(n) {
   document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === cur));
   document.getElementById('btn-prev').disabled = cur === 0;
   document.getElementById('btn-next').disabled = cur === slides.length - 1;
-  const isApp = cur >= EXEC_SLIDES;
-  document.getElementById('slide-num').textContent = isApp
-    ? `Apéndice A${cur - EXEC_SLIDES + 1} / A${slides.length - EXEC_SLIDES}`
-    : `${cur + 1} / ${EXEC_SLIDES}`;
+  updateSlideNum();
 }
 
 function go(delta) { goTo(cur + delta); }
