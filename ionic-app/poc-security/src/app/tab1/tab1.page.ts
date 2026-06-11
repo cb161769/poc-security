@@ -4,6 +4,8 @@ import { AuthService } from '../services/auth.service';
 import { ApiService } from '../services/api.service';
 import { CryptoService } from '../services/crypto.service';
 import { PlatformService, Channel } from '../services/platform.service';
+import { BiometricService } from '../services/biometric.service';
+import { SecureStorageService } from '../services/secure-storage.service';
 
 @Component({
   selector: 'app-tab1',
@@ -35,17 +37,31 @@ export class Tab1Page implements OnInit, OnDestroy {
   changePwdError: string | null = null;
   changePwdSuccess = false;
 
+  // Biometric
+  biometricAvailable = false;
+  hasBiometricToken = false;
+  biometricLoading = false;
+  biometricError: string | null = null;
+
   constructor(
     public auth: AuthService,
     private api: ApiService,
     private crypto: CryptoService,
-    private platform: PlatformService
+    public platform: PlatformService,
+    private biometric: BiometricService,
+    private secureStorage: SecureStorageService,
   ) {}
 
   async ngOnInit() {
     this.channel = this.platform.getChannel();
     await this.crypto.initialize(this.channel);
     this.timerSub = interval(1000).subscribe(() => this.updateTimer());
+
+    if (this.platform.isMobile()) {
+      this.biometricAvailable = await this.biometric.isAvailable();
+      const rt = await this.secureStorage.loadRefreshToken();
+      this.hasBiometricToken = !!rt;
+    }
   }
 
   ngOnDestroy() {
@@ -97,6 +113,12 @@ export class Tab1Page implements OnInit, OnDestroy {
       await this.auth.login(this.username.trim(), this.password);
       this.loginAttempts = 0;
       this.updateTimer();
+
+      // Store refresh token for future biometric logins (mobile only)
+      if (this.platform.isMobile() && this.auth.getRefreshToken()) {
+        await this.secureStorage.storeRefreshToken(this.auth.getRefreshToken()!);
+        this.hasBiometricToken = true;
+      }
     } catch {
       this.loginAttempts++;
       if (this.loginAttempts >= 5) {
@@ -108,6 +130,46 @@ export class Tab1Page implements OnInit, OnDestroy {
     } finally {
       this.loading = false;
     }
+  }
+
+  async loginWithBiometric() {
+    this.biometricLoading = true;
+    this.biometricError = null;
+
+    const ok = await this.biometric.authenticate('Confirma tu identidad para acceder a KEYSTONE');
+    if (!ok) {
+      this.biometricLoading = false;
+      this.biometricError = 'Autenticación biométrica cancelada';
+      return;
+    }
+
+    const rt = await this.secureStorage.loadRefreshToken();
+    if (!rt) {
+      this.biometricLoading = false;
+      this.biometricError = 'No hay sesión guardada. Inicia sesión con contraseña.';
+      this.hasBiometricToken = false;
+      return;
+    }
+
+    try {
+      await this.auth.loginWithRefreshToken(rt);
+      // Refresh token rotates on each use — persist the new one
+      if (this.auth.getRefreshToken()) {
+        await this.secureStorage.storeRefreshToken(this.auth.getRefreshToken()!);
+      }
+      this.updateTimer();
+    } catch {
+      await this.secureStorage.clearRefreshToken();
+      this.hasBiometricToken = false;
+      this.biometricError = 'Sesión expirada. Inicia sesión con contraseña.';
+    } finally {
+      this.biometricLoading = false;
+    }
+  }
+
+  showPasswordForm() {
+    this.hasBiometricToken = false;
+    this.biometricError = null;
   }
 
   async loadData() {
@@ -166,8 +228,12 @@ export class Tab1Page implements OnInit, OnDestroy {
     }
   }
 
-  logout() {
+  async logout() {
     this.auth.logout();
+    if (this.platform.isMobile()) {
+      await this.secureStorage.clearRefreshToken();
+      this.hasBiometricToken = false;
+    }
     this.data = null;
     this.rawJwe = null;
     this.error = null;

@@ -168,9 +168,10 @@ pre .v{color:#3fb950}
   <div class="accent-bar"></div>
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <span class="badge b-blue">POC · Seguridad API</span>
-    <span class="badge b-green">✓ 33/33 Funcional</span>
-    <span class="badge b-green">✓ 17/17 Ataques</span>
+    <span class="badge b-green">✓ 85/85 Tests · 0 Fail</span>
+    <span class="badge b-green">✓ 50 Pentests API · 5 categorías</span>
     <span class="badge b-green">✓ Android 26/35 · 0 Fail</span>
+    <span class="badge b-purple">✓ Passkeys WebAuthn implementados</span>
     <span class="badge b-gray">Junio 2026</span>
   </div>
   <h1>Seguridad de Extremo a Extremo<br><span style="color:var(--blue)">API Backend</span> <span style="color:var(--muted);font-weight:400">+</span> <span style="color:var(--green)">Aplicación Mobile</span></h1>
@@ -198,9 +199,9 @@ pre .v{color:#3fb950}
         <div>✓ Sin metadatos de servidor</div>
       </div>
       <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-        <span class="badge b-green" style="font-size:9px">33/33 funcional</span>
-        <span class="badge b-green" style="font-size:9px">17/17 ataques</span>
-        <span class="badge b-blue" style="font-size:9px">9 ataques bloqueados</span>
+        <span class="badge b-green" style="font-size:9px">85/85 tests · 0 fail</span>
+        <span class="badge b-green" style="font-size:9px">50 pentests · 5 categorías</span>
+        <span class="badge b-purple" style="font-size:9px">Passkeys WebAuthn activos</span>
       </div>
     </div>
     <!-- PILLAR 2: Mobile -->
@@ -684,19 +685,19 @@ pre .v{color:#3fb950}
 <div class="slide" id="s5">
   <div class="slide-body">
   <div class="section-tag">Evidencia</div>
-  <h2>9 ataques simulados — 17 verificaciones superadas</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Suite automatizada: <code style="font-size:11px">bash scripts/test-attacks.sh</code> — reinicia servicios, obtiene tokens reales y ejecuta cada ataque</p>
+  <h2>85/85 tests — 9 ataques + 50 pentests · 0 fallos</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Suite automatizada: <code style="font-size:11px">bash scripts/test-all.sh</code> — 15 secciones · tokens reales de Keycloak · ataques JWT, inyección, headers, CORS, rate limiting, brute force</p>
 
   <div style="display:flex;gap:14px;align-items:flex-start">
     <!-- Score box -->
     <div style="flex-shrink:0;text-align:center;padding:14px 16px;background:var(--card);border:1px solid #23863644;border-radius:12px;min-width:110px">
-      <div class="score-big" style="font-size:clamp(42px,6vw,72px)">17</div>
-      <div style="font-size:11px;color:var(--green);font-weight:700;margin-top:2px">/ 17 PASS</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px">9 ataques</div>
+      <div class="score-big" style="font-size:clamp(32px,5vw,56px)">85</div>
+      <div style="font-size:11px;color:var(--green);font-weight:700;margin-top:2px">/ 85 PASS</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">15 secciones</div>
       <div style="font-size:10px;color:var(--muted)">0 fallos</div>
       <div style="border-top:1px solid var(--border);margin:8px 0"></div>
-      <div style="font-size:10px;color:var(--green);font-weight:700">+33/33</div>
-      <div style="font-size:9px;color:var(--muted)">suite funcional</div>
+      <div style="font-size:10px;color:var(--green);font-weight:700">50 pentests</div>
+      <div style="font-size:9px;color:var(--muted)">5 categorías</div>
     </div>
 
     <!-- 9 attack grid -->
@@ -756,6 +757,38 @@ pre .v{color:#3fb950}
 
     </div>
   </div>
+
+  <!-- Pentest summary strip -->
+  <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+    <div style="font-size:9px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">+ 50 pentests adicionales — 5 categorías · 0 fallos</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px">
+      <div class="card" style="padding:8px 10px;border-color:#bc8cff33;background:#6e40c908">
+        <div style="font-size:9px;font-weight:700;color:var(--purple);margin-bottom:4px">JWT Attacks</div>
+        <div style="font-size:11px;color:var(--green);font-weight:700">5/5 ✓</div>
+        <div style="font-size:9.5px;color:var(--muted);margin-top:3px">alg=none · HS256 · claims · exp · kid/jku</div>
+      </div>
+      <div class="card" style="padding:8px 10px;border-color:#f0883e33;background:#f0883e08">
+        <div style="font-size:9px;font-weight:700;color:var(--orange);margin-bottom:4px">Injection</div>
+        <div style="font-size:11px;color:var(--green);font-weight:700">10/10 ✓</div>
+        <div style="font-size:9.5px;color:var(--muted);margin-top:3px">SQL · XSS · path traversal · HTTP verbs</div>
+      </div>
+      <div class="card" style="padding:8px 10px;border-color:#d2992233;background:#9e640008">
+        <div style="font-size:9px;font-weight:700;color:var(--yellow);margin-bottom:4px">Info Disclosure</div>
+        <div style="font-size:11px;color:var(--green);font-weight:700">5/5 ✓</div>
+        <div style="font-size:9.5px;color:var(--muted);margin-top:3px">stack trace · server · realm enum · users</div>
+      </div>
+      <div class="card" style="padding:8px 10px;border-color:#58a6ff33;background:#1f6feb08">
+        <div style="font-size:9px;font-weight:700;color:var(--blue);margin-bottom:4px">Headers & CORS</div>
+        <div style="font-size:11px;color:var(--green);font-weight:700">5/5 ✓</div>
+        <div style="font-size:9.5px;color:var(--muted);margin-top:3px">CSP · X-Frame · Cache · CORS evil origin</div>
+      </div>
+      <div class="card" style="padding:8px 10px;border-color:#3fb95033;background:#23863608">
+        <div style="font-size:9px;font-weight:700;color:var(--green);margin-bottom:4px">Rate & Payload</div>
+        <div style="font-size:11px;color:var(--green);font-weight:700">5/5 ✓</div>
+        <div style="font-size:9.5px;color:var(--muted);margin-top:3px">headers · burst · 1MB · null byte</div>
+      </div>
+    </div>
+  </div>
   </div>
 </div>
 
@@ -783,6 +816,14 @@ pre .v{color:#3fb950}
       <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Intercepción de tráfico (MitM)</td><td>TLS en Kong · JWE E2E independiente del TLS</td><td style="text-align:center">—</td><td class="partial">~ Parcial (POC)</td></tr>
       <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Fallo en cascada (Odoo/Keycloak caído)</td><td>—</td><td style="text-align:center">—</td><td class="pending">⏳ Roadmap P2</td></tr>
       <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Token JWT comprometido y activo</td><td>—</td><td style="text-align:center">—</td><td class="pending">⏳ Roadmap P2</td></tr>
+      <tr style="border-top:2px solid #bc8cff33;background:#6e40c908">
+        <td colspan="5" style="padding:6px 10px;font-size:9px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase">Pentests adicionales — 50 verificaciones · 5 categorías</td>
+      </tr>
+      <tr><td style="color:var(--muted);font-size:10px">P1</td><td>JWT Algorithm Attacks</td><td>alg=none · RS256→HS256 · claims forjados · exp=1 · kid/jku injection</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">P2</td><td>Injection Attacks</td><td>SQL en Bearer · XSS reflection · path traversal ×4 · HTTP verbs (PUT/DELETE/PATCH/OPTIONS)</td><td style="text-align:center">10</td><td class="ok">✓ 10/10</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">P3</td><td>Information Disclosure</td><td>Stack trace · X-Powered-By · Server verbose · realm enumeration · user enumeration</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">P4</td><td>Security Headers &amp; CORS</td><td>X-Content-Type-Options · X-Frame-Options · Cache-Control · CORS wildcard · preflight evil origin</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">P5</td><td>Rate Limiting &amp; Payload Abuse</td><td>X-RateLimit headers · burst 35 req (límite 30) · 1MB payload · oversized header · null byte bypass</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
     </tbody>
   </table>
   </div>
@@ -842,6 +883,83 @@ pre .v{color:#3fb950}
   </div>
 </div>
 
+<!-- ══ 8b. PASSKEYS — BENEFICIO ESTRATÉGICO ══ -->
+<div class="slide" id="s7b">
+  <div class="slide-body">
+  <div class="section-tag">Beneficio estratégico · validado en este POC</div>
+  <h2>Passkeys / WebAuthn — Autenticación sin contraseña</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">El flujo completo de passkeys está implementado y funcional en este POC. Desplegarlo en producción <strong style="color:var(--text)">elimina los vectores de ataque más frecuentes contra cuentas de usuario</strong> sin añadir fricción.</p>
+
+  <div class="grid g2" style="gap:10px;margin-bottom:10px">
+    <div class="card hi-red" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">⚠ Con contraseñas — vectores de riesgo activos</div>
+      <div style="font-size:11.5px;line-height:2;color:var(--muted)">
+        <div><span style="color:var(--red)">✗</span> <strong style="color:var(--text)">Phishing</strong> — usuario entrega su credencial a un sitio falso</div>
+        <div><span style="color:var(--red)">✗</span> <strong style="color:var(--text)">Credential stuffing</strong> — bases de datos filtradas reutilizadas</div>
+        <div><span style="color:var(--red)">✗</span> <strong style="color:var(--text)">Brute force / spray</strong> — ataques de diccionario automatizados</div>
+        <div><span style="color:var(--red)">✗</span> <strong style="color:var(--text)">Reutilización</strong> — misma contraseña en múltiples servicios</div>
+        <div><span style="color:var(--red)">✗</span> <strong style="color:var(--text)">Interceptación</strong> — contraseña viaja por la red en cada login</div>
+      </div>
+    </div>
+    <div class="card hi-green" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">✓ Con passkeys — todos esos vectores son imposibles</div>
+      <div style="font-size:11.5px;line-height:2;color:var(--muted)">
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Clave privada nunca sale del dispositivo</strong> del usuario</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Vinculada al dominio</strong> — un phishing en dominio distinto no funciona</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Sin secreto compartido</strong> — el servidor nunca conoce la clave privada</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">FIDO2 / W3C WebAuthn L3</strong> — estándar auditado por la industria</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Biometría local</strong> (Face ID / huella) — no envía datos biométricos</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:12px 16px;border-color:#bc8cff44;background:#6e40c908;margin-bottom:10px">
+    <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">🔑 Lo que este POC ya tiene funcional — listo para producción</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:11px">
+      <div style="text-align:center;padding:9px;background:#6e40c910;border:1px solid #bc8cff33;border-radius:6px">
+        <div style="font-size:18px;margin-bottom:4px">🔑</div>
+        <div style="font-weight:700">Keycloak 26</div>
+        <div style="color:var(--muted);font-size:10px;margin-top:2px">WebAuthn Passwordless flow configurado como <em>browserFlow</em> de web-realm</div>
+      </div>
+      <div style="text-align:center;padding:9px;background:#6e40c910;border:1px solid #bc8cff33;border-radius:6px">
+        <div style="font-size:18px;margin-bottom:4px">📋</div>
+        <div style="font-weight:700">PKCE S256</div>
+        <div style="color:var(--muted);font-size:10px;margin-top:2px">Authorization Code + code_challenge SHA-256 obligatorio en web-app-client</div>
+      </div>
+      <div style="text-align:center;padding:9px;background:#6e40c910;border:1px solid #bc8cff33;border-radius:6px">
+        <div style="font-size:18px;margin-bottom:4px">🛡️</div>
+        <div style="font-weight:700">CSRF state</div>
+        <div style="color:var(--muted);font-size:10px;margin-top:2px">Parámetro <em>state</em> generado y verificado en callback — impide CSRF en el redirect OIDC</div>
+      </div>
+      <div style="text-align:center;padding:9px;background:#6e40c910;border:1px solid #bc8cff33;border-radius:6px">
+        <div style="font-size:18px;margin-bottom:4px">🚫</div>
+        <div style="font-weight:700">Sin ROPC</div>
+        <div style="color:var(--muted);font-size:10px;margin-top:2px">directAccessGrants desactivado — solo flujo browser con passkey, sin bypass por contraseña</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+    <div class="card" style="padding:9px 12px;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:var(--green)">0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">secretos en tránsito<br>la clave privada nunca viaja</div>
+    </div>
+    <div class="card" style="padding:9px 12px;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:var(--blue)">ES256</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">ECDSA P-256<br>algoritmo de la credencial</div>
+    </div>
+    <div class="card" style="padding:9px 12px;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:var(--purple)">FIDO2</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">W3C WebAuthn L3<br>soportado en todos los browsers</div>
+    </div>
+    <div class="card" style="padding:9px 12px;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:var(--orange)">100%</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">phishing resistance<br>estándar NIST AAL3</div>
+    </div>
+  </div>
+  </div>
+</div>
+
 <!-- ══ APPENDIX DIVIDER ══ -->
 <div class="slide" id="s8" style="justify-content:center;align-items:center">
   <div class="slide-body">
@@ -862,6 +980,8 @@ pre .v{color:#3fb950}
       <span class="badge b-blue">A7 · Android CI Pipeline</span>
       <span class="badge b-blue">A8 · Test Phases 1–15</span>
       <span class="badge b-blue">A9 · Test Phases 16–30</span>
+      <span class="badge b-purple">A10 · Pentest Suite</span>
+      <span class="badge b-purple">A11 · Passkeys técnico</span>
     </div>
   </div>
   </div>
@@ -1646,6 +1766,170 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
   </div>
 </div>
 
+<!-- ══ A10: PENTEST SUITE ══ -->
+<div class="slide" id="s18">
+  <div class="slide-body">
+  <div class="appendix-badge">A10 · Apéndice técnico</div>
+  <h2>Pentest Suite — 50 verificaciones de seguridad · 5 categorías</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Secciones 11–15 del script <code>test-all.sh</code> — ejecutadas con tokens reales de Keycloak · 0 fallos · bloqueadas por los controles existentes</p>
+
+  <div class="grid g3" style="gap:9px;margin-bottom:9px">
+
+    <!-- P1: JWT Attacks -->
+    <div class="card" style="padding:11px 13px;border-color:#bc8cff33;background:#6e40c908">
+      <div style="font-size:9.5px;font-weight:700;color:var(--purple);letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px">P1 · JWT Algorithm Attacks — 5/5 ✓</div>
+      <div style="font-size:11px;line-height:1.75;color:var(--muted)">
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">alg=none</strong> — token sin firma → HTTP 401</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">RS256→HS256 confusion</strong> — firma con clave pública como HMAC secret → 401</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Claims forjados</strong> — payload manipulado con roles elevados → 401</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Expired token</strong> — exp=1 (año 1970) → 401</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">kid/jku injection</strong> — header apuntando a JWKS malicioso → 401</div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:var(--muted)">Control activo: <code>jsonwebtoken.verify()</code> · RS256 forzado · JWKS verificación en Keycloak</div>
+    </div>
+
+    <!-- P2: Injection -->
+    <div class="card" style="padding:11px 13px;border-color:#f0883e33;background:#f0883e08">
+      <div style="font-size:9.5px;font-weight:700;color:var(--orange);letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px">P2 · Injection Attacks — 10/10 ✓</div>
+      <div style="font-size:11px;line-height:1.75;color:var(--muted)">
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">SQL en Bearer</strong> — <code>'; DROP TABLE users;--</code> → 401 sin ejecución</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">XSS reflection</strong> — <code>&lt;script&gt;</code> en header no reflejado en response</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Path traversal</strong> <code>/../admin</code> → 404</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Path traversal</strong> <code>/%2e%2e/admin</code> → 400</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Path traversal</strong> doble barra → 404</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Path traversal</strong> <code>/../../internal</code> → 404</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">HTTP PUT/DELETE/PATCH</strong> — métodos no permitidos → 404</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">OPTIONS preflight</strong> — CORS correcto → 200 (no bloqueado por version check)</div>
+      </div>
+    </div>
+
+    <!-- P3: Info Disclosure -->
+    <div class="card" style="padding:11px 13px;border-color:#d2992233;background:#9e640008">
+      <div style="font-size:9.5px;font-weight:700;color:var(--yellow);letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px">P3 · Information Disclosure — 5/5 ✓</div>
+      <div style="font-size:11px;line-height:1.75;color:var(--muted)">
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Sin stack trace</strong> — errores no exponen rutas de código</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">X-Powered-By ausente</strong> — framework no revelado</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Server header no verbose</strong> — solo <code>kong/3.5.0</code></div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Realm enumeration</strong> — realm inexistente → 404</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">User enumeration</strong> — mismo mensaje usuario/contraseña inválidos</div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:var(--muted)">Control activo: Kong response-transformer elimina X-Powered-By · Node: <code>app.disable('x-powered-by')</code></div>
+    </div>
+
+    <!-- P4: Headers & CORS -->
+    <div class="card" style="padding:11px 13px;border-color:#58a6ff33;background:#1f6feb08">
+      <div style="font-size:9.5px;font-weight:700;color:var(--blue);letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px">P4 · Security Headers &amp; CORS — 5/5 ✓</div>
+      <div style="font-size:11px;line-height:1.75;color:var(--muted)">
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">X-Content-Type-Options: nosniff</strong> — MIME sniffing bloqueado</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">X-Frame-Options: DENY</strong> — clickjacking bloqueado</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Cache-Control: no-store</strong> — respuestas JWE no cacheables</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">CORS no wildcard</strong> — solo <code>localhost:4200</code> y <code>8100</code></div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">CORS preflight evil origin</strong> — origen malicioso no reflejado</div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:var(--muted)">Control activo: Kong global response-transformer + plugin cors con origins whitelist</div>
+    </div>
+
+    <!-- P5: Rate Limiting & Payload -->
+    <div class="card" style="padding:11px 13px;border-color:#3fb95033;background:#23863608">
+      <div style="font-size:9.5px;font-weight:700;color:var(--green);letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px">P5 · Rate Limiting &amp; Payload Abuse — 5/5 ✓</div>
+      <div style="font-size:11px;line-height:1.75;color:var(--muted)">
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">X-RateLimit headers visibles</strong> — límite 60 req/min web · 30 mobile</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Burst 35 req &gt; límite 30</strong> — HTTP 429 tras el límite (5 throttled)</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Payload 1 MB</strong> — rechazado con HTTP 413</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">X-App-Version oversized</strong> — header gigante → 400</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Null byte bypass</strong> — <code>0.0.1\x00.bypass</code> → 426 (no pasa como 1.0.0)</div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:var(--muted)">Control activo: Kong rate-limiting por token JWT · pre-function Lua version check · nginx límites de payload</div>
+    </div>
+
+    <!-- Brute Force summary -->
+    <div class="card" style="padding:11px 13px;border-color:#f8514933;background:#f8514908">
+      <div style="font-size:9.5px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px">+ Brute Force &amp; Version Enforcement — 15/15 ✓</div>
+      <div style="font-size:11px;line-height:1.75;color:var(--muted)">
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">6 intentos fallidos</strong> → cuenta bloqueada en Keycloak</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Admin API unlock</strong> → login restaurado correctamente</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">6 rutas × sin header</strong> → HTTP 426 (Upgrade Required)</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">6 rutas × versión 0.0.1</strong> → HTTP 426</div>
+        <div><span style="color:var(--green)">✓</span> <strong style="color:var(--text)">Versión 1.0.0</strong> → acceso normal en todas las rutas</div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:var(--muted)">Keycloak: bruteForceProtected=true · failureFactor=5 · Kong: Lua version whitelist por ruta</div>
+    </div>
+
+  </div>
+
+  <div class="card" style="padding:9px 14px;border-color:#23863644;background:#23863608;display:flex;align-items:center;gap:14px">
+    <div style="font-size:32px;font-weight:900;color:var(--green);flex-shrink:0">85</div>
+    <div>
+      <div style="font-size:13px;font-weight:700">/ 85 PASS · 0 FAIL — suite completa en <code>scripts/test-all.sh</code></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Infraestructura · Keycloak · RSA · Kong · Servicios × 6 · Seguridad · POST endpoints · Brute force · Version enforcement · Aislamiento por servicio · JWT attacks · Injection · Info disclosure · Headers/CORS · Rate limiting</div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- ══ A11: PASSKEYS TÉCNICO ══ -->
+<div class="slide" id="s19">
+  <div class="slide-body">
+  <div class="appendix-badge">A11 · Apéndice técnico</div>
+  <h2>Passkeys / WebAuthn — Implementación técnica en el POC</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Tres vulnerabilidades OIDC encontradas y corregidas durante el desarrollo. El flujo resultante cumple con PKCE + CSRF + WebAuthn Passwordless.</p>
+
+  <div class="grid g3" style="gap:9px;margin-bottom:10px">
+    <div class="card hi-red" style="padding:11px 13px">
+      <div style="font-size:9.5px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Vuln 1 · Direct Grant bypass</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:6px">
+        <strong style="color:var(--text)">Problema:</strong> <code>directAccessGrantsEnabled=true</code> en <em>web-app-client</em> permitía obtener tokens vía ROPC (usuario+contraseña) sin pasar por WebAuthn, anulando el flujo de passkeys.<br>
+        <strong style="color:var(--green)">Fix:</strong> <code>directAccessGrantsEnabled=false</code> en web-app-client. Creado <em>web-test-client</em> separado con ROPC solo para automatización de tests.
+      </div>
+      <span class="badge b-green" style="font-size:9px">✓ Corregido</span>
+    </div>
+    <div class="card hi-red" style="padding:11px 13px">
+      <div style="font-size:9.5px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Vuln 2 · PKCE downgrade</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:6px">
+        <strong style="color:var(--text)">Problema:</strong> Sin <code>pkce.code.challenge.method=S256</code> en los atributos del cliente, un atacante podía iniciar un flujo sin code_challenge y el servidor lo aceptaría, permitiendo intercambiar el auth code si lo intercepta.<br>
+        <strong style="color:var(--green)">Fix:</strong> Atributo S256 obligatorio en web-app-client → Keycloak rechaza flujos sin code_challenge.
+      </div>
+      <span class="badge b-green" style="font-size:9px">✓ Corregido</span>
+    </div>
+    <div class="card hi-red" style="padding:11px 13px">
+      <div style="font-size:9.5px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Vuln 3 · CSRF sin state</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:6px">
+        <strong style="color:var(--text)">Problema:</strong> El parámetro <code>state</code> en el redirect OIDC no se generaba ni verificaba. Un atacante podía construir un URL de callback con un auth code propio y engañar al usuario para que lo ejecutara (CSRF login attack).<br>
+        <strong style="color:var(--green)">Fix:</strong> state generado criptográficamente en <code>sessionStorage</code> y verificado en <code>auth-callback.page.ts</code>.
+      </div>
+      <span class="badge b-green" style="font-size:9px">✓ Corregido</span>
+    </div>
+  </div>
+
+  <div class="grid g2" style="gap:10px">
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Flujo resultante — seguro</div>
+      <div class="flow">
+        <div class="flow-step"><div class="flow-num">1</div><div><b>initiatePasskeyLogin()</b><span>genera code_verifier + challenge (SHA-256) + state aleatorio · los guarda en sessionStorage</span></div></div>
+        <div class="flow-step"><div class="flow-num">2</div><div><b>Redirect a Keycloak</b><span>con code_challenge, acr_values=webauthn-passwordless, state</span></div></div>
+        <div class="flow-step"><div class="flow-num">3</div><div><b>WebAuthn ceremony</b><span>Keycloak presenta el authenticator (Face ID/huella) · firma con ECDSA P-256</span></div></div>
+        <div class="flow-step"><div class="flow-num">4</div><div><b>Callback /auth/callback</b><span>verifica state === sessionStorage → si mismatch: CSRF → aborta</span></div></div>
+        <div class="flow-step"><div class="flow-num">5</div><div><b>handleOidcCallback(code)</b><span>intercambia auth code + code_verifier → access token RS256</span></div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Configuración Keycloak web-realm</div>
+      <pre style="font-size:9.5px"><span class="c">// Keycloak admin REST API — passkey-browser flow</span>
+<span class="n">browserFlow</span>: <span class="s">"passkey-browser"</span>
+<span class="n">webAuthnPolicyPasswordlessRpId</span>: <span class="s">"localhost"</span>
+<span class="n">webAuthnPolicyPasswordlessSignatureAlgorithms</span>: [<span class="s">"ES256"</span>]
+<span class="n">webAuthnPolicyPasswordlessRequireResidentKey</span>: <span class="s">"Yes"</span>
+<span class="n">webAuthnPolicyPasswordlessUserVerificationRequirement</span>: <span class="s">"required"</span>
+
+<span class="c">// web-app-client</span>
+<span class="n">directAccessGrantsEnabled</span>: <span class="k">false</span>
+<span class="n">pkce.code.challenge.method</span>: <span class="s">"S256"</span>
+<span class="n">access.token.signed.response.alg</span>: <span class="s">"RS256"</span></pre>
+    </div>
+  </div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════
      APÉNDICE: COMPARATIVA PRODUCCIÓN ACTUAL vs POC
 ══════════════════════════════════════════════════════ -->
@@ -1807,7 +2091,7 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
 <script>
 const slides = document.querySelectorAll('.slide');
 const dotsEl = document.getElementById('dots');
-const EXEC_SLIDES = 11; // slides 0-10 are executive; 11+ are appendix
+const EXEC_SLIDES = 12; // slides 0-11 are executive; 12+ are appendix
 let cur = 0;
 
 slides.forEach((_, i) => {

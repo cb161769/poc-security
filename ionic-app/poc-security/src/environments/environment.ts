@@ -4,6 +4,7 @@
 
 export const environment = {
   production: false,
+  appVersion: '1.0.0',
   // mobile-realm
   keycloakUrl:      'http://localhost:8080/realms/mobile-realm',
   keycloakClientId: 'mobile-app-client',

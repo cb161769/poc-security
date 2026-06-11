@@ -19,7 +19,30 @@
 
   <!-- LOGIN -->
   <ng-container *ngIf="!auth.isLoggedIn()">
-    <ion-card>
+
+    <!-- BIOMETRIC LOGIN (mobile only, shown when stored token exists) -->
+    <ion-card *ngIf="platform.isMobile() && biometricAvailable && hasBiometricToken">
+      <ion-card-header>
+        <ion-card-title>Bienvenido de vuelta</ion-card-title>
+        <ion-card-subtitle>📱 Mobile · Acceso biométrico</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-button expand="block" color="success" [disabled]="biometricLoading" (click)="loginWithBiometric()">
+          <ion-spinner *ngIf="biometricLoading" name="crescent" slot="start"></ion-spinner>
+          <ion-icon *ngIf="!biometricLoading" name="finger-print-outline" slot="start"></ion-icon>
+          Entrar con biometría
+        </ion-button>
+        <ion-button expand="block" fill="clear" size="small" class="ion-margin-top" (click)="showPasswordForm()">
+          Usar contraseña en su lugar
+        </ion-button>
+        <ion-text color="danger" *ngIf="biometricError">
+          <p class="ion-text-center ion-margin-top">{{ biometricError }}</p>
+        </ion-text>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- PASSWORD LOGIN -->
+    <ion-card *ngIf="!platform.isMobile() || !biometricAvailable || !hasBiometricToken">
       <ion-card-header>
         <ion-card-title>Iniciar sesión</ion-card-title>
         <ion-card-subtitle>{{ channelLabel }} · Keycloak PKCE</ion-card-subtitle>
@@ -53,6 +76,21 @@
         </ion-text>
       </ion-card-content>
     </ion-card>
+
+    <!-- PASSKEY LOGIN (web only) -->
+    <ion-card *ngIf="channel === 'web'" class="ion-margin-top">
+      <ion-card-content>
+        <ion-button expand="block" color="secondary" (click)="auth.initiatePasskeyLogin()">
+          <ion-icon name="hardware-chip-outline" slot="start"></ion-icon>
+          Iniciar sesión con Passkey
+        </ion-button>
+        <p class="ion-text-center" style="font-size:12px;color:var(--ion-color-medium);margin-top:8px">
+          Usa tu passkey registrada (huella, Face ID, PIN del dispositivo).<br>
+          Si no tienes una, inicia sesión con contraseña primero y regístrala en la configuración de cuenta.
+        </p>
+      </ion-card-content>
+    </ion-card>
+
   </ng-container>
 
   <!-- PANEL AUTENTICADO -->

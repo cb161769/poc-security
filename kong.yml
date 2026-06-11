@@ -17,9 +17,22 @@ services:
         methods: ["GET", "POST", "OPTIONS"]
         plugins:
           - name: rate-limiting
-            config: { minute: 60, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
+            config: { minute: 60, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: false }
           - name: request-transformer
             config: { add: { headers: ["X-Channel:web"] } }
+          - name: pre-function
+            config:
+              access:
+                - |
+                  if kong.request.get_method() == "OPTIONS" then return end
+                  local ver = kong.request.get_header("x-app-version")
+                  local allowed = { ["1.0.0"] = true }
+                  if not allowed[ver] then
+                    return kong.response.exit(426, {
+                      error = "Version not supported. Please update the application.",
+                      min_version = "1.0.0"
+                    })
+                  end
 
       - name: mobile-data-route
         paths: [/api/v1/mobile]
@@ -27,9 +40,22 @@ services:
         methods: ["GET", "POST", "OPTIONS"]
         plugins:
           - name: rate-limiting
-            config: { minute: 30, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
+            config: { minute: 30, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: false }
           - name: request-transformer
             config: { add: { headers: ["X-Channel:mobile"] } }
+          - name: pre-function
+            config:
+              access:
+                - |
+                  if kong.request.get_method() == "OPTIONS" then return end
+                  local ver = kong.request.get_header("x-app-version")
+                  local allowed = { ["1.0.0"] = true }
+                  if not allowed[ver] then
+                    return kong.response.exit(426, {
+                      error = "Version not supported. Please update the application.",
+                      min_version = "1.0.0"
+                    })
+                  end
 
       - name: pubkey-route
         paths: [/api/v1/pubkey]
@@ -49,9 +75,22 @@ services:
         methods: ["GET", "POST", "OPTIONS"]
         plugins:
           - name: rate-limiting
-            config: { minute: 60, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
+            config: { minute: 60, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: false }
           - name: request-transformer
             config: { add: { headers: ["X-Channel:web"] } }
+          - name: pre-function
+            config:
+              access:
+                - |
+                  if kong.request.get_method() == "OPTIONS" then return end
+                  local ver = kong.request.get_header("x-app-version")
+                  local allowed = { ["1.0.0"] = true }
+                  if not allowed[ver] then
+                    return kong.response.exit(426, {
+                      error = "Version not supported. Please update the application.",
+                      min_version = "1.0.0"
+                    })
+                  end
 
       - name: mobile-transfers-route
         paths: [/api/v1/mobile/transfers]
@@ -59,9 +98,22 @@ services:
         methods: ["GET", "POST", "OPTIONS"]
         plugins:
           - name: rate-limiting
-            config: { minute: 30, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
+            config: { minute: 30, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: false }
           - name: request-transformer
             config: { add: { headers: ["X-Channel:mobile"] } }
+          - name: pre-function
+            config:
+              access:
+                - |
+                  if kong.request.get_method() == "OPTIONS" then return end
+                  local ver = kong.request.get_header("x-app-version")
+                  local allowed = { ["1.0.0"] = true }
+                  if not allowed[ver] then
+                    return kong.response.exit(426, {
+                      error = "Version not supported. Please update the application.",
+                      min_version = "1.0.0"
+                    })
+                  end
 
   # ── PAYMENTS SERVICE ───────────────────────────────
   - name: payments-svc
@@ -73,9 +125,22 @@ services:
         methods: ["GET", "POST", "OPTIONS"]
         plugins:
           - name: rate-limiting
-            config: { minute: 60, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
+            config: { minute: 60, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: false }
           - name: request-transformer
             config: { add: { headers: ["X-Channel:web"] } }
+          - name: pre-function
+            config:
+              access:
+                - |
+                  if kong.request.get_method() == "OPTIONS" then return end
+                  local ver = kong.request.get_header("x-app-version")
+                  local allowed = { ["1.0.0"] = true }
+                  if not allowed[ver] then
+                    return kong.response.exit(426, {
+                      error = "Version not supported. Please update the application.",
+                      min_version = "1.0.0"
+                    })
+                  end
 
       - name: mobile-payments-route
         paths: [/api/v1/mobile/payments]
@@ -83,9 +148,22 @@ services:
         methods: ["GET", "POST", "OPTIONS"]
         plugins:
           - name: rate-limiting
-            config: { minute: 30, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: true }
+            config: { minute: 30, policy: local, limit_by: header, header_name: Authorization, hide_client_headers: false }
           - name: request-transformer
             config: { add: { headers: ["X-Channel:mobile"] } }
+          - name: pre-function
+            config:
+              access:
+                - |
+                  if kong.request.get_method() == "OPTIONS" then return end
+                  local ver = kong.request.get_header("x-app-version")
+                  local allowed = { ["1.0.0"] = true }
+                  if not allowed[ver] then
+                    return kong.response.exit(426, {
+                      error = "Version not supported. Please update the application.",
+                      min_version = "1.0.0"
+                    })
+                  end
 
 #############################
 # PLUGINS GLOBALES
@@ -97,7 +175,7 @@ plugins:
     config:
       origins: [http://localhost:8100, http://localhost:4200]
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-      headers: [Authorization, Content-Type, X-App-Fingerprint, X-Client-Public-Key, X-Idempotency-Key]
+      headers: [Authorization, Content-Type, X-App-Fingerprint, X-Client-Public-Key, X-Idempotency-Key, X-App-Version]
       exposed_headers: [X-Request-Id]
       credentials: false
       max_age: 3600
@@ -116,3 +194,4 @@ plugins:
           - X-Frame-Options:DENY
           - Referrer-Policy:no-referrer
           - Permissions-Policy:geolocation=()
+          - Cache-Control:no-store

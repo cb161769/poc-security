@@ -102,3 +102,4 @@ shared-keys/pub.pem
 docs/android-build-reports/problems/problems-report.html
 docs/android-test-reports/*
 docs/android-test-reports/run-20260611-150039.log
+shared-keys/last_rotation.txt

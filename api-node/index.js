@@ -235,11 +235,30 @@ app.post('/internal/validate-user', validateJWT, async (req, res) => {
 /* ================================
    CHANGE PASSWORD
    1. Re-autentica con contraseña actual → verifica que es correcta
-   2. Obtiene admin token del master realm
+   2. Obtiene admin token del master realm (cached, renovado 30s antes de exp)
    3. Admin API: PUT /admin/realms/{realm}/users/{sub}/reset-password
 ================================ */
 const KEYCLOAK_ADMIN_USER = process.env.KEYCLOAK_ADMIN_USER || 'admin';
 const KEYCLOAK_ADMIN_PASS = process.env.KEYCLOAK_ADMIN_PASS || 'admin';
+let _adminToken = null;
+let _adminTokenExpiry = 0;
+
+async function getAdminToken() {
+  if (_adminToken && Date.now() / 1000 < _adminTokenExpiry - 30) return _adminToken;
+  const resp = await axios.post(
+    `${KEYCLOAK_BASE}/realms/master/protocol/openid-connect/token`,
+    new URLSearchParams({
+      client_id:  'admin-cli',
+      grant_type: 'password',
+      username:   KEYCLOAK_ADMIN_USER,
+      password:   KEYCLOAK_ADMIN_PASS,
+    }).toString(),
+    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+  );
+  _adminToken = resp.data.access_token;
+  _adminTokenExpiry = Math.floor(Date.now() / 1000) + resp.data.expires_in;
+  return _adminToken;
+}
 
 app.post('/change-password', validateJWT, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
@@ -273,20 +292,10 @@ app.post('/change-password', validateJWT, async (req, res) => {
     return res.status(502).json({ error: 'Error verificando credenciales' });
   }
 
-  // Paso 2: obtener admin token del master realm
+  // Paso 2: obtener admin token del master realm (módulo-level cache)
   let adminToken;
   try {
-    const adminResp = await axios.post(
-      `${KEYCLOAK_BASE}/realms/master/protocol/openid-connect/token`,
-      new URLSearchParams({
-        client_id:  'admin-cli',
-        grant_type: 'password',
-        username:   KEYCLOAK_ADMIN_USER,
-        password:   KEYCLOAK_ADMIN_PASS,
-      }).toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
-    adminToken = adminResp.data.access_token;
+    adminToken = await getAdminToken();
   } catch (err) {
     console.error('[change-password] admin token error:', err.response?.data || err.message);
     return res.status(500).json({ error: 'Error interno al actualizar contraseña' });

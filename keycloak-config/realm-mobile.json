@@ -1,6 +1,15 @@
 {
   "realm": "mobile-realm",
   "enabled": true,
+  "sslRequired": "none",
+  "accessTokenLifespan": 300,
+  "ssoSessionMaxLifespan": 36000,
+  "ssoSessionIdleTimeout": 1800,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
   "clients": [
     {
       "clientId": "mobile-app-client",
@@ -16,11 +25,10 @@
         "id.token.encrypted.response.enc": "A128GCM",
         "access.token.signed.response.alg": "RS256",
         "access.token.encrypted.response.alg": "RSA-OAEP",
-        "access.token.encrypted.response.enc": "A128GCM",
-        "jwks.url": "http://kong-gateway:8000/servicios/jwks", 
-        "token.endpoint.auth.signing.alg": "RS256"
+        "access.token.encrypted.response.enc": "A128GCM"
       },
-      "webOrigins": ["*"]
+      "webOrigins": ["http://localhost:8100", "http://localhost:4200"],
+      "redirectUris": ["http://localhost:8100/*", "http://localhost:4200/*"]
     }
   ],
   "roles": {

@@ -6,6 +6,7 @@ const d = (s: string) => atob(s);
 
 export const environment = {
   production: true,
+  appVersion: '1.0.0',
   keycloakUrl:         d('aHR0cDovL2xvY2FsaG9zdDo4MDgwL3JlYWxtcy9tb2JpbGUtcmVhbG0='),
   keycloakClientId:    d('bW9iaWxlLWFwcC1jbGllbnQ='),
   mobileApiUrl:        d('aHR0cDovL2xvY2FsaG9zdDo4MDAwL2FwaS92MS9tb2JpbGU='),

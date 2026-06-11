@@ -1,6 +1,24 @@
 {
   "realm": "web-realm",
   "enabled": true,
+  "sslRequired": "none",
+  "accessTokenLifespan": 300,
+  "ssoSessionMaxLifespan": 36000,
+  "ssoSessionIdleTimeout": 1800,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "webAuthnPolicyPasswordlessRpEntityName": "KEYSTONE POC",
+  "webAuthnPolicyPasswordlessSignatureAlgorithms": ["ES256"],
+  "webAuthnPolicyPasswordlessRpId": "localhost",
+  "webAuthnPolicyPasswordlessAttestationConveyancePreference": "none",
+  "webAuthnPolicyPasswordlessAuthenticatorAttachment": "platform",
+  "webAuthnPolicyPasswordlessRequireResidentKey": "Yes",
+  "webAuthnPolicyPasswordlessUserVerificationRequirement": "required",
+  "webAuthnPolicyPasswordlessCreateTimeout": 0,
+  "webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister": false,
   "clients": [
     {
       "clientId": "web-app-client",
@@ -14,7 +32,24 @@
         "access.token.signed.response.alg": "RS256"
       },
       "webOrigins": ["http://localhost:4200", "http://localhost:8100"],
-      "redirectUris": ["http://localhost:4200/*", "http://localhost:8100/*"]
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:8100/*",
+        "http://localhost:4200/auth/callback"
+      ],
+      "protocolMappers": [
+        {
+          "name": "web-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "web-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
     }
   ],
   "roles": {
@@ -22,5 +57,23 @@
       { "name": "user-web",  "description": "Usuario web estándar" },
       { "name": "admin-web", "description": "Administrador web" }
     ]
-  }
+  },
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "testuser@example.com",
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Test1234!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user-web"]
+    }
+  ]
 }

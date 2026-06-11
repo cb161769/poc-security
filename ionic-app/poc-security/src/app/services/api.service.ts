@@ -25,6 +25,7 @@ export class ApiService {
     return new HttpHeaders({
       Authorization: `Bearer ${this.auth.getToken()}`,
       'X-Client-Public-Key': this.crypto.getPublicKeyB64(),
+      'X-App-Version': environment.appVersion,
     });
   }
 

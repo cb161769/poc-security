@@ -188,13 +188,37 @@ Estado al **2026-06-11**. Items completados marcados con ✅.
 
 ---
 
+## ✅ Completado — Passkeys / WebAuthn
+
+- **✅ Keycloak `passkey-browser` flow** — creado via Admin REST API · ejecutor `webauthn-authenticator-passwordless` en REQUIRED · vinculado como `browserFlow` en web-realm
+- **✅ PKCE S256 obligatorio** — `pkce.code.challenge.method=S256` en web-app-client (PKCE downgrade bloqueado)
+- **✅ CSRF state protection** — parámetro `state` generado con `getRandomValues()` y verificado en `auth-callback.page.ts`
+- **✅ directAccessGrants desactivado en web-app-client** — imposible bypassar WebAuthn vía ROPC
+- **✅ web-test-client separado** — ROPC habilitado solo para automatización de tests
+- **✅ 3 vulnerabilidades OIDC corregidas** — direct grant bypass · PKCE downgrade · CSRF sin state
+
+---
+
+## ✅ Completado — Pentest Suite (secciones 11–15 de test-all.sh)
+
+- **P1 · JWT Algorithm Attacks (5/5)** — alg=none · RS256→HS256 confusion · claims forjados · exp=1 · kid/jku injection
+- **P2 · Injection Attacks (10/10)** — SQL en Bearer · XSS reflection · path traversal ×4 · HTTP PUT/DELETE/PATCH/OPTIONS
+- **P3 · Information Disclosure (5/5)** — stack trace · X-Powered-By · Server verbose · realm enumeration · user enumeration
+- **P4 · Security Headers & CORS (5/5)** — X-Content-Type-Options · X-Frame-Options · Cache-Control · CORS wildcard · evil origin
+- **P5 · Rate Limiting & Payload (5/5)** — X-RateLimit headers · burst 35 req · 1MB payload · oversized header · null byte bypass
+
+**Fixes aplicados durante pentests:**
+- Kong `pre-function` Lua: añadido `if kong.request.get_method() == "OPTIONS" then return end` — CORS preflight ya no bloqueado por version check
+- Kong rate-limiting: `hide_client_headers: false` — headers X-RateLimit ahora visibles
+- `test-all.sh` secciones 9 y 11: token refresh usa `web-test-client` (no `web-app-client` con ROPC desactivado)
+
+---
+
 ## Test suites actuales
 
 | Suite | Comando | Resultado |
 |-------|---------|-----------|
-| Funcional completo | `bash scripts/test-all.sh` | 33/33 PASS |
-| Ataques negativos | `bash scripts/test-attacks.sh` | 17/17 PASS |
-| Runtime Playwright | `node scripts/test-runtime-debug.js` | 10/10 PASS |
+| **Suite completa + pentests** | `bash scripts/test-all.sh` | **85/85 PASS · 0 FAIL** |
 | Android MASVS v2 | `docker compose --profile android-tests up` | 26 Pass / 0 Fail / 9 Warn — 35 checks en 54s |
 
 ### Android — detalle de los 9 warnings (no son fallos, son mejoras recomendadas)

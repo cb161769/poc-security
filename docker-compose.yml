@@ -9,6 +9,7 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/db-init:/docker-entrypoint-initdb.d:ro
     networks:
       - secure-net
     healthcheck:
@@ -40,7 +41,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
     container_name: keycloak-server
-    command: start-dev --http-enabled=true --import-realm
+    command: start --http-enabled=true --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
@@ -48,7 +49,14 @@ services:
       KC_DB_URL: jdbc:postgresql://db-poc:5432/postgres
       KC_DB_USERNAME: admin_seguro
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-password_2026}
+      KC_DB_SCHEMA: keycloak
+      KC_DB_POOL_MIN_SIZE: "5"
+      KC_DB_POOL_MAX_SIZE: "20"
       KC_HOSTNAME_STRICT: "false"
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "false"
+      KC_CACHE: local
+      KC_HTTP_PORT: "8080"
     volumes:
       - ./keycloak-config:/opt/keycloak/data/import/
     networks:
@@ -58,6 +66,12 @@ services:
     depends_on:
       db-poc:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q 'UP' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
 
   # --- KONG GATEWAY (Perímetro de Seguridad) ---
   kong:
@@ -148,8 +162,10 @@ services:
     networks:
       - secure-net
     depends_on:
-      - keycloak
-      - odoo
+      keycloak:
+        condition: service_healthy
+      odoo:
+        condition: service_started
 
   # --- PAYMENTS SERVICE ---
   payments-service:
@@ -168,8 +184,10 @@ services:
     networks:
       - secure-net
     depends_on:
-      - keycloak
-      - odoo
+      keycloak:
+        condition: service_healthy
+      odoo:
+        condition: service_started
 
   # --- API NODE.JS (Identity Bridge) ---
   api-node:
@@ -191,7 +209,10 @@ services:
     networks:
       - secure-net
     depends_on:
-      - kong
+      keycloak:
+        condition: service_healthy
+      kong:
+        condition: service_started
 
   # --- ANDROID EMULATOR (Android 34, software renderer) ---
   # Requires: docker compose --profile android-tests up
