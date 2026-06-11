@@ -14,9 +14,16 @@
 html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--dark);color:var(--text)}
 
 .deck{width:100%;height:100vh;position:relative}
-.slide{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;transform:translateX(50px);padding:28px 6vw 68px}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .45s ease,transform .45s ease;transform:translateX(40px);padding:28px 6vw 68px;will-change:opacity,transform}
 .slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
-.slide.out{opacity:0;transform:translateX(-50px)}
+.slide.out{opacity:0;transform:translateX(-40px)}
+.slide > *{opacity:0;transform:translateY(12px);transition:opacity .45s ease,transform .45s ease;transition-delay:.08s}
+.slide.active > *{opacity:1;transform:translateY(0)}
+.slide.active > *:nth-child(1){transition-delay:.08s}
+.slide.active > *:nth-child(2){transition-delay:.12s}
+.slide.active > *:nth-child(3){transition-delay:.16s}
+.slide.active > *:nth-child(4){transition-delay:.20s}
+.slide.active > *:nth-child(5){transition-delay:.24s}
 
 /* NAV */
 .nav{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#161b22ee;border:1px solid var(--border);border-radius:40px;padding:7px 16px;backdrop-filter:blur(8px);z-index:100}
@@ -62,8 +69,19 @@ h3{font-size:13px;font-weight:700;margin-bottom:3px}
 .card.hi-red{border-color:#da363644;background:#da363608}
 .card.hi-yellow{border-color:#9e640044;background:#9e640008}
 
+.slide-body{display:flex;flex-direction:column;gap:16px;min-height:0}
+.slide-body > *:first-child{margin-top:0}
+.slide-body > *:last-child{margin-bottom:0}
+
+.ownership-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.owner-card{background:rgba(10,14,23,.95);border:1px solid #262d36;border-radius:12px;padding:14px;min-height:120px;display:flex;flex-direction:column;justify-content:space-between}
+.owner-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.owner-title{font-size:14px;font-weight:800;line-height:1.2;margin-bottom:6px}
+.owner-meta{font-size:11px;color:var(--muted);line-height:1.5}
+
 /* STAT CARDS */
 .stat{text-align:center;padding:18px 14px}
+.stat-card{text-align:center;padding:18px 14px}
 .stat-num{font-size:clamp(32px,5vw,56px);font-weight:900;line-height:1;letter-spacing:-.04em}
 .stat-label{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
 
@@ -146,6 +164,7 @@ pre .v{color:#3fb950}
 
 <!-- ══ 1. EXECUTIVE SUMMARY ══ -->
 <div class="slide active" id="s0">
+  <div class="slide-body">
   <div class="accent-bar"></div>
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <span class="badge b-blue">POC · Seguridad API</span>
@@ -213,49 +232,51 @@ pre .v{color:#3fb950}
     <div class="card" style="padding:11px 14px">
       <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:7px">Documentación interactiva</div>
       <div class="doc-links" style="flex-wrap:wrap;gap:5px">
-        <a class="doc-link" href="arch.html" target="_blank" style="border-color:#58a6ff44;font-size:11px">🏗️ Architecture</a>
-        <a class="doc-link" href="request-flow.html" target="_blank" style="font-size:11px">🔀 JWT + JWE Flow</a>
-        <a class="doc-link" href="stride.html" target="_blank" style="font-size:11px">🎯 STRIDE</a>
-        <a class="doc-link" href="attack-repudiation.html" target="_blank" style="font-size:11px">🛡️ Ataques</a>
-        <a class="doc-link" href="android-test-reports/android-security-report.html" target="_blank" style="font-size:11px;border-color:#3fb95044">📱 Android Report</a>
+        <a class="doc-link" href="arch.html" target="_blank" rel="noopener noreferrer" style="border-color:#58a6ff44;font-size:11px">🏗️ Architecture</a>
+        <a class="doc-link" href="request-flow.html" target="_blank" rel="noopener noreferrer" style="font-size:11px">🔀 JWT + JWE Flow</a>
+        <a class="doc-link" href="stride.html" target="_blank" rel="noopener noreferrer" style="font-size:11px">🎯 STRIDE</a>
+        <a class="doc-link" href="attack-repudiation.html" target="_blank" rel="noopener noreferrer" style="font-size:11px">🛡️ Ataques</a>
+        <a class="doc-link" href="android-test-reports/android-security-report.html" target="_blank" rel="noopener noreferrer" style="font-size:11px;border-color:#3fb95044">📱 Android Report</a>
       </div>
     </div>
+  </div>
   </div>
 </div>
 
 <!-- ══ 2. ARQUITECTURA C4 ══ -->
 <div class="slide" id="s1">
+  <div class="slide-body">
   <div class="section-tag">Arquitectura</div>
   <h2>Stack Tecnológico — 5 capas de defensa</h2>
 
   <!-- Auth flow -->
-  <div class="arch-flow" style="margin-bottom:8px">
-    <div class="arch-box" style="border-color:#3fb95066">
-      <div style="font-size:15px">📱</div>
-      <div style="font-weight:700;font-size:11px">Cliente</div>
-      <div style="color:var(--muted);font-size:10px">Ionic 8 · Angular 20</div>
+    <div class="arch-flow" style="margin-bottom:8px">
+      <div class="arch-box" style="border-color:#3fb95066">
+        <div style="font-size:15px">📱</div>
+        <div style="font-weight:700;font-size:11px">Cliente</div>
+        <div style="color:var(--muted);font-size:10px">Ionic 8 · Angular 20</div>
+      </div>
+      <div class="arch-arrow">
+        <div style="font-size:9px;color:var(--muted)">PKCE + JWT RS256</div>
+        <svg width="48" height="12"><line x1="0" y1="6" x2="44" y2="6" stroke="#58a6ff" stroke-width="1.2"/><polygon points="44,3 48,6 44,9" fill="#58a6ff"/></svg>
+      </div>
+      <div class="arch-box" style="border-color:#f59e0b66">
+        <div style="font-size:15px">🔑</div>
+        <div style="font-weight:700;font-size:11px">Keycloak 26</div>
+        <div style="color:var(--muted);font-size:10px">web-realm · mobile-realm</div>
+      </div>
+      <div class="arch-arrow">
+        <div style="font-size:9px;color:var(--muted)">JWT · 5 min TTL</div>
+        <svg width="48" height="12"><line x1="0" y1="6" x2="44" y2="6" stroke="#58a6ff" stroke-width="1.2"/><polygon points="44,3 48,6 44,9" fill="#58a6ff"/></svg>
+      </div>
+      <div class="arch-box" style="border-color:#3fb95066">
+        <div style="font-size:15px">📱</div>
+        <div style="font-weight:700;font-size:11px">Cliente</div>
+        <div style="color:var(--muted);font-size:10px">token en memoria</div>
+      </div>
     </div>
-    <div class="arch-arrow">
-      <div style="font-size:9px;color:var(--muted)">PKCE + JWT RS256</div>
-      <svg width="48" height="12"><line x1="0" y1="6" x2="44" y2="6" stroke="#58a6ff" stroke-width="1.2"/><polygon points="44,3 48,6 44,9" fill="#58a6ff"/></svg>
-    </div>
-    <div class="arch-box" style="border-color:#f59e0b66">
-      <div style="font-size:15px">🔑</div>
-      <div style="font-weight:700;font-size:11px">Keycloak 26</div>
-      <div style="color:var(--muted);font-size:10px">web-realm · mobile-realm</div>
-    </div>
-    <div class="arch-arrow">
-      <div style="font-size:9px;color:var(--muted)">JWT · 5 min TTL</div>
-      <svg width="48" height="12"><line x1="0" y1="6" x2="44" y2="6" stroke="#58a6ff" stroke-width="1.2"/><polygon points="44,3 48,6 44,9" fill="#58a6ff"/></svg>
-    </div>
-    <div class="arch-box" style="border-color:#3fb95066">
-      <div style="font-size:15px">📱</div>
-      <div style="font-weight:700;font-size:11px">Cliente</div>
-      <div style="color:var(--muted);font-size:10px">token en memoria</div>
-    </div>
-  </div>
 
-  <!-- Request flow -->
+    <!-- Request flow -->
   <div class="arch-flow">
     <div class="arch-box" style="border-color:#3fb95066">
       <div style="font-size:15px">📱</div>
@@ -310,10 +331,43 @@ pre .v{color:#3fb950}
       <div class="stat-label">Rotación de llaves RSA-4096</div>
     </div>
   </div>
+  </div>
+</div>
+
+<!-- ══ 2. OWNERSHIP ══ -->
+<div class="slide" id="s1b">
+  <div class="slide-body">
+    <div class="section-tag">Ownership</div>
+    <h2>Responsabilidad del stack — dueños claros</h2>
+    <p style="color:var(--muted);font-size:12px;max-width:720px;line-height:1.55">Cada componente tiene un dueño definido: auth, backend, mobile y negocio. Esto ayuda a evitar ambigüedades en seguridad, despliegue y respuesta a incidentes.</p>
+    <div class="ownership-grid">
+      <div class="owner-card">
+        <div class="owner-label">Mobile Team</div>
+        <div class="owner-title">App móvil / Runtime</div>
+        <div class="owner-meta">Ionic, Angular y Android. Responsable de FLAG_SECURE, detección de root/Frida, hardening de WebView y build security.</div>
+      </div>
+      <div class="owner-card">
+        <div class="owner-label">Identity Team</div>
+        <div class="owner-title">Keycloak / Auth</div>
+        <div class="owner-meta">PKCE, JWT RS256, realms y lifecycles. Dueños de la emisión de tokens, configuración de realms y seguridad de identidad.</div>
+      </div>
+      <div class="owner-card">
+        <div class="owner-label">Backend Team</div>
+        <div class="owner-title">Kong + Node APIs</div>
+        <div class="owner-meta">Gateway, rate limiting, validación de JWT/JWE, pubkey binding, anti-replay y protección de request.</div>
+      </div>
+      <div class="owner-card">
+        <div class="owner-label">Business / Ops</div>
+        <div class="owner-title">Odoo + Seguridad</div>
+        <div class="owner-meta">Autorización de negocio, estado de cliente activo e integración ERP. Responsable de QA y respuesta a incidentes.</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ══ 3. STRIDE ══ -->
 <div class="slide" id="s2">
+  <div class="slide-body">
   <div class="section-tag">Modelo de amenazas</div>
   <h2>STRIDE — Cobertura por categoría</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Metodología estándar de modelado de amenazas (Microsoft) aplicada al stack completo</p>
@@ -373,10 +427,12 @@ pre .v{color:#3fb950}
       </div>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ 4. FLUJO DE REQUEST ══ -->
 <div class="slide" id="s3">
+  <div class="slide-body">
   <div class="section-tag">Seguridad en profundidad</div>
   <h2>9 controles activos en cada request</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Un request sin autenticar no llega al servicio; uno autenticado pasa por 7 validaciones antes de recibir respuesta</p>
@@ -406,10 +462,12 @@ pre .v{color:#3fb950}
       <span style="color:#8b949e">eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0.&lt;clave cifrada&gt;.&lt;IV&gt;.&lt;datos&gt;.&lt;firma&gt;</span>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ 5. CONTROLES IMPLEMENTADOS ══ -->
 <div class="slide" id="s4">
+  <div class="slide-body">
   <div class="section-tag">Controles implementados</div>
   <h2>Dos dominios de seguridad — implementados y verificados</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:8px">Cada control pertenece a un dominio específico y bloquea un vector de ataque diferente. La seguridad mobile NO es un apéndice: es un dominio propio.</p>
@@ -507,10 +565,12 @@ pre .v{color:#3fb950}
 
     <div style="grid-column:2;visibility:hidden;height:0"></div>
   </div>
+  </div>
 </div>
 
 <!-- ══ 5b. MOBILE SECURITY COVERAGE ══ -->
 <div class="slide" id="s4b">
+  <div class="slide-body">
   <div class="section-tag">Seguridad Mobile</div>
   <h2>Android — 5 dominios MASVS v2 cubiertos</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:10px">La suite automatizada cubre los mismos vectores que herramientas profesionales como MobSF o NowSecure. 30 fases · 0 fallos · reporte HTML con evidencia y recomendaciones.</p>
@@ -574,14 +634,16 @@ pre .v{color:#3fb950}
       </div>
       <div style="font-size:10.5px;color:var(--muted);line-height:1.6">Los 9 warnings son mejoras para producción, no fallos de seguridad críticos. <strong style="color:var(--green)">0 vulnerabilidades explotables</strong> encontradas.</div>
       <div style="margin-top:8px">
-        <a class="doc-link" href="android-test-reports/android-security-report.html" target="_blank" style="font-size:11px;border-color:#3fb95044;display:inline-flex">📱 Ver reporte completo</a>
+        <a class="doc-link" href="android-test-reports/android-security-report.html" target="_blank" rel="noopener noreferrer" style="font-size:11px;border-color:#3fb95044;display:inline-flex">📱 Ver reporte completo</a>
       </div>
     </div>
+  </div>
   </div>
 </div>
 
 <!-- ══ 6. RESULTADOS ══ -->
 <div class="slide" id="s5">
+  <div class="slide-body">
   <div class="section-tag">Evidencia</div>
   <h2>9 ataques simulados — 17 verificaciones superadas</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Suite automatizada: <code style="font-size:11px">bash scripts/test-attacks.sh</code> — reinicia servicios, obtiene tokens reales y ejecuta cada ataque</p>
@@ -655,10 +717,12 @@ pre .v{color:#3fb950}
 
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ 7. COBERTURA ══ -->
 <div class="slide" id="s6">
+  <div class="slide-body">
   <div class="section-tag">Cobertura</div>
   <h2>Mapa de cobertura — 9/9 ataques bloqueados</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Cada fila es un ataque del script automatizado · 17 verificaciones individuales · 0 fallos</p>
@@ -682,10 +746,12 @@ pre .v{color:#3fb950}
       <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Token JWT comprometido y activo</td><td>—</td><td style="text-align:center">—</td><td class="pending">⏳ Roadmap P2</td></tr>
     </tbody>
   </table>
+  </div>
 </div>
 
 <!-- ══ 8. ROADMAP ══ -->
 <div class="slide" id="s7">
+  <div class="slide-body">
   <div class="section-tag">Próximos pasos</div>
   <h2>Roadmap hacia producción</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:14px">Los controles actuales cubren los riesgos más críticos. Estos ítems deben resolverse antes de ir a producción</p>
@@ -730,10 +796,12 @@ pre .v{color:#3fb950}
       </div>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ APPENDIX DIVIDER ══ -->
 <div class="slide" id="s8" style="justify-content:center;align-items:center">
+  <div class="slide-body">
   <div style="text-align:center">
     <div class="appendix-badge" style="margin:0 auto 16px">📎 Apéndice técnico</div>
     <h2 style="color:var(--muted);font-weight:400">Detalle de implementación</h2>
@@ -753,10 +821,12 @@ pre .v{color:#3fb950}
       <span class="badge b-blue">A9 · Test Phases 16–30</span>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ A1: HEADER HARDENING ══ -->
 <div class="slide" id="s9">
+  <div class="slide-body">
   <div class="appendix-badge">A1 · Apéndice técnico</div>
   <h2>Header Hardening — Eliminación de metadatos</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Tres líneas de código que eliminan información útil para un atacante</p>
@@ -802,10 +872,12 @@ X-Request-Id: a3f8c2d1-...</pre>
       <span>✅</span><div><div style="font-size:12px;font-weight:700">Cache-Control: no-store</div><div style="font-size:10px;color:var(--muted)">En todas las respuestas JWE</div></div>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ A2: PUBKEY BINDING ══ -->
 <div class="slide" id="s10">
+  <div class="slide-body">
   <div class="appendix-badge">A2 · Apéndice técnico</div>
   <h2>Pubkey Binding — Sustitución de clave JWE</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:12px">La primera clave pública del usuario queda registrada; cualquier cambio posterior es rechazado</p>
@@ -846,10 +918,12 @@ X-Request-Id: a3f8c2d1-...</pre>
 &#125;</pre>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ A3: ANTI-REPLAY ══ -->
 <div class="slide" id="s11">
+  <div class="slide-body">
   <div class="appendix-badge">A3 · Apéndice técnico</div>
   <h2>Anti-Replay — Clave de idempotencia</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Prevención de reenvío de operaciones POST en transfers y payments</p>
@@ -903,10 +977,12 @@ X-Idempotency-Replayed: true
 &#125;</pre>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ A4: ODOO AUTHZ ══ -->
 <div class="slide" id="s12">
+  <div class="slide-body">
   <div class="appendix-badge">A4 · Apéndice técnico</div>
   <h2>Odoo AuthZ — Autorización de negocio</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Validación contra el ERP antes de procesar cualquier operación — los 3 servicios</p>
@@ -973,10 +1049,12 @@ active = Boolean()
       </div>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ A5: ANDROID SECURITY ══ -->
 <div class="slide" id="s13">
+  <div class="slide-body">
   <div class="appendix-badge">A5 · Apéndice técnico</div>
   <h2>Android Security Hardening — 10 controles nativos + CI pipeline MASVS v2</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Implementados en <code>MainActivity.java</code> · <code>AndroidManifest.xml</code> · <code>build.gradle</code> · <code>proguard-rules.pro</code> — sin librerías de terceros · verificados por suite de <strong style="color:var(--green)">30 fases MASVS v2</strong></p>
@@ -1085,10 +1163,12 @@ active = Boolean()
       </div>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ A6: JS OBFUSCATION ══ -->
 <div class="slide" id="s14">
+  <div class="slide-body">
   <div class="appendix-badge">A6 · Apéndice técnico</div>
   <h2>JavaScript Bundle Obfuscation — 3 capas de protección</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Postbuild automático: <code>npm run build</code> → <code>node scripts/obfuscate-bundle.js</code> — 66 archivos procesados · 2 saltados (runtime + polyfills)</p>
@@ -1150,10 +1230,12 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
       </div>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ A7: ANDROID CI PIPELINE ══ -->
 <div class="slide" id="s15">
+  <div class="slide-body">
   <div class="appendix-badge">A7 · Apéndice técnico</div>
   <h2>Android CI Pipeline — Arquitectura Docker · 30 fases · MASVS v2</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Un solo comando (<code>docker compose --profile android-tests up</code>) levanta los 3 contenedores en orden, construye el APK firmado y ejecuta la suite completa.</p>
@@ -1242,10 +1324,12 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
       </div>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══ A8: TEST PHASES 1-15 ══ -->
 <div class="slide" id="s16">
+  <div class="slide-body">
   <div class="appendix-badge">A8 · Apéndice técnico</div>
   <h2>Android Security Tests — Fases 1 a 15</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:8px">Análisis estático del APK · Ataques a UI y captura · Checks de build hardening · Red y criptografía</p>
@@ -1378,10 +1462,12 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
     </tbody>
   </table>
   </div>
+  </div>
 </div>
 
 <!-- ══ A9: TEST PHASES 16-30 ══ -->
 <div class="slide" id="s17">
+  <div class="slide-body">
   <div class="appendix-badge">A9 · Apéndice técnico</div>
   <h2>Android Security Tests — Fases 16 a 30</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:8px">Firma APK · Storage seguro · Ataques IPC · Detección de hooking · Memoria en runtime · Anti-tampering</p>
@@ -1514,12 +1600,14 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
     </tbody>
   </table>
   </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════
      APÉNDICE: COMPARATIVA PRODUCCIÓN ACTUAL vs POC
 ══════════════════════════════════════════════════════ -->
 <div class="slide" id="s-compare">
+  <div class="slide-body">
   <div class="section-tag">Análisis comparativo</div>
   <h2>Producción actual vs. POC — Análisis de brecha criptográfica</h2>
   <p style="color:var(--muted);font-size:11.5px;margin-bottom:10px">Basado en análisis del tráfico real capturado. Cada fila es un vector de riesgo independiente.</p>
@@ -1661,6 +1749,7 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
       <div style="font-size:9.5px;color:var(--muted);margin-top:2px">Anti-replay: nonce + firma HMAC</div>
     </div>
   </div>
+  </div>
 </div>
 
 </div><!-- /deck -->
@@ -1669,13 +1758,13 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
   <button class="nav-btn" id="btn-prev" onclick="go(-1)" disabled>← Prev</button>
   <div class="dots" id="dots"></div>
   <button class="nav-btn" id="btn-next" onclick="go(1)">Next →</button>
-  <span class="slide-num" id="slide-num">1 / 8</span>
+  <span class="slide-num" id="slide-num">1 / 10</span>
 </nav>
 
 <script>
 const slides = document.querySelectorAll('.slide');
 const dotsEl = document.getElementById('dots');
-const EXEC_SLIDES = 9; // slides 0-8 are executive; 9+ are appendix
+const EXEC_SLIDES = 10; // slides 0-9 are executive; 10+ are appendix
 let cur = 0;
 
 slides.forEach((_, i) => {
@@ -1688,9 +1777,10 @@ slides.forEach((_, i) => {
 
 function goTo(n) {
   if (n < 0 || n >= slides.length) return;
-  slides[cur].classList.remove('active');
-  slides[cur].classList.add('out');
-  slides[cur].addEventListener('transitionend', () => slides[cur].classList.remove('out'), {once:true});
+  const prev = slides[cur];
+  prev.classList.remove('active');
+  prev.classList.add('out');
+  prev.addEventListener('transitionend', () => prev.classList.remove('out'), {once:true});
   cur = n;
   slides[cur].classList.add('active');
   document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === cur));

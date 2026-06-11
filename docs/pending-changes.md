@@ -114,6 +114,43 @@ Estado al **2026-06-11**. Items completados marcados con ✅.
 
 ---
 
+## ✅ Completado — Password Change Flow
+
+- **✅ Cambio de contraseña en app Ionic** — `ionic-app/.../tab1/tab1.page.*`
+  - Formulario inline en Tab "Identidad" (visible solo con sesión activa)
+  - 3 campos: contraseña actual, nueva contraseña, confirmar nueva contraseña
+  - Hints en tiempo real: mínimo 8 chars, confirmación coincidente
+  - Submit con Enter en cualquier campo
+
+- **✅ Validaciones client-side** (tab1.page.ts `validateChangePwd()`):
+  - Todos los campos requeridos
+  - Nueva contraseña ≥ 8 caracteres
+  - Nueva contraseña ≠ contraseña actual
+  - Nueva contraseña == confirmación
+
+- **✅ Endpoint backend** — `POST /api/v1/mobile/change-password` y `POST /api/v1/web/change-password` → api-node `POST /change-password`
+  - Paso 1: Re-autenticación con `{username, currentPassword}` via Keycloak token endpoint → verifica contraseña actual (401 Keycloak → 400 al cliente)
+  - Paso 2: Admin token del master realm via `admin-cli`
+  - Paso 3: `PUT /admin/realms/{realm}/users/{sub}/reset-password` — Admin REST API aplica el cambio
+
+- **✅ Decisión de AuthZ**: sin `validateClientInOdoo` deliberadamente — cambio de contraseña es operación de identidad (no de negocio). Bloquearla con Odoo AuthZ impediría recuperar acceso a usuarios con cuenta de Odoo desactivada.
+
+- **✅ Tests pasados (8/8)**:
+  | # | Caso | Resultado |
+  |---|------|-----------|
+  | T1 | Sin JWT | 401 Token JWT requerido |
+  | T2 | Contraseña actual incorrecta | 400 Contraseña actual incorrecta |
+  | T3 | Nueva < 8 caracteres | 400 Mínimo 8 caracteres |
+  | T4 | Nueva == actual | 400 Debe ser diferente |
+  | T5 | Cambio válido | 200 `{ success: true }` |
+  | T6 | Nueva contraseña funciona en Keycloak | Login exitoso con nueva contraseña |
+  | T7 | Revertir con nueva contraseña como actual | 200 `{ success: true }` |
+  | T8 | Contraseña original restaurada | Login exitoso con contraseña original |
+
+- **Nota técnica**: Keycloak 26 no expone el Account REST API de Keycloak en `/account/credentials/password` (405). Se usa el Admin API con credenciales de `admin-cli` del master realm.
+
+---
+
 ## Pendiente — P2/P3 para producción
 
 ### P2 — Alta prioridad
