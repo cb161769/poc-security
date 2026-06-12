@@ -228,6 +228,10 @@ export class Tab1Page implements OnInit, OnDestroy {
     }
   }
 
+  openPasskeyRegistration() {
+    window.open('http://localhost:8080/realms/web-realm/account/#/security/signingin', '_blank');
+  }
+
   async logout() {
     this.auth.logout();
     if (this.platform.isMobile()) {

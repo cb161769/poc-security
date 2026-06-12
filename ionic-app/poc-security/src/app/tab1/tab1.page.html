@@ -41,7 +41,7 @@
       </ion-card-content>
     </ion-card>
 
-    <!-- PASSWORD LOGIN -->
+    <!-- PASSWORD LOGIN (web + mobile) -->
     <ion-card *ngIf="!platform.isMobile() || !biometricAvailable || !hasBiometricToken">
       <ion-card-header>
         <ion-card-title>Iniciar sesión</ion-card-title>
@@ -71,23 +71,22 @@
           Entrar
         </ion-button>
 
-        <ion-text color="danger" *ngIf="error">
-          <p class="ion-text-center">{{ error }}</p>
-        </ion-text>
-      </ion-card-content>
-    </ion-card>
+        <!-- Passkey option (web only) -->
+        <ng-container *ngIf="channel === 'web'">
+          <div style="display:flex;align-items:center;gap:8px;margin:12px 0 4px">
+            <div style="flex:1;height:1px;background:var(--ion-color-medium-shade)"></div>
+            <ion-text color="medium"><small>o</small></ion-text>
+            <div style="flex:1;height:1px;background:var(--ion-color-medium-shade)"></div>
+          </div>
+          <ion-button expand="block" color="secondary" fill="outline" (click)="auth.initiatePasskeyLogin()">
+            <ion-icon name="hardware-chip-outline" slot="start"></ion-icon>
+            Entrar con Passkey
+          </ion-button>
+        </ng-container>
 
-    <!-- PASSKEY LOGIN (web only) -->
-    <ion-card *ngIf="channel === 'web'" class="ion-margin-top">
-      <ion-card-content>
-        <ion-button expand="block" color="secondary" (click)="auth.initiatePasskeyLogin()">
-          <ion-icon name="hardware-chip-outline" slot="start"></ion-icon>
-          Iniciar sesión con Passkey
-        </ion-button>
-        <p class="ion-text-center" style="font-size:12px;color:var(--ion-color-medium);margin-top:8px">
-          Usa tu passkey registrada (huella, Face ID, PIN del dispositivo).<br>
-          Si no tienes una, inicia sesión con contraseña primero y regístrala en la configuración de cuenta.
-        </p>
+        <ion-text color="danger" *ngIf="error">
+          <p class="ion-text-center ion-margin-top">{{ error }}</p>
+        </ion-text>
       </ion-card-content>
     </ion-card>
 
@@ -138,6 +137,13 @@
         {{ showChangePwd ? 'Cancelar' : 'Cambiar contraseña' }}
       </ion-button>
     </div>
+
+    <!-- Registrar Passkey (web only) -->
+    <ion-button *ngIf="channel === 'web'" expand="block" fill="outline" color="secondary"
+      class="ion-margin-bottom" (click)="openPasskeyRegistration()">
+      <ion-icon name="hardware-chip-outline" slot="start"></ion-icon>
+      Registrar Passkey
+    </ion-button>
 
     <!-- CAMBIO DE CONTRASEÑA -->
     <ion-card *ngIf="showChangePwd" class="ion-margin-top">

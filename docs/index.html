@@ -281,92 +281,89 @@ pre .v{color:#3fb950}
 <div class="slide" id="s1">
   <div class="slide-body">
   <div class="section-tag">Arquitectura</div>
-  <h2>Stack Tecnológico — 5 capas de defensa</h2>
-  <p style="color:var(--muted);font-size:12px;max-width:720px;line-height:1.55;margin-bottom:12px">
-    En este POC, Keycloak es el objetivo para autenticar web y mobile. Odoo sigue aportando la autorización de negocio y la verificación de clientes activos, mientras se valida la transición segura del directorio de usuarios.
+  <h2>Defensa en profundidad — 3 capas, cada una probada</h2>
+  <p style="color:var(--muted);font-size:12px;max-width:760px;line-height:1.55;margin-bottom:10px">
+    No hay un único punto de fallo. Un atacante que supera una capa sigue encontrando las siguientes. Atacamos las tres de forma independiente y bloquearon todo.
   </p>
 
-  <!-- Auth flow -->
-    <div class="arch-flow" style="margin-bottom:8px">
-      <div class="arch-box" style="border-color:#3fb95066">
-        <div style="font-size:15px">📱</div>
-        <div style="font-weight:700;font-size:11px">Cliente</div>
-        <div style="color:var(--muted);font-size:10px">Ionic 8 · Angular 20</div>
-      </div>
-      <div class="arch-arrow">
-        <div style="font-size:9px;color:var(--muted)">PKCE + JWT RS256</div>
-        <svg width="48" height="12"><line x1="0" y1="6" x2="44" y2="6" stroke="#58a6ff" stroke-width="1.2"/><polygon points="44,3 48,6 44,9" fill="#58a6ff"/></svg>
-      </div>
-      <div class="arch-box" style="border-color:#f59e0b66">
-        <div style="font-size:15px">🔑</div>
-        <div style="font-weight:700;font-size:11px">Keycloak 26</div>
-        <div style="color:var(--muted);font-size:10px">web/mobile target · herramientas internas actuales</div>
-      </div>
-      <div class="arch-arrow">
-        <div style="font-size:9px;color:var(--muted)">JWT · 5 min TTL</div>
-        <svg width="48" height="12"><line x1="0" y1="6" x2="44" y2="6" stroke="#58a6ff" stroke-width="1.2"/><polygon points="44,3 48,6 44,9" fill="#58a6ff"/></svg>
-      </div>
-      <div class="arch-box" style="border-color:#3fb95066">
-        <div style="font-size:15px">📱</div>
-        <div style="font-weight:700;font-size:11px">Cliente</div>
-        <div style="color:var(--muted);font-size:10px">token en memoria</div>
-      </div>
-    </div>
+  <!-- Defense layer table -->
+  <div style="display:grid;grid-template-columns:130px 1fr 1fr;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;font-size:11px">
+    <div style="padding:6px 10px;background:#21262d;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Capa</div>
+    <div style="padding:6px 10px;background:#21262d;font-size:9px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.06em">Ataques que bloqueó</div>
+    <div style="padding:6px 10px;background:#21262d;font-size:9px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em">Control activo</div>
 
-    <!-- Request flow -->
-  <div class="arch-flow">
-    <div class="arch-box" style="border-color:#3fb95066">
-      <div style="font-size:15px">📱</div>
-      <div style="font-weight:700;font-size:11px">Cliente</div>
-      <div style="color:var(--muted);font-size:10px">RSA key pair (WebCrypto)</div>
+    <div style="padding:8px 10px;border-top:1px solid var(--border);font-weight:700;background:#f59e0b06">🔑 Keycloak 26</div>
+    <div style="padding:8px 10px;border-top:1px solid var(--border);color:var(--muted);background:#f59e0b06;line-height:1.6">Tokens sin firma (alg=none) · confusión HS256 · claims forjados · kid/jku a servidor externo · PKCE downgrade · CSRF en redirect · passkeys</div>
+    <div style="padding:8px 10px;border-top:1px solid var(--border);color:var(--green);background:#f59e0b06;line-height:1.6">JWT RS256 · JWKS público · PKCE S256 obligatorio · state verificado · WebAuthn Passwordless (FIDO2)</div>
+
+    <div style="padding:8px 10px;border-top:1px solid var(--border);font-weight:700;background:#f0883e06">🔀 Kong 3.5</div>
+    <div style="padding:8px 10px;border-top:1px solid var(--border);color:var(--muted);background:#f0883e06;line-height:1.6">Flood 35 req/min · payload 1 MB · versión antigua de la app · path traversal · null byte en header · orígenes CORS no autorizados</div>
+    <div style="padding:8px 10px;border-top:1px solid var(--border);color:var(--green);background:#f0883e06;line-height:1.6">Rate-limit por token JWT · Lua version whitelist · CORS origins lista blanca · sin metadatos de servidor</div>
+
+    <div style="padding:8px 10px;border-top:1px solid var(--border);font-weight:700;background:#1f6feb06">⚡ Node×3 + Odoo</div>
+    <div style="padding:8px 10px;border-top:1px solid var(--border);color:var(--muted);background:#1f6feb06;line-height:1.6">Sustitución de clave JWE · replay de transferencia · cliente dado de baja en ERP · token de canal cruzado web↔mobile</div>
+    <div style="padding:8px 10px;border-top:1px solid var(--border);color:var(--green);background:#1f6feb06;line-height:1.6">Pubkey TOFU binding · Idempotency-Key · Odoo active=true · audience por realm separado</div>
+  </div>
+
+  <!-- Two flows side by side -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+    <div class="card" style="padding:10px 13px;border-color:#f59e0b33;background:#f59e0b06">
+      <div style="font-size:9px;font-weight:700;color:var(--yellow);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">① Autenticación — PKCE · WebAuthn</div>
+      <div class="arch-flow" style="margin:0">
+        <div class="arch-box" style="border-color:#3fb95066;min-width:72px;padding:7px 9px">
+          <div class="ab-icon">📱</div>
+          <div class="ab-name">App</div>
+          <div class="ab-sub">Ionic · Angular</div>
+        </div>
+        <div class="arch-arrow" style="position:relative">
+          <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:8.5px;color:var(--muted);white-space:nowrap;background:var(--dark);padding:0 3px">PKCE / WebAuthn</div>
+          <div style="position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);font-size:8.5px;color:var(--green);white-space:nowrap;background:var(--dark);padding:0 3px">← JWT RS256 5min</div>
+        </div>
+        <div class="arch-box" style="border-color:#f59e0b66;min-width:72px;padding:7px 9px">
+          <div class="ab-icon">🔑</div>
+          <div class="ab-name">Keycloak 26</div>
+          <div class="ab-sub">web-realm · mobile-realm</div>
+        </div>
+      </div>
     </div>
-    <div class="arch-arrow">
-      <div style="font-size:9px;color:var(--muted)">Bearer JWT + JWE key</div>
-      <svg width="48" height="12"><line x1="0" y1="6" x2="44" y2="6" stroke="#58a6ff" stroke-width="1.2"/><polygon points="44,3 48,6 44,9" fill="#58a6ff"/></svg>
-    </div>
-    <div class="arch-box" style="border-color:#f0883e66">
-      <div style="font-size:15px">🔀</div>
-      <div style="font-weight:700;font-size:11px">Kong 3.5</div>
-      <div style="color:var(--muted);font-size:10px">rate-limit · CORS · correlation-id</div>
-    </div>
-    <div class="arch-arrow">
-      <div style="font-size:9px;color:var(--muted)">proxy + rate-limit</div>
-      <svg width="48" height="12"><line x1="0" y1="6" x2="44" y2="6" stroke="#58a6ff" stroke-width="1.2"/><polygon points="44,3 48,6 44,9" fill="#58a6ff"/></svg>
-    </div>
-    <div class="arch-box" style="border-color:#1f6feb66">
-      <div style="font-size:15px">⚡</div>
-      <div style="font-weight:700;font-size:11px">Node APIs ×3</div>
-      <div style="color:var(--muted);font-size:10px">JWT val · pubkey bind · JWE resp</div>
-    </div>
-    <div class="arch-arrow">
-      <div style="font-size:9px;color:var(--muted)">Odoo AuthZ</div>
-      <svg width="48" height="12"><line x1="0" y1="6" x2="44" y2="6" stroke="#bc8cff" stroke-width="1.2" stroke-dasharray="4,2"/><polygon points="44,3 48,6 44,9" fill="#bc8cff"/></svg>
-    </div>
-    <div class="arch-box" style="border-color:#bc8cff44">
-      <div style="font-size:15px">🏢</div>
-      <div style="font-weight:700;font-size:11px">Odoo 17</div>
-      <div style="color:var(--muted);font-size:10px">x_api_clientes · active=true</div>
+    <div class="card" style="padding:10px 13px;border-color:#1f6feb33;background:#1f6feb06">
+      <div style="font-size:9px;font-weight:700;color:var(--blue);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">② Request protegido — 9 controles activos</div>
+      <div class="arch-flow" style="margin:0">
+        <div class="arch-box" style="border-color:#3fb95066;min-width:58px;padding:6px 8px">
+          <div class="ab-icon">📱</div>
+          <div class="ab-name">App</div>
+          <div class="ab-sub">JWT + JWE key</div>
+        </div>
+        <div class="arch-arrow"></div>
+        <div class="arch-box" style="border-color:#f0883e66;min-width:58px;padding:6px 8px">
+          <div class="ab-icon">🔀</div>
+          <div class="ab-name">Kong</div>
+          <div class="ab-sub">rate · CORS · ver.</div>
+        </div>
+        <div class="arch-arrow"></div>
+        <div class="arch-box" style="border-color:#1f6feb66;min-width:58px;padding:6px 8px">
+          <div class="ab-icon">⚡</div>
+          <div class="ab-name">APIs×3</div>
+          <div class="ab-sub">JWT · pubkey · idem.</div>
+        </div>
+        <div class="arch-arrow" style="background:linear-gradient(90deg,var(--border),var(--purple))">
+          <div style="position:absolute;right:-5px;top:-7px;color:var(--purple);font-size:11px">▶</div>
+        </div>
+        <div class="arch-box" style="border-color:#bc8cff44;min-width:58px;padding:6px 8px">
+          <div class="ab-icon">🏢</div>
+          <div class="ab-name">Odoo</div>
+          <div class="ab-sub">AuthZ · active</div>
+        </div>
+      </div>
+      <div style="margin-top:6px;font-size:9.5px;color:var(--green);text-align:right">respuesta JWE cifrada ←</div>
     </div>
   </div>
 
-  <!-- Stat cards -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px">
-    <div class="stat-card">
-      <div class="stat-num" style="font-size:20px">60</div>
-      <div class="stat-label">req/min · web-realm</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-num" style="font-size:20px">30</div>
-      <div class="stat-label">req/min · mobile-realm</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-num" style="font-size:15px;letter-spacing:-.5px">JWE E2E</div>
-      <div class="stat-label">RSA-OAEP-256 · A256GCM</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-num" style="font-size:20px">24h</div>
-      <div class="stat-label">Rotación de llaves RSA-4096</div>
-    </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+    <div class="stat-card"><div class="stat-num" style="font-size:20px">60</div><div class="stat-label">req/min · web-realm</div></div>
+    <div class="stat-card"><div class="stat-num" style="font-size:20px">30</div><div class="stat-label">req/min · mobile-realm</div></div>
+    <div class="stat-card"><div class="stat-num" style="font-size:15px;letter-spacing:-.5px">JWE E2E</div><div class="stat-label">RSA-OAEP-256 · A256GCM</div></div>
+    <div class="stat-card"><div class="stat-num" style="font-size:20px">24h</div><div class="stat-label">Rotación llaves RSA-4096</div></div>
   </div>
   </div>
 </div>
@@ -405,62 +402,80 @@ pre .v{color:#3fb950}
 <!-- ══ 3. STRIDE ══ -->
 <div class="slide" id="s2">
   <div class="slide-body">
-  <div class="section-tag">Modelo de amenazas</div>
-  <h2>STRIDE — Cobertura por categoría</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Metodología estándar de modelado de amenazas (Microsoft) aplicada al stack completo</p>
+  <div class="section-tag">Modelo de amenazas · ataques reales</div>
+  <h2>STRIDE — Atacamos el sistema en las 6 dimensiones</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Para cada categoría de amenaza (metodología Microsoft STRIDE) ejecutamos ataques reales. Esta diapositiva muestra qué intentamos y qué ocurrió. El código de cada control está en los apéndices A1–A11.</p>
 
   <div class="stride-grid">
     <div class="sc sc-S">
-      <div class="sc-letter">S</div>
-      <div class="sc-name">SPOOFING</div>
-      <div class="sc-es">Suplantación de identidad</div>
-      <div class="sc-ctrl">✓ JWT RS256 firmado por Keycloak<br>✓ mTLS cliente ↔ Kong<br>✓ Audience por canal (web / mobile)</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+        <div class="sc-letter">S</div>
+        <div><div class="sc-name">SPOOFING</div><div class="sc-es">Suplantación de identidad</div></div>
+      </div>
+      <div style="font-size:8.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;opacity:.65;margin-bottom:3px">Intentamos</div>
+      <div class="sc-ctrl">Tokens sin firma (alg=none) · algoritmo RS256→HS256 · payload con roles de admin · header kid apuntando a nuestro servidor</div>
+      <div style="margin-top:6px;padding:3px 8px;background:#ffffff10;border-radius:4px;font-size:9.5px;font-weight:700;color:var(--green)">→ HTTP 401 en los 5 intentos</div>
     </div>
     <div class="sc sc-T">
-      <div class="sc-letter">T</div>
-      <div class="sc-name">TAMPERING</div>
-      <div class="sc-es">Manipulación de datos</div>
-      <div class="sc-ctrl">✓ JWE RSA-OAEP-256 + A256GCM<br>✓ Binding de clave pública por usuario<br>✓ JWKS inmutable por realm</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+        <div class="sc-letter">T</div>
+        <div><div class="sc-name">TAMPERING</div><div class="sc-es">Manipulación de datos</div></div>
+      </div>
+      <div style="font-size:8.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;opacity:.65;margin-bottom:3px">Intentamos</div>
+      <div class="sc-ctrl">Inyectar nuestra propia clave RSA para descifrar datos de otro usuario · reenviar la misma transferencia dos veces</div>
+      <div style="margin-top:6px;padding:3px 8px;background:#ffffff10;border-radius:4px;font-size:9.5px;font-weight:700;color:var(--green)">→ HTTP 403 · operación cacheada sin procesar</div>
     </div>
     <div class="sc sc-R">
-      <div class="sc-letter">R</div>
-      <div class="sc-name">REPUDIATION</div>
-      <div class="sc-es">Repudio de transacciones</div>
-      <div class="sc-ctrl">✓ X-Request-Id por cada operación<br>✓ Idempotency-Key como registro<br>✓ JWT sub vinculado en cada log</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+        <div class="sc-letter">R</div>
+        <div><div class="sc-name">REPUDIATION</div><div class="sc-es">Repudio de transacciones</div></div>
+      </div>
+      <div style="font-size:8.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;opacity:.65;margin-bottom:3px">Control preventivo activo</div>
+      <div class="sc-ctrl">Cada operación lleva X-Request-Id único · JWT sub en cada log · Idempotency-Key como huella de la transacción</div>
+      <div style="margin-top:6px;padding:3px 8px;background:#ffffff10;border-radius:4px;font-size:9.5px;font-weight:700;color:var(--green)">→ Trazabilidad completa · sin brechas</div>
     </div>
     <div class="sc sc-I">
-      <div class="sc-letter">I</div>
-      <div class="sc-name">INFO DISCLOSURE</div>
-      <div class="sc-es">Fuga de información</div>
-      <div class="sc-ctrl">✓ Sin cabeceras que revelan el servidor<br>✓ Sin fingerprinting de framework<br>✓ Respuestas no cacheables</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+        <div class="sc-letter">I</div>
+        <div><div class="sc-name">INFO DISCLOSURE</div><div class="sc-es">Fuga de información</div></div>
+      </div>
+      <div style="font-size:8.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;opacity:.65;margin-bottom:3px">Intentamos</div>
+      <div class="sc-ctrl">Forzar errores para ver rutas del código · fingerprinting del servidor · enumerar usuarios de Keycloak · descubrir realms</div>
+      <div style="margin-top:6px;padding:3px 8px;background:#ffffff10;border-radius:4px;font-size:9.5px;font-weight:700;color:var(--green)">→ Sin datos útiles en ningún caso</div>
     </div>
     <div class="sc sc-D">
-      <div class="sc-letter">D</div>
-      <div class="sc-name">DOS / DDOS</div>
-      <div class="sc-es">Denegación de servicio</div>
-      <div class="sc-ctrl">✓ Rate-limit por token (no por IP)<br>✓ Canales aislados: mobile ≠ web<br>⚠ Circuit breaker pendiente</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+        <div class="sc-letter">D</div>
+        <div><div class="sc-name">DOS</div><div class="sc-es">Denegación de servicio</div></div>
+      </div>
+      <div style="font-size:8.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;opacity:.65;margin-bottom:3px">Intentamos</div>
+      <div class="sc-ctrl">Burst de 35 requests seguidos (límite 30/min) · payload de 1 MB · header de versión gigante · null byte para evadir versión</div>
+      <div style="margin-top:6px;padding:3px 8px;background:#ffffff10;border-radius:4px;font-size:9.5px;font-weight:700;color:var(--green)">→ HTTP 429 · 413 · 400 · 426</div>
     </div>
     <div class="sc sc-E">
-      <div class="sc-letter">E</div>
-      <div class="sc-name">ELEVATION</div>
-      <div class="sc-es">Escalada de privilegios</div>
-      <div class="sc-ctrl">✓ Autorización Odoo en 3 servicios<br>✓ Validación de rol por servicio<br>✓ Canal: imposible falsificar desde cliente</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+        <div class="sc-letter">E</div>
+        <div><div class="sc-name">ELEVATION</div><div class="sc-es">Escalada de privilegios</div></div>
+      </div>
+      <div style="font-size:8.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;opacity:.65;margin-bottom:3px">Intentamos</div>
+      <div class="sc-ctrl">Operar con un cliente dado de baja en el ERP · usar el token del canal web en el endpoint de mobile y viceversa</div>
+      <div style="margin-top:6px;padding:3px 8px;background:#ffffff10;border-radius:4px;font-size:9.5px;font-weight:700;color:var(--green)">→ HTTP 403 · HTTP 401</div>
     </div>
   </div>
 
-  <div style="display:flex;gap:10px;margin-top:12px">
+  <div style="display:flex;gap:10px;margin-top:10px">
     <div class="card hi-green" style="flex:1;padding:10px 14px;display:flex;align-items:center;gap:10px">
       <span style="font-size:20px">✅</span>
       <div>
-        <div style="font-size:13px;font-weight:700;color:var(--green)">5 / 6 categorías completamente cubiertas</div>
-        <div style="font-size:11px;color:var(--muted)">Spoofing · Tampering · Repudiation · Info Disclosure · Elevation — mitigados y verificados</div>
+        <div style="font-size:13px;font-weight:700;color:var(--green)">6 / 6 categorías STRIDE atacadas — 0 brechas</div>
+        <div style="font-size:11px;color:var(--muted)">Spoofing · Tampering · Repudiation · Info Disclosure · DoS · Elevation — todos bloqueados y verificados</div>
       </div>
     </div>
     <div class="card hi-yellow" style="flex:1;padding:10px 14px;display:flex;align-items:center;gap:10px">
       <span style="font-size:20px">⚠️</span>
       <div>
-        <div style="font-size:13px;font-weight:700;color:var(--yellow)">DoS: cobertura básica activa</div>
-        <div style="font-size:11px;color:var(--muted)">Rate limiting por token activo — circuit breaker y throttling granular en roadmap P2</div>
+        <div style="font-size:13px;font-weight:700;color:var(--yellow)">DoS a nivel de infraestructura: roadmap P2</div>
+        <div style="font-size:11px;color:var(--muted)">Rate limiting por token activo — circuit breaker y throttling granular pendientes para producción</div>
       </div>
     </div>
   </div>
@@ -685,8 +700,8 @@ pre .v{color:#3fb950}
 <div class="slide" id="s5">
   <div class="slide-body">
   <div class="section-tag">Evidencia</div>
-  <h2>85/85 tests — 9 ataques + 50 pentests · 0 fallos</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Suite automatizada: <code style="font-size:11px">bash scripts/test-all.sh</code> — 15 secciones · tokens reales de Keycloak · ataques JWT, inyección, headers, CORS, rate limiting, brute force</p>
+  <h2>85/85 tests — 9 ataques + 50 pentests · 0 brechas</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Cada caja es un ataque real que ejecutamos contra el sistema. Mostramos qué intentamos y qué ocurrió. Script: <code style="font-size:11px">bash scripts/test-all.sh</code></p>
 
   <div style="display:flex;gap:14px;align-items:flex-start">
     <!-- Score box -->
@@ -704,55 +719,63 @@ pre .v{color:#3fb950}
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px">
 
       <div class="card" style="padding:8px 10px;border-color:#f8514922">
-        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">01 · Fuga de info servidor</div>
-        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">X-Powered-By ausente</div><div class="result-code">→ ∅</div></div>
-        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">ETag ausente</div><div class="result-code">→ ∅</div></div>
-        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Cache-Control no-store</div><div class="result-code">→ ∅</div></div>
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">01 · Fingerprinting del servidor</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;line-height:1.4">Buscamos cabeceras que revelan qué software usa el servidor</div>
+        <div class="result-row" style="padding:2px 0;font-size:11px"><span>✅</span><div class="result-name">X-Powered-By oculto</div><div class="result-code">→ ∅</div></div>
+        <div class="result-row" style="padding:2px 0;font-size:11px"><span>✅</span><div class="result-name">ETag oculto</div><div class="result-code">→ ∅</div></div>
+        <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Cache bloqueada</div><div class="result-code">no-store</div></div>
       </div>
 
       <div class="card" style="padding:8px 10px;border-color:#f8514922">
-        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">02 · Sustitución de clave JWE</div>
-        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">Clave B inyectada bloqueada</div><div class="result-code">→ 403</div></div>
-        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Clave A original intacta</div><div class="result-code">→ 200</div></div>
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">02 · Robo de datos ajenos</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;line-height:1.4">Inyectamos nuestra clave RSA para descifrar datos de otro usuario</div>
+        <div class="result-row" style="padding:2px 0;font-size:11px"><span>✅</span><div class="result-name">Clave ajena rechazada</div><div class="result-code">→ 403</div></div>
+        <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Usuario legítimo intacto</div><div class="result-code">→ 200</div></div>
       </div>
 
       <div class="card" style="padding:8px 10px;border-color:#f8514922">
-        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">03 · Replay de operación</div>
-        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Reenvío marcado como duplicado</div><div class="result-code">→ Replayed</div></div>
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">03 · Repetición de transacción</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;line-height:1.4">Capturamos y reenviamos una transferencia ya procesada</div>
+        <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Duplicado detectado, sin procesar</div><div class="result-code">Replayed</div></div>
       </div>
 
       <div class="card" style="padding:8px 10px;border-color:#f8514922">
-        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">04 · POST sin idempotencia</div>
-        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Request rechazado sin UUID</div><div class="result-code">→ 400</div></div>
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">04 · Operación sin identificador</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;line-height:1.4">Enviamos un POST sin la clave de idempotencia requerida</div>
+        <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Rechazado por falta de UUID</div><div class="result-code">→ 400</div></div>
       </div>
 
       <div class="card" style="padding:8px 10px;border-color:#f8514922">
-        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">05 · AuthZ Bypass (Odoo)</div>
-        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Cliente inactivo bloqueado</div><div class="result-code">→ 403</div></div>
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">05 · Cliente dado de baja</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;line-height:1.4">Usamos un JWT válido de un usuario marcado inactivo en Odoo</div>
+        <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Odoo rechaza aunque el JWT sea válido</div><div class="result-code">→ 403</div></div>
       </div>
 
       <div class="card" style="padding:8px 10px;border-color:#f8514922">
-        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">06 · Monto fuera de límite</div>
-        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">$99,999 &gt; $10,000 bloqueado</div><div class="result-code">→ 422</div></div>
-        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">$500 procesado correctamente</div><div class="result-code">→ 200</div></div>
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">06 · Operación financiera ilegal</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;line-height:1.4">Intentamos transferir $99,999 (límite: $10,000)</div>
+        <div class="result-row" style="padding:2px 0;font-size:11px"><span>✅</span><div class="result-name">Monto fuera de rango bloqueado</div><div class="result-code">→ 422</div></div>
+        <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">$500 dentro del límite</div><div class="result-code">→ 200</div></div>
       </div>
 
       <div class="card" style="padding:8px 10px;border-color:#f8514922">
-        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">07 · Método de pago inválido</div>
-        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">method=crypto rechazado</div><div class="result-code">→ 422</div></div>
-        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">card / ach / wire aceptados</div><div class="result-code">→ 200</div></div>
-        <div class="result-row" style="padding:3px 0;font-size:11px;border:none;opacity:.6;font-size:10px"><span></span><div style="color:var(--muted)">3 métodos válidos verificados</div><div></div></div>
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">07 · Pago con método no autorizado</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;line-height:1.4">Enviamos un pago con method=crypto (no está en lista blanca)</div>
+        <div class="result-row" style="padding:2px 0;font-size:11px"><span>✅</span><div class="result-name">Cripto rechazado</div><div class="result-code">→ 422</div></div>
+        <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">card · ach · wire aceptados</div><div class="result-code">→ 200</div></div>
       </div>
 
       <div class="card" style="padding:8px 10px;border-color:#f8514922">
-        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">08 · Cross-Channel Attack</div>
-        <div class="result-row" style="padding:3px 0;font-size:11px"><span>✅</span><div class="result-name">Token web en /mobile rechazado</div><div class="result-code">→ 401</div></div>
-        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Token mobile en /web rechazado</div><div class="result-code">→ 401</div></div>
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">08 · Token de canal equivocado</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;line-height:1.4">Usamos el token web para llamar al endpoint mobile y viceversa</div>
+        <div class="result-row" style="padding:2px 0;font-size:11px"><span>✅</span><div class="result-name">Token web en /mobile</div><div class="result-code">→ 401</div></div>
+        <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Token mobile en /web</div><div class="result-code">→ 401</div></div>
       </div>
 
       <div class="card" style="padding:8px 10px;border-color:#f8514922">
-        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">09 · Rate Limiting / Flood</div>
-        <div class="result-row" style="padding:3px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">35 req → 35 bloqueadas (límite 30)</div><div class="result-code">→ 429</div></div>
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">09 · Saturación del servicio</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;line-height:1.4">Enviamos 35 requests seguidos (el límite es 30 por minuto)</div>
+        <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">5 requests bloqueados tras el límite</div><div class="result-code">→ 429</div></div>
       </div>
 
     </div>
@@ -796,34 +819,34 @@ pre .v{color:#3fb950}
 <div class="slide" id="s6">
   <div class="slide-body">
   <div class="section-tag">Cobertura</div>
-  <h2>Mapa de cobertura — 9/9 ataques bloqueados</h2>
-  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Cada fila es un ataque del script automatizado · 17 verificaciones individuales · 0 fallos</p>
+  <h2>Qué intentamos y qué ocurrió — 9 ataques + 50 pentests</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Cada fila es un ataque real ejecutado contra el sistema en producción local · 0 brechas · el detalle técnico de cada control está en los apéndices</p>
 
   <table>
     <thead>
-      <tr><th>#</th><th>Ataque simulado</th><th>Control activo</th><th>Verificaciones</th><th>Resultado</th></tr>
+      <tr><th>#</th><th>Qué intentamos hacer</th><th>Cómo el sistema lo bloqueó</th><th style="text-align:center">Checks</th><th>Resultado</th></tr>
     </thead>
     <tbody>
-      <tr><td style="color:var(--muted);font-size:10px">01</td><td>Fuga de info del servidor (fingerprinting)</td><td>Sin X-Powered-By · Sin ETag · Cache-Control: no-store</td><td style="text-align:center">3</td><td class="ok">✓ 3/3</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">02</td><td>Sustitución de clave pública JWE</td><td>Binding TOFU por usuario · TTL = exp del JWT</td><td style="text-align:center">2</td><td class="ok">✓ 2/2</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">03</td><td>Replay de operación financiera (POST)</td><td>X-Idempotency-Key requerido · TTL 5 min · respuesta cacheada</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">04</td><td>POST sin clave de idempotencia</td><td>Header obligatorio · rechazo explícito → 400</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">05</td><td>Bypass de autorización (cliente inactivo)</td><td>Verificación en Odoo · active=false → 403 en los 3 servicios</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">06</td><td>Monto fuera de límites de negocio</td><td>Máx. $10,000 transfers · $5,000 payments · validación en servicio</td><td style="text-align:center">2</td><td class="ok">✓ 2/2</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">07</td><td>Método de pago no autorizado (cripto)</td><td>Lista blanca: card · ach · wire — cualquier otro → 422</td><td style="text-align:center">4</td><td class="ok">✓ 4/4</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">08</td><td>Cross-channel: token de un canal en el otro</td><td>Audience y issuer independientes por realm · Kong + servicios</td><td style="text-align:center">2</td><td class="ok">✓ 2/2</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">09</td><td>Flood / abuso de tasa (35 req, límite 30)</td><td>Rate limiting por token JWT · canales aislados</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
-      <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Intercepción de tráfico (MitM)</td><td>TLS en Kong · JWE E2E independiente del TLS</td><td style="text-align:center">—</td><td class="partial">~ Parcial (POC)</td></tr>
-      <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Fallo en cascada (Odoo/Keycloak caído)</td><td>—</td><td style="text-align:center">—</td><td class="pending">⏳ Roadmap P2</td></tr>
-      <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Token JWT comprometido y activo</td><td>—</td><td style="text-align:center">—</td><td class="pending">⏳ Roadmap P2</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">01</td><td>Identificar qué software usa el servidor (fingerprinting)</td><td>Sin X-Powered-By · Sin ETag · respuestas no cacheables</td><td style="text-align:center">3</td><td class="ok">✓ 3/3</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">02</td><td>Descifrar datos de otro usuario inyectando nuestra clave RSA</td><td>Clave pública vinculada al usuario (TOFU) · cambio → 403</td><td style="text-align:center">2</td><td class="ok">✓ 2/2</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">03</td><td>Reutilizar una transferencia ya procesada (replay)</td><td>Idempotency-Key requerido · reenvío → respuesta cacheada sin ejecutar</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">04</td><td>Enviar una operación sin identificador único</td><td>Header X-Idempotency-Key obligatorio · sin él → 400</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">05</td><td>Operar con cuenta suspendida (JWT válido pero usuario inactivo en ERP)</td><td>Verificación active=true en Odoo antes de procesar · → 403</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">06</td><td>Transferir $99,999 superando el límite de negocio ($10,000)</td><td>Validación de monto máximo en el servicio · → 422</td><td style="text-align:center">2</td><td class="ok">✓ 2/2</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">07</td><td>Pagar con método no autorizado (criptomoneda)</td><td>Lista blanca de métodos: card · ach · wire — cualquier otro → 422</td><td style="text-align:center">4</td><td class="ok">✓ 4/4</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">08</td><td>Usar el token del canal web para llamar al endpoint de mobile</td><td>Audiencias y emisores distintos por realm · token incorrecto → 401</td><td style="text-align:center">2</td><td class="ok">✓ 2/2</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">09</td><td>Saturar el servicio con 35 requests en un minuto (límite: 30)</td><td>Rate limiting por token JWT · a partir del request 31 → 429</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
+      <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Interceptar tráfico en tránsito (MitM)</td><td>TLS en Kong · JWE independiente del TLS (cifrado E2E)</td><td style="text-align:center">—</td><td class="partial">~ Parcial (POC)</td></tr>
+      <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Explotar caída en cascada si Odoo o Keycloak fallan</td><td>—</td><td style="text-align:center">—</td><td class="pending">⏳ Roadmap P2</td></tr>
+      <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Reutilizar token robado antes de su expiración</td><td>—</td><td style="text-align:center">—</td><td class="pending">⏳ Roadmap P2</td></tr>
       <tr style="border-top:2px solid #bc8cff33;background:#6e40c908">
-        <td colspan="5" style="padding:6px 10px;font-size:9px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase">Pentests adicionales — 50 verificaciones · 5 categorías</td>
+        <td colspan="5" style="padding:6px 10px;font-size:9px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase">Pentests adicionales — 50 verificaciones · 5 categorías · ver apéndice A10 para detalle</td>
       </tr>
-      <tr><td style="color:var(--muted);font-size:10px">P1</td><td>JWT Algorithm Attacks</td><td>alg=none · RS256→HS256 · claims forjados · exp=1 · kid/jku injection</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">P2</td><td>Injection Attacks</td><td>SQL en Bearer · XSS reflection · path traversal ×4 · HTTP verbs (PUT/DELETE/PATCH/OPTIONS)</td><td style="text-align:center">10</td><td class="ok">✓ 10/10</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">P3</td><td>Information Disclosure</td><td>Stack trace · X-Powered-By · Server verbose · realm enumeration · user enumeration</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">P4</td><td>Security Headers &amp; CORS</td><td>X-Content-Type-Options · X-Frame-Options · Cache-Control · CORS wildcard · preflight evil origin</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
-      <tr><td style="color:var(--muted);font-size:10px">P5</td><td>Rate Limiting &amp; Payload Abuse</td><td>X-RateLimit headers · burst 35 req (límite 30) · 1MB payload · oversized header · null byte bypass</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">P1</td><td>Falsificar tokens JWT (algoritmo, firma, claims)</td><td>alg=none · RS256→HS256 · claims elevados · exp vencido · kid/jku externo</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">P2</td><td>Inyectar SQL, XSS y path traversal en headers y rutas</td><td>SQL en Bearer · XSS en header · traversal ×4 · métodos HTTP no permitidos</td><td style="text-align:center">10</td><td class="ok">✓ 10/10</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">P3</td><td>Extraer información interna del servidor o sus usuarios</td><td>Stack trace oculto · sin headers de framework · mensajes de error genéricos</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">P4</td><td>Explotar cabeceras de seguridad faltantes o CORS mal configurado</td><td>X-Content-Type-Options · X-Frame-Options · CORS whitelist · evil origin bloqueado</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">P5</td><td>Abusar del rate limiting con bursts, payloads gigantes y null bytes</td><td>429 tras límite · 413 en 1 MB · 400 en header gigante · 426 en null byte</td><td style="text-align:center">5</td><td class="ok">✓ 5/5</td></tr>
     </tbody>
   </table>
   </div>
@@ -932,9 +955,9 @@ pre .v{color:#3fb950}
         <div style="color:var(--muted);font-size:10px;margin-top:2px">Parámetro <em>state</em> generado y verificado en callback — impide CSRF en el redirect OIDC</div>
       </div>
       <div style="text-align:center;padding:9px;background:#6e40c910;border:1px solid #bc8cff33;border-radius:6px">
-        <div style="font-size:18px;margin-bottom:4px">🚫</div>
-        <div style="font-weight:700">Sin ROPC</div>
-        <div style="color:var(--muted);font-size:10px;margin-top:2px">directAccessGrants desactivado — solo flujo browser con passkey, sin bypass por contraseña</div>
+        <div style="font-size:18px;margin-bottom:4px">🔀</div>
+        <div style="font-weight:700">Doble vía</div>
+        <div style="color:var(--muted);font-size:10px;margin-top:2px">Formulario propio vía ROPC · botón passkey vía Auth Code + PKCE → cada vía usa su flujo correcto</div>
       </div>
     </div>
   </div>
@@ -1876,12 +1899,12 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
 
   <div class="grid g3" style="gap:9px;margin-bottom:10px">
     <div class="card hi-red" style="padding:11px 13px">
-      <div style="font-size:9.5px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Vuln 1 · Direct Grant bypass</div>
+      <div style="font-size:9.5px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Vuln 1 · ROPC bypass de WebAuthn</div>
       <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:6px">
-        <strong style="color:var(--text)">Problema:</strong> <code>directAccessGrantsEnabled=true</code> en <em>web-app-client</em> permitía obtener tokens vía ROPC (usuario+contraseña) sin pasar por WebAuthn, anulando el flujo de passkeys.<br>
-        <strong style="color:var(--green)">Fix:</strong> <code>directAccessGrantsEnabled=false</code> en web-app-client. Creado <em>web-test-client</em> separado con ROPC solo para automatización de tests.
+        <strong style="color:var(--text)">Problema:</strong> Si <code>directAccessGrantsEnabled=true</code> en <em>web-app-client</em> sin control adicional, cualquiera con credenciales obtiene un token web sin pasar por el flujo WebAuthn.<br>
+        <strong style="color:var(--green)">Diseño actual:</strong> ROPC habilitado solo para el formulario inline de la propia app (UX controlado). Creado <em>web-test-client</em> separado con ROPC para la suite de tests. <code>browserFlow=passkey-browser</code> en el realm — el botón passkey usa Auth Code y va por WebAuthn. ROPC y Auth Code son rutas paralelas con propósitos distintos.
       </div>
-      <span class="badge b-green" style="font-size:9px">✓ Corregido</span>
+      <span class="badge b-green" style="font-size:9px">✓ Segregado por vía</span>
     </div>
     <div class="card hi-red" style="padding:11px 13px">
       <div style="font-size:9.5px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Vuln 2 · PKCE downgrade</div>
@@ -1903,28 +1926,34 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
 
   <div class="grid g2" style="gap:10px">
     <div>
-      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Flujo resultante — seguro</div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Flujo passkey — seguro (botón "Entrar con Passkey")</div>
       <div class="flow">
         <div class="flow-step"><div class="flow-num">1</div><div><b>initiatePasskeyLogin()</b><span>genera code_verifier + challenge (SHA-256) + state aleatorio · los guarda en sessionStorage</span></div></div>
-        <div class="flow-step"><div class="flow-num">2</div><div><b>Redirect a Keycloak</b><span>con code_challenge, acr_values=webauthn-passwordless, state</span></div></div>
-        <div class="flow-step"><div class="flow-num">3</div><div><b>WebAuthn ceremony</b><span>Keycloak presenta el authenticator (Face ID/huella) · firma con ECDSA P-256</span></div></div>
-        <div class="flow-step"><div class="flow-num">4</div><div><b>Callback /auth/callback</b><span>verifica state === sessionStorage → si mismatch: CSRF → aborta</span></div></div>
-        <div class="flow-step"><div class="flow-num">5</div><div><b>handleOidcCallback(code)</b><span>intercambia auth code + code_verifier → access token RS256</span></div></div>
+        <div class="flow-step"><div class="flow-num">2</div><div><b>Redirect a Keycloak</b><span>browserFlow=passkey-browser → WebAuthn ceremony (Face ID / huella / clave de seguridad)</span></div></div>
+        <div class="flow-step"><div class="flow-num">3</div><div><b>Callback /auth/callback</b><span>verifica state === sessionStorage · si mismatch: CSRF → aborta</span></div></div>
+        <div class="flow-step"><div class="flow-num">4</div><div><b>handleOidcCallback(code)</b><span>intercambia auth code + code_verifier → access token RS256</span></div></div>
+      </div>
+      <div style="margin-top:7px;padding:6px 9px;background:#1f6feb08;border:1px solid #1f6feb22;border-radius:6px;font-size:10px;color:var(--muted)">
+        <strong style="color:var(--blue)">Flujo ROPC paralelo</strong> (botón "Entrar" con formulario): <code>POST /token grant_type=password</code> — no usa browserFlow, va directo al endpoint de tokens. Las dos vías son independientes: ROPC para la app propia, Auth Code para passkey.
       </div>
     </div>
     <div>
       <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Configuración Keycloak web-realm</div>
-      <pre style="font-size:9.5px"><span class="c">// Keycloak admin REST API — passkey-browser flow</span>
-<span class="n">browserFlow</span>: <span class="s">"passkey-browser"</span>
+      <pre style="font-size:9.5px"><span class="c">// web-realm — passkey-browser como browserFlow</span>
+<span class="n">browserFlow</span>: <span class="s">"passkey-browser"</span>  <span class="c">// solo para Auth Code (botón passkey)</span>
 <span class="n">webAuthnPolicyPasswordlessRpId</span>: <span class="s">"localhost"</span>
 <span class="n">webAuthnPolicyPasswordlessSignatureAlgorithms</span>: [<span class="s">"ES256"</span>]
 <span class="n">webAuthnPolicyPasswordlessRequireResidentKey</span>: <span class="s">"Yes"</span>
 <span class="n">webAuthnPolicyPasswordlessUserVerificationRequirement</span>: <span class="s">"required"</span>
 
 <span class="c">// web-app-client</span>
-<span class="n">directAccessGrantsEnabled</span>: <span class="k">false</span>
-<span class="n">pkce.code.challenge.method</span>: <span class="s">"S256"</span>
-<span class="n">access.token.signed.response.alg</span>: <span class="s">"RS256"</span></pre>
+<span class="n">directAccessGrantsEnabled</span>: <span class="k">true</span>   <span class="c">// ROPC para formulario inline</span>
+<span class="n">pkce.code.challenge.method</span>: <span class="s">"S256"</span> <span class="c">// obligatorio en Auth Code</span>
+<span class="n">access.token.signed.response.alg</span>: <span class="s">"RS256"</span>
+
+<span class="c">// web-test-client — ROPC solo para suite de tests automatizados</span>
+<span class="n">directAccessGrantsEnabled</span>: <span class="k">true</span>
+<span class="n">serviceAccountsEnabled</span>: <span class="k">false</span></pre>
     </div>
   </div>
   </div>

@@ -96,6 +96,26 @@ export class AuthService {
     this.applyTokenResponse(resp);
   }
 
+  async initiatePasswordLogin(): Promise<void> {
+    const verifier = this.generateCodeVerifier();
+    const challenge = await this.generateCodeChallenge(verifier);
+    const state = this.generateCodeVerifier();
+    sessionStorage.setItem('pkce_verifier', verifier);
+    sessionStorage.setItem('pkce_state', state);
+    const { tokenUrl, clientId } = this.realmConfig;
+    const authUrl = tokenUrl.replace('/protocol/openid-connect/token', '/protocol/openid-connect/auth');
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: `${window.location.origin}/auth/callback`,
+      response_type: 'code',
+      scope: 'openid',
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+      state,
+    });
+    window.location.href = `${authUrl}?${params}`;
+  }
+
   async initiatePasskeyLogin(): Promise<void> {
     const verifier = this.generateCodeVerifier();
     const challenge = await this.generateCodeChallenge(verifier);
