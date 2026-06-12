@@ -700,7 +700,7 @@ pre .v{color:#3fb950}
 <div class="slide" id="s5">
   <div class="slide-body">
   <div class="section-tag">Evidencia</div>
-  <h2>92/92 tests — 9 ataques + 57 pentests · 0 brechas</h2>
+  <h2>92/92 tests — 11 ataques + 57 pentests · 0 brechas</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Cada caja es un ataque real que ejecutamos contra el sistema. Mostramos qué intentamos y qué ocurrió. Script: <code style="font-size:11px">bash scripts/test-all.sh</code></p>
 
   <div style="display:flex;gap:14px;align-items:flex-start">
@@ -819,7 +819,7 @@ pre .v{color:#3fb950}
 <div class="slide" id="s6">
   <div class="slide-body">
   <div class="section-tag">Cobertura</div>
-  <h2>Qué intentamos y qué ocurrió — 9 ataques + 50 pentests</h2>
+  <h2>Qué intentamos y qué ocurrió — 11 ataques + 57 pentests</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Cada fila es un ataque real ejecutado contra el sistema en producción local · 0 brechas · el detalle técnico de cada control está en los apéndices</p>
 
   <table>
@@ -837,8 +837,8 @@ pre .v{color:#3fb950}
       <tr><td style="color:var(--muted);font-size:10px">08</td><td>Usar el token del canal web para llamar al endpoint de mobile</td><td>Audiencias y emisores distintos por realm · token incorrecto → 401</td><td style="text-align:center">2</td><td class="ok">✓ 2/2</td></tr>
       <tr><td style="color:var(--muted);font-size:10px">09</td><td>Saturar el servicio con 35 requests en un minuto (límite: 30)</td><td>Rate limiting por token JWT · a partir del request 31 → 429</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
       <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Interceptar tráfico en tránsito (MitM)</td><td>TLS en Kong · JWE independiente del TLS (cifrado E2E)</td><td style="text-align:center">—</td><td class="partial">~ Parcial (POC)</td></tr>
-      <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Explotar caída en cascada si Odoo o Keycloak fallan</td><td>—</td><td style="text-align:center">—</td><td class="pending">⏳ Roadmap P2</td></tr>
-      <tr style="opacity:.6"><td style="color:var(--muted);font-size:10px">—</td><td>Reutilizar token robado antes de su expiración</td><td>—</td><td style="text-align:center">—</td><td class="pending">⏳ Roadmap P2</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">10</td><td>Explotar caída en cascada si Odoo o Keycloak fallan</td><td>Circuit Breaker (opossum) — OPEN state → 503 + Retry-After: 30 · no propaga el error</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
+      <tr><td style="color:var(--muted);font-size:10px">11</td><td>Reutilizar token robado antes de su expiración</td><td>JTI blacklist en Redis (TTL = vida restante) · Emergency Lockdown O(1) para invalidación masiva</td><td style="text-align:center">1</td><td class="ok">✓ 1/1</td></tr>
       <tr style="border-top:2px solid #bc8cff33;background:#6e40c908">
         <td colspan="5" style="padding:6px 10px;font-size:9px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase">Pentests adicionales — 50 verificaciones · 5 categorías · ver apéndice A10 para detalle</td>
       </tr>
@@ -859,13 +859,21 @@ pre .v{color:#3fb950}
   <h2>Roadmap hacia producción</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:14px">Los controles actuales cubren los riesgos más críticos. Estos ítems deben resolverse antes de ir a producción</p>
 
+  <!-- Implementado en este POC -->
+  <div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:8px;letter-spacing:.06em;text-transform:uppercase">✅ Implementado en este POC</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
+    <span class="badge b-green" style="font-size:9px">Circuit Breaker (opossum)</span>
+    <span class="badge b-green" style="font-size:9px">JTI Blacklist (Redis)</span>
+    <span class="badge b-green" style="font-size:9px">Emergency Lockdown O(1)</span>
+    <span class="badge b-green" style="font-size:9px">Distributed Stores (Redis)</span>
+    <span class="badge b-green" style="font-size:9px">app_version JWT claim</span>
+    <span class="badge b-green" style="font-size:9px">Biometric Auth (Capacitor)</span>
+    <span class="badge b-green" style="font-size:9px">Passkeys / WebAuthn</span>
+  </div>
+
   <div class="grid g2" style="gap:10px">
     <div>
       <div style="font-size:10px;color:var(--yellow);font-weight:700;margin-bottom:8px;letter-spacing:.06em;text-transform:uppercase">⚠ Prioridad alta — antes de producción</div>
-      <div class="card hi-yellow" style="margin-bottom:8px;padding:12px 14px">
-        <h3>Circuit Breaker</h3>
-        <p>Si Odoo o Keycloak fallan, actualmente todos los endpoints fallan con ellos. Necesitamos un mecanismo que degrade gracefully y proteja la disponibilidad del servicio.</p>
-      </div>
       <div class="card hi-yellow" style="margin-bottom:8px;padding:12px 14px">
         <h3>Transición Odoo → Keycloak · Consolidación de realms</h3>
         <p style="margin-bottom:8px">Formalizar el plan de migración del acceso web/mobile a Keycloak, mientras Odoo conserva la autorización de negocio y la validación de cliente activo.</p>
@@ -905,16 +913,46 @@ pre .v{color:#3fb950}
         </div>
       </div>
       <div class="card hi-yellow" style="margin-bottom:8px;padding:12px 14px">
-        <h3>Revocación de tokens en tiempo real</h3>
-        <p>Un token comprometido hoy es válido hasta que expira (5 min). Necesitamos poder invalidarlo inmediatamente desde el servidor (logout forzado, cuenta bloqueada).</p>
+        <h3>Gestión de secretos (Vault)</h3>
+        <p>Las credenciales de base de datos, el usuario admin de Keycloak y las variables de entorno sensibles están hardcodeadas en <code>docker-compose.yml</code>. En producción deben vivir en un gestor de secretos con rotación automática y auditoría de acceso.</p>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">
+          <div><strong style="color:var(--text)">DB:</strong> Docker Secrets o Vault dynamic credentials</div>
+          <div><strong style="color:var(--text)">admin-cli:</strong> Vault AppRole con TTL corto — token nunca persiste en disco</div>
+          <div><strong style="color:var(--text)">Keycloak admin:</strong> contraseña fuerte + MFA + acceso solo desde red interna</div>
+        </div>
       </div>
       <div class="card hi-yellow" style="padding:12px 14px">
-        <h3>Stores distribuidos (Redis)</h3>
-        <p>El registro de claves y el control anti-replay viven en memoria del proceso. Un reinicio o escalado horizontal los pierde. Redis garantiza persistencia y consistencia entre nodos.</p>
+        <h3>HSM / KMS para llaves RSA</h3>
+        <p>Las llaves RSA que cifran los payloads JWE viven como archivos PEM planos en <code>/shared-keys</code>. Un atacante con acceso al filesystem puede extraer el material de clave.</p>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">
+          <div><strong style="color:var(--text)">Cloud:</strong> AWS KMS / GCP Cloud KMS — operaciones de firma sin exponer la clave</div>
+          <div><strong style="color:var(--text)">On-prem:</strong> HSM PKCS#11 (Thales / AWS CloudHSM)</div>
+          <div><strong style="color:var(--text)">Mínimo viable:</strong> Android Keystore / iOS Secure Enclave para la clave del cliente</div>
+        </div>
       </div>
     </div>
     <div>
       <div style="font-size:10px;color:var(--blue);font-weight:700;margin-bottom:8px;letter-spacing:.06em;text-transform:uppercase">📋 Prioridad media — hardening de infraestructura</div>
+      <div class="card hi-blue" style="margin-bottom:8px;padding:12px 14px">
+        <h3>Play Integrity API / App Attest</h3>
+        <p>El claim <code>app_version</code> en el JWT verifica versión, pero no integridad del binario. Un APK recompilado o un emulador rootado puede obtener tokens legítimos de Keycloak.</p>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">
+          <div><strong style="color:var(--text)">Android:</strong> Play Integrity API — atestigua que el APK es el original de Play Store, en hardware real, no rooteado</div>
+          <div><strong style="color:var(--text)">iOS:</strong> App Attest (gratuito) — misma garantía con Secure Enclave</div>
+          <div style="margin-top:4px;color:var(--yellow)">⚠ Play Integrity: gratis hasta 10k req/día; App Attest: gratuito sin límite</div>
+        </div>
+      </div>
+      <div class="card hi-blue" style="margin-bottom:8px;padding:12px 14px">
+        <h3>SSL Pinning con certificado real</h3>
+        <p>El POC usa un certificado autofirmado — el pin SHA-256 de producción aún no se puede configurar sin un dominio real. En producción se fija el hash del certificado en <code>network_security_config.xml</code> (Android) y <code>Info.plist</code> (iOS).</p>
+      </div>
+      <div class="card hi-blue" style="margin-bottom:8px;padding:12px 14px">
+        <h3>Almacenamiento seguro del refresh token</h3>
+        <p>El refresh token para biometría se guarda en <code>@capacitor/preferences</code> que usa <code>SharedPreferences</code> plano en Android. En producción debe usar <code>EncryptedSharedPreferences</code> respaldado por Android Keystore, e iOS Keychain.</p>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          <span class="badge b-yellow" style="font-size:9px">MASVS STOR-2 warning activo</span>
+        </div>
+      </div>
       <div class="card hi-blue" style="margin-bottom:8px;padding:12px 14px">
         <h3>Segregar rutas Web / Mobile</h3>
         <p>Kong actualmente expone las mismas rutas para los canales web y mobile. En producción, separar rutas, audiencias y permisos reduce el riesgo de cross-channel token reuse y mejora la trazabilidad de seguridad.</p>
@@ -933,7 +971,7 @@ pre .v{color:#3fb950}
       </div>
       <div class="card hi-blue" style="padding:12px 14px">
         <h3>Alertas y monitorización (SIEM)</h3>
-        <p>Los rechazos de seguridad (clave incorrecta, cliente bloqueado, rate limiting) deben generar alertas. Actualmente solo quedan en logs locales sin visibilidad centralizada.</p>
+        <p>Los rechazos de seguridad (clave incorrecta, cliente bloqueado, rate limiting, lockdown activado) deben generar alertas. Actualmente solo quedan en logs locales sin visibilidad centralizada.</p>
       </div>
     </div>
   </div>
@@ -2056,10 +2094,25 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
   </div>
 
   <div class="card" style="padding:9px 14px;border-color:#23863644;background:#23863608;display:flex;align-items:center;gap:14px">
-    <div style="font-size:32px;font-weight:900;color:var(--green);flex-shrink:0">85</div>
+    <div style="font-size:32px;font-weight:900;color:var(--green);flex-shrink:0">92</div>
     <div>
-      <div style="font-size:13px;font-weight:700">/ 85 PASS · 0 FAIL — suite completa en <code>scripts/test-all.sh</code></div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">Infraestructura · Keycloak · RSA · Kong · Servicios × 6 · Seguridad · POST endpoints · Brute force · Version enforcement · Aislamiento por servicio · JWT attacks · Injection · Info disclosure · Headers/CORS · Rate limiting</div>
+      <div style="font-size:13px;font-weight:700">/ 92 PASS · 0 FAIL — suite completa en <code>scripts/test-all.sh</code></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Infraestructura · Keycloak · RSA · Kong · Servicios × 6 · Seguridad · POST endpoints · Brute force · Version enforcement · Aislamiento por servicio · JWT attacks · Injection · Info disclosure · Headers/CORS · Rate limiting · Emergency Lockdown</div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+    <div class="card" style="padding:9px 14px;border-color:#58a6ff44;background:#58a6ff08;flex:1;min-width:200px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Suite Playwright (runtime)</div>
+      <div style="font-size:12px;font-weight:700;color:var(--green)">10/10 PASS</div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:2px"><code>node scripts/test-runtime-debug.js</code></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px">ng.getComponent · ng.applyChanges · fetch intercept · JWT memory · Capacitor mock · Component modify</div>
+    </div>
+    <div class="card" style="padding:9px 14px;border-color:#6e40c944;background:#6e40c908;flex:1;min-width:200px">
+      <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Utilidad JWE</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text)">encrypt-body.js</div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:2px"><code>node scripts/encrypt-body.js '&lt;jwk&gt;' '&lt;payload&gt;'</code></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px">Cifra un payload JSON como JWE RSA-OAEP-256+A256GCM para probar POST endpoints mobile manualmente</div>
     </div>
   </div>
   </div>

@@ -579,6 +579,29 @@ npm run test:runtime
 > Los screenshots de cada paso se guardan en `docs/debug-screenshots/`.  
 > La suite usa Chromium (headless). Si el navegador no está disponible: `npx playwright install chromium`.
 
+### Utilidad: cifrado JWE manual (`encrypt-body.js`)
+
+Cifra un payload JSON como JWE compacto (RSA-OAEP-256 + A256GCM) para probar manualmente los endpoints POST del canal mobile que requieren `Content-Type: application/jose`.
+
+```bash
+# 1. Obtener la clave pública del servidor
+PUB=$(curl -s http://localhost:8000/api/v1/pubkey | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['jwk'])" | python3 -c "import sys,json,base64; print(base64.b64encode(sys.stdin.read().encode()).decode())")
+
+# 2. Cifrar un payload
+JWE=$(node scripts/encrypt-body.js "$(echo $PUB | base64 -d)" '{"amount":100,"to":"ACC-1234","memo":"test"}')
+
+# 3. Enviar como body cifrado
+curl -X POST http://localhost:8000/api/v1/mobile/transfers \
+  -H "Authorization: Bearer $MOB_TOKEN" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/jose" \
+  -H "X-App-Version: 1.0.0" \
+  -d "$JWE"
+```
+
+> El canal mobile rechaza con HTTP 415 si el body **no** está cifrado. El canal web acepta JSON plano.
+
 ---
 
 ## Endpoints disponibles
@@ -734,18 +757,24 @@ bash scripts/setup.sh         # Volver a configurar
 | `X-Powered-By: Express` | ✅ Desactivado en los 3 servicios |
 | ETag en respuestas JWE | ✅ Desactivado en los 3 servicios |
 | Odoo AuthZ | ✅ Activo en api-node + transfers + payments |
+| Circuit Breaker | ✅ `opossum` en los 3 servicios — OPEN state → 503 + `Retry-After: 30` |
+| Revocación de tokens (JTI) | ✅ Redis blacklist por JTI con TTL = vida restante del token |
+| Emergency Lockdown | ✅ `SET emergency:lockdown <epoch>` → invalida todos los tokens en O(1); `DELETE` para levantar |
+| Stores distribuidos (Redis) | ✅ pubkey binding, idempotency, blacklist, lockdown — Redis 7 en docker-compose |
+| `app_version` JWT claim | ✅ Keycloak hardcoded mapper — versión server-side en JWT, no forgeable por el cliente |
+| Biometric auth (mobile) | ✅ `@aparajita/capacitor-biometric-auth` + refresh token en `@capacitor/preferences` |
+| Passkeys / WebAuthn | ✅ Keycloak WebAuthn Passwordless + PKCE Auth Code flow en Ionic |
 
 **Antes de producción — Prioridad alta:**
 
 | Item | POC | Producción |
 |------|-----|------------|
-| Circuit Breaker | Sin degradación graceful | Retry + fallback si Keycloak u Odoo fallan |
 | Consolidación de realms | `web-realm` + `mobile-realm` separados — cambio de contraseña no se propaga | Realm único `app-realm`; canales separados por cliente (`web-app-client` / `mobile-app-client`) |
-| Revocación de tokens | Token válido hasta que expira (5 min) | Blacklist por JTI en Redis; invalidación inmediata desde el servidor |
-| Stores distribuidos | Anti-replay e idempotency en memoria del proceso | Redis cluster — sobrevive reinicios y escala horizontalmente |
-| Credenciales DB | Hardcodeadas en docker-compose | Docker Secrets / Vault |
-| Keycloak admin | `admin/admin` | Contraseña fuerte + MFA |
+| Credenciales DB | Hardcodeadas en docker-compose | Docker Secrets / Vault con AppRole + TTL corto |
+| Keycloak admin | `admin/admin` | Contraseña fuerte + MFA + acceso solo desde red interna |
 | Keycloak admin-cli | Credenciales en env vars de `api-node` | `KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASS` en Vault con AppRole + TTL corto |
+| Llaves RSA | Archivos PEM planos en `/shared-keys` | HSM o AWS KMS — nunca material de clave en disco |
+| Play Integrity / App Attest | `app_version` claim hardcodeado en Keycloak | Play Integrity API (Android) + App Attest (iOS) — atestación de integridad del binario |
 
 **Antes de producción — Prioridad media:**
 
@@ -753,11 +782,12 @@ bash scripts/setup.sh         # Volver a configurar
 |------|-----|------------|
 | `secure-net` | `internal: false` | `internal: true` — servicios backend no accesibles desde exterior |
 | Certificados | Autofirmados | Let's Encrypt / CA corporativa |
-| Rate limiting | Policy local (un nodo) | Redis backend (multi-nodo) |
-| Logging | Console stdout | ELK / Loki estructurado |
-| Vault token | Archivo plano en disco | AppRole + TTL corto |
+| SSL Pinning | Sin pin real (cert autofirmado) | SHA-256 del cert de producción en `network_security_config.xml` |
+| Rate limiting | Policy local (un nodo) | Redis backend (multi-nodo, comparte contadores entre instancias) |
+| Logging | Console stdout | ELK / Loki estructurado con correlation ID |
 | Segregar rutas web/mobile | Mismos endpoints para ambos canales | Rutas, audiencias y permisos separados en Kong |
-| Monitorización | Logs locales sin alertas | SIEM con alertas en rechazos de seguridad (rate limit, 401, 403) |
+| Monitorización | Logs locales sin alertas | SIEM con alertas en rechazos de seguridad (rate limit, 401, 403, lockdown activado) |
+| Almacenamiento refresh token | `@capacitor/preferences` (SharedPreferences plano) | `EncryptedSharedPreferences` (Android Keystore) |
 
 ---
 
