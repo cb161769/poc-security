@@ -16,10 +16,112 @@ B='\033[0;34m'; W='\033[1;37m'; NC='\033[0m'
 
 PASS=0; FAIL=0; SKIP=0
 
-pass() { echo -e "${G}✅ PASS${NC}  $1"; PASS=$((PASS+1)); }
-fail() { echo -e "${R}❌ FAIL${NC}  $1"; echo -e "      ${R}→ $2${NC}"; FAIL=$((FAIL+1)); }
-skip() { echo -e "${Y}⚠️  SKIP${NC}  $1  ($2)"; SKIP=$((SKIP+1)); }
-section() { echo -e "\n${B}━━━ $1 ━━━${NC}"; }
+# ── HTML Report ──────────────────────────────────────────
+REPORT_DIR="$(cd "$(dirname "$0")/.." && pwd)/docs/test-reports"
+mkdir -p "$REPORT_DIR"
+REPORT_TS=$(date '+%Y%m%d-%H%M%S')
+REPORT_FILE="$REPORT_DIR/test-all-$REPORT_TS.html"
+HTML_TMP=$(mktemp /tmp/test-report-rows-XXXXXX)
+START_TS=$(date +%s)
+_SEC_NAME=""; _SEC_P=0; _SEC_F=0; _SEC_S=0
+
+_html_esc() { echo "$1" | sed 's/&/\&amp;/g;s/</\&lt;/g;s/>/\&gt;/g'; }
+
+_flush_section() {
+  [[ -z "$_SEC_NAME" ]] && return
+  local cls="s-pass"; [[ $_SEC_F -gt 0 ]] && cls="s-fail"
+  echo "<section class=\"$cls\">" >> "$HTML_TMP"
+  echo "<h3>$(_html_esc "$_SEC_NAME") <span class=\"sc\">✅$_SEC_P$([ $_SEC_F -gt 0 ] && echo " ❌$_SEC_F")$([ $_SEC_S -gt 0 ] && echo " ⚠$_SEC_S")</span></h3>" >> "$HTML_TMP"
+  echo "<table>" >> "$HTML_TMP"
+}
+
+pass() {
+  echo -e "${G}✅ PASS${NC}  $1"; PASS=$((PASS+1)); _SEC_P=$((_SEC_P+1))
+  echo "<tr class=\"p\"><td>✅</td><td>$(_html_esc "$1")</td><td></td></tr>" >> "$HTML_TMP"
+}
+fail() {
+  echo -e "${R}❌ FAIL${NC}  $1"; echo -e "      ${R}→ $2${NC}"
+  FAIL=$((FAIL+1)); _SEC_F=$((_SEC_F+1))
+  echo "<tr class=\"f\"><td>❌</td><td>$(_html_esc "$1")</td><td>$(_html_esc "$2")</td></tr>" >> "$HTML_TMP"
+}
+skip() {
+  echo -e "${Y}⚠️  SKIP${NC}  $1  ($2)"; SKIP=$((SKIP+1)); _SEC_S=$((_SEC_S+1))
+  echo "<tr class=\"s\"><td>⚠️</td><td>$(_html_esc "$1")</td><td>$(_html_esc "$2")</td></tr>" >> "$HTML_TMP"
+}
+section() {
+  echo -e "\n${B}━━━ $1 ━━━${NC}"
+  if [[ -n "$_SEC_NAME" ]]; then
+    echo "</table></section>" >> "$HTML_TMP"
+  fi
+  _flush_section
+  _SEC_NAME="$1"; _SEC_P=0; _SEC_F=0; _SEC_S=0
+  echo "<section class=\"pending\">" >> "$HTML_TMP"
+  echo "<h3>$(_html_esc "$1") <span class=\"sc\"></span></h3><table>" >> "$HTML_TMP"
+}
+
+write_report() {
+  # Close last section
+  echo "</table></section>" >> "$HTML_TMP"
+  local END_TS; END_TS=$(date +%s)
+  local DUR=$(( END_TS - START_TS ))
+  local TOTAL=$(( PASS + FAIL + SKIP ))
+  local STATUS="PASS"; [[ $FAIL -gt 0 ]] && STATUS="FAIL"
+  local ROWS; ROWS=$(cat "$HTML_TMP")
+  rm -f "$HTML_TMP"
+
+  cat > "$REPORT_FILE" <<HTMLEOF
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>POC Security — Test Report $REPORT_TS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'JetBrains Mono',monospace,system-ui;background:#0d1117;color:#e6edf3;font-size:13px;line-height:1.6;padding:24px}
+h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.meta{color:#8b949e;font-size:11px;margin-bottom:20px}
+.summary{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 20px;min-width:100px;text-align:center}
+.card .n{font-size:36px;font-weight:900;line-height:1}
+.card .l{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.n-pass{color:#3fb950}.n-fail{color:#f85149}.n-skip{color:#d29922}.n-total{color:#58a6ff}
+.status-PASS{color:#3fb950;font-size:14px;font-weight:700}.status-FAIL{color:#f85149;font-size:14px;font-weight:700}
+section{background:#161b22;border:1px solid #30363d;border-radius:8px;margin-bottom:10px;overflow:hidden}
+section h3{padding:10px 14px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;align-items:center;cursor:pointer;border-bottom:1px solid #30363d}
+.s-pass h3{border-left:3px solid #3fb950}.s-fail h3{border-left:3px solid #f85149}.s-pass h3{background:#23863608}.s-fail h3{background:#f8514908}
+.sc{font-size:11px;font-weight:400;color:#8b949e;font-family:monospace}
+table{width:100%;border-collapse:collapse}
+td{padding:5px 14px;font-size:11.5px;border-bottom:1px solid #21262d;vertical-align:top}
+td:first-child{width:28px;text-align:center}
+td:last-child{color:#8b949e;font-size:10.5px;font-style:italic;min-width:160px}
+tr.p{background:#23863605}tr.f{background:#f8514908}tr.s{background:#d2992208}
+tr.p td:first-child{color:#3fb950}tr.f td:first-child{color:#f85149}tr.s td:first-child{color:#d29922}
+tr:last-child td{border-bottom:none}
+.footer{margin-top:20px;color:#8b949e;font-size:10px;text-align:center}
+a{color:#58a6ff}
+</style>
+</head>
+<body>
+<h1>POC Security — Test Report</h1>
+<div class="meta">$REPORT_TS &nbsp;·&nbsp; duración: ${DUR}s &nbsp;·&nbsp; <span class="status-$STATUS">$STATUS</span></div>
+<div class="summary">
+  <div class="card"><div class="n n-total">$TOTAL</div><div class="l">Total</div></div>
+  <div class="card"><div class="n n-pass">$PASS</div><div class="l">Pass</div></div>
+  <div class="card"><div class="n n-fail">$FAIL</div><div class="l">Fail</div></div>
+  <div class="card"><div class="n n-skip">$SKIP</div><div class="l">Skip</div></div>
+  <div class="card" style="flex:1;text-align:left;padding:14px 20px">
+    <div style="font-size:11px;color:#8b949e;margin-bottom:6px">Secciones</div>
+    <div style="font-size:11px">Infraestructura · Keycloak · RSA · Kong · Servicios · Seguridad · POST · Brute Force · Version · Aislamiento · JWT Attacks · Injection · Info Disclosure · Headers/CORS · Rate Limiting · Emergency Lockdown · Disaster Recovery</div>
+  </div>
+</div>
+$ROWS
+<div class="footer">Generado por scripts/test-all.sh — POC Security 2026 · <a href="../index.html">Ver presentación</a></div>
+</body>
+</html>
+HTMLEOF
+  echo -e "\n  ${B}📄 Reporte HTML → $REPORT_FILE${NC}"
+}
 
 # ── Helpers ──────────────────────────────────────────────
 KONG="http://localhost:8000"
@@ -824,6 +926,103 @@ R=$(curl -s -o /dev/null -w "%{http_code}" \
 [[ "$R" == "200" ]] \
   && pass "Lockdown levantado — token pre-lockdown válido nuevamente → HTTP 200" \
   || fail "Token debe volver a funcionar tras levantar lockdown" "HTTP $R — esperado 200"
+
+section "17/17 · DISASTER RECOVERY — Resiliencia ante fallos de infraestructura"
+
+# ── DR-1: Redis caído → fail-open (servicio sigue funcionando) ──────────────
+DR_TOKEN=$(curl -s -X POST "$KC/realms/web-realm/protocol/openid-connect/token" \
+  -d "client_id=web-test-client&username=testuser&password=Test1234!&grant_type=password" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null)
+
+docker stop redis-cache > /dev/null 2>&1
+sleep 2
+
+R=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "$KONG/api/v1/web/api/v1/data" \
+  -H "Authorization: Bearer $DR_TOKEN" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0")
+[[ "$R" == "200" ]] \
+  && pass "Redis DOWN → servicio fail-open, petición legítima aceptada → HTTP 200" \
+  || fail "Servicio debería ser fail-open cuando Redis no está disponible" "HTTP $R — esperado 200"
+
+docker start redis-cache > /dev/null 2>&1
+sleep 3  # dar tiempo a que Redis levante y pase el healthcheck
+
+R=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "$KONG/api/v1/web/api/v1/data" \
+  -H "Authorization: Bearer $DR_TOKEN" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0")
+[[ "$R" == "200" ]] \
+  && pass "Redis restaurado → servicio normal → HTTP 200" \
+  || fail "Servicio debería funcionar tras restaurar Redis" "HTTP $R — esperado 200"
+
+# ── DR-2: Odoo caído → circuit breaker abre → 503 + Retry-After ─────────────
+docker stop odoo-server > /dev/null 2>&1
+sleep 2
+
+# Disparar suficientes requests para abrir el circuit breaker (volumeThreshold=3, errorThreshold=50%)
+CB_OPEN=false
+for i in 1 2 3 4 5; do
+  R=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X GET "$KONG/api/v1/web/transfers" \
+    -H "Authorization: Bearer $DR_TOKEN" \
+    -H "X-Client-Public-Key: $PUB_KEY" \
+    -H "X-App-Version: 1.0.0")
+  [[ "$R" == "503" ]] && CB_OPEN=true && break
+  sleep 1
+done
+
+[[ "$CB_OPEN" == "true" ]] \
+  && pass "Odoo DOWN → circuit breaker abierto → HTTP 503" \
+  || fail "Circuit breaker debería abrirse cuando Odoo no responde" "No se obtuvo 503 tras 5 intentos"
+
+# Verificar que 503 incluye Retry-After
+RETRY_HEADER=$(curl -s -D - -o /dev/null \
+  -X GET "$KONG/api/v1/web/transfers" \
+  -H "Authorization: Bearer $DR_TOKEN" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0" \
+  | grep -i "retry-after" | head -1)
+[[ -n "$RETRY_HEADER" ]] \
+  && pass "503 incluye Retry-After header → $RETRY_HEADER" \
+  || fail "503 debería incluir Retry-After header" "Header ausente"
+
+docker start odoo-server > /dev/null 2>&1
+sleep 5  # dar tiempo a que Odoo levante (es lento)
+
+# ── DR-3: Killswitch Kong → 503 en todas las rutas → restaurar → 200 ─────────
+bash "$(dirname "$0")/killswitch.sh" ON > /dev/null 2>&1
+sleep 1
+
+R_W=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "$KONG/api/v1/web/api/v1/data" \
+  -H "Authorization: Bearer $DR_TOKEN" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0")
+R_T=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "$KONG/api/v1/web/transfers" \
+  -H "Authorization: Bearer $DR_TOKEN" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0")
+[[ "$R_W" == "503" && "$R_T" == "503" ]] \
+  && pass "Killswitch ON → todos los endpoints devuelven 503 (api=$R_W transfers=$R_T)" \
+  || fail "Killswitch ON debería bloquear todo con 503" "api=$R_W transfers=$R_T"
+
+bash "$(dirname "$0")/killswitch.sh" OFF > /dev/null 2>&1
+sleep 1
+
+R=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "$KONG/api/v1/web/api/v1/data" \
+  -H "Authorization: Bearer $DR_TOKEN" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0")
+[[ "$R" == "200" ]] \
+  && pass "Killswitch OFF → servicio restaurado → HTTP 200" \
+  || fail "Servicio debería restaurarse tras levantar killswitch" "HTTP $R — esperado 200"
+
+write_report
 
 # ════════════════════════════════════════════════════════
 # RESUMEN

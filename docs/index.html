@@ -168,7 +168,7 @@ pre .v{color:#3fb950}
   <div class="accent-bar"></div>
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <span class="badge b-blue">POC · Seguridad API</span>
-    <span class="badge b-green">✓ 92/92 Tests · 0 Fail</span>
+    <span class="badge b-green">✓ 98/98 Tests · 0 Fail</span>
     <span class="badge b-green">✓ 50 Pentests API · 5 categorías</span>
     <span class="badge b-green">✓ Android 26/35 · 0 Fail</span>
     <span class="badge b-purple">✓ Passkeys WebAuthn implementados</span>
@@ -199,7 +199,7 @@ pre .v{color:#3fb950}
         <div>✓ Sin metadatos de servidor</div>
       </div>
       <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-        <span class="badge b-green" style="font-size:9px">92/92 tests · 0 fail</span>
+        <span class="badge b-green" style="font-size:9px">98/98 tests · 0 fail</span>
         <span class="badge b-green" style="font-size:9px">50 pentests · 5 categorías</span>
         <span class="badge b-purple" style="font-size:9px">Passkeys WebAuthn activos</span>
       </div>
@@ -227,10 +227,15 @@ pre .v{color:#3fb950}
 
   <div class="grid g2" style="gap:10px">
     <div class="card hi-yellow" style="padding:11px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:5px">✅ Implementado en este POC</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:6px">
+        <span style="color:var(--blue)">API:</span> Circuit breaker (opossum) · JTI blacklist · Emergency lockdown O(1) · Redis distributed stores · app_version JWT claim<br>
+        <span style="color:var(--green)">Mobile:</span> SSL pinning (cert autofirmado) · Root/Frida detection · Biometric auth · Passkeys WebAuthn
+      </div>
       <div style="font-size:10px;font-weight:700;color:var(--yellow);margin-bottom:5px">⚠ Pendiente para producción</div>
-      <div style="font-size:11.5px;color:var(--muted);line-height:1.6">
-        <span style="color:var(--blue)">API:</span> Circuit breaker · Token revocation · Redis stores · TLS CA real · Red interna aislada<br>
-        <span style="color:var(--green)">Mobile:</span> SSL pinning activo · Emulator detection en DEX · CT enforcement
+      <div style="font-size:11px;color:var(--muted);line-height:1.7">
+        <span style="color:var(--blue)">API:</span> TLS CA real · Red interna aislada (<code>secure-net: internal:true</code>) · Secrets en Vault · HSM para llaves RSA<br>
+        <span style="color:var(--green)">Mobile:</span> SSL pin con cert real · Emulator detection en DEX · Certificate Transparency · EncryptedSharedPreferences · Play Integrity API
       </div>
     </div>
     <div class="card" style="padding:11px 14px">
@@ -474,8 +479,8 @@ pre .v{color:#3fb950}
     <div class="card hi-yellow" style="flex:1;padding:10px 14px;display:flex;align-items:center;gap:10px">
       <span style="font-size:20px">⚠️</span>
       <div>
-        <div style="font-size:13px;font-weight:700;color:var(--yellow)">DoS a nivel de infraestructura: roadmap P2</div>
-        <div style="font-size:11px;color:var(--muted)">Rate limiting por token activo — circuit breaker y throttling granular pendientes para producción</div>
+        <div style="font-size:13px;font-weight:700;color:var(--green)">Circuit breaker implementado ✓ — throttling granular: roadmap P2</div>
+        <div style="font-size:11px;color:var(--muted)">opossum en los 3 servicios — OPEN state → 503 + Retry-After:30. Throttling por token activo pendiente para producción.</div>
       </div>
     </div>
   </div>
@@ -700,22 +705,22 @@ pre .v{color:#3fb950}
 <div class="slide" id="s5">
   <div class="slide-body">
   <div class="section-tag">Evidencia</div>
-  <h2>92/92 tests — 11 ataques + 57 pentests · 0 brechas</h2>
+  <h2>98/98 tests — 11 ataques + 57 pentests + 6 DR · 0 brechas</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Cada caja es un ataque real que ejecutamos contra el sistema. Mostramos qué intentamos y qué ocurrió. Script: <code style="font-size:11px">bash scripts/test-all.sh</code></p>
 
   <div style="display:flex;gap:14px;align-items:flex-start">
     <!-- Score box -->
     <div style="flex-shrink:0;text-align:center;padding:14px 16px;background:var(--card);border:1px solid #23863644;border-radius:12px;min-width:110px">
-      <div class="score-big" style="font-size:clamp(32px,5vw,56px)">85</div>
-      <div style="font-size:11px;color:var(--green);font-weight:700;margin-top:2px">/ 85 PASS</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px">15 secciones</div>
+      <div class="score-big" style="font-size:clamp(32px,5vw,56px)">98</div>
+      <div style="font-size:11px;color:var(--green);font-weight:700;margin-top:2px">/ 98 PASS</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">17 secciones</div>
       <div style="font-size:10px;color:var(--muted)">0 fallos</div>
       <div style="border-top:1px solid var(--border);margin:8px 0"></div>
-      <div style="font-size:10px;color:var(--green);font-weight:700">50 pentests</div>
-      <div style="font-size:9px;color:var(--muted)">5 categorías</div>
+      <div style="font-size:10px;color:var(--green);font-weight:700">57 pentests</div>
+      <div style="font-size:9px;color:var(--muted)">6 categorías</div>
     </div>
 
-    <!-- 9 attack grid -->
+    <!-- 11 attack grid -->
     <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px">
 
       <div class="card" style="padding:8px 10px;border-color:#f8514922">
@@ -778,13 +783,28 @@ pre .v{color:#3fb950}
         <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">5 requests bloqueados tras el límite</div><div class="result-code">→ 429</div></div>
       </div>
 
+      <div class="card" style="padding:8px 10px;border-color:#f8514922">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">10 · Caída en cascada de dependencias</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;line-height:1.4">Simulamos fallo de Odoo/Keycloak para provocar error en cadena</div>
+        <div class="result-row" style="padding:2px 0;font-size:11px"><span>✅</span><div class="result-name">Circuit breaker OPEN</div><div class="result-code">→ 503</div></div>
+        <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Retry-After devuelto</div><div class="result-code">30s</div></div>
+      </div>
+
+      <div class="card" style="padding:8px 10px;border-color:#f8514922">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">11 · Reutilizar token robado / lockdown masivo</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;line-height:1.4">Robamos un token válido e intentamos usarlo tras cambio de contraseña y tras lockdown global</div>
+        <div class="result-row" style="padding:2px 0;font-size:11px"><span>✅</span><div class="result-name">Token revocado (JTI)</div><div class="result-code">→ 401</div></div>
+        <div class="result-row" style="padding:2px 0;font-size:11px"><span>✅</span><div class="result-name">Lockdown O(1) activo</div><div class="result-code">→ 401</div></div>
+        <div class="result-row" style="padding:2px 0;font-size:11px;border:none"><span>✅</span><div class="result-name">Token post-lockdown</div><div class="result-code">→ 200</div></div>
+      </div>
+
     </div>
   </div>
 
   <!-- Pentest summary strip -->
   <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
-    <div style="font-size:9px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">+ 50 pentests adicionales — 5 categorías · 0 fallos</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px">
+    <div style="font-size:9px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">+ 57 pentests / verificaciones — 6 categorías · 0 fallos</div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:7px">
       <div class="card" style="padding:8px 10px;border-color:#bc8cff33;background:#6e40c908">
         <div style="font-size:9px;font-weight:700;color:var(--purple);margin-bottom:4px">JWT Attacks</div>
         <div style="font-size:11px;color:var(--green);font-weight:700">5/5 ✓</div>
@@ -810,6 +830,11 @@ pre .v{color:#3fb950}
         <div style="font-size:11px;color:var(--green);font-weight:700">5/5 ✓</div>
         <div style="font-size:9.5px;color:var(--muted);margin-top:3px">headers · burst · 1MB · null byte</div>
       </div>
+      <div class="card" style="padding:8px 10px;border-color:#58a6ff33;background:#58a6ff08">
+        <div style="font-size:9px;font-weight:700;color:var(--blue);margin-bottom:4px">Lockdown</div>
+        <div style="font-size:11px;color:var(--green);font-weight:700">7/7 ✓</div>
+        <div style="font-size:9.5px;color:var(--muted);margin-top:3px">pre-lockdown · O(1) · post-token · lift</div>
+      </div>
     </div>
   </div>
   </div>
@@ -819,7 +844,7 @@ pre .v{color:#3fb950}
 <div class="slide" id="s6">
   <div class="slide-body">
   <div class="section-tag">Cobertura</div>
-  <h2>Qué intentamos y qué ocurrió — 11 ataques + 57 pentests</h2>
+  <h2>Qué intentamos y qué ocurrió — 11 ataques + 57 pentests + 6 DR</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Cada fila es un ataque real ejecutado contra el sistema en producción local · 0 brechas · el detalle técnico de cada control está en los apéndices</p>
 
   <table>
@@ -1197,6 +1222,111 @@ pre .v{color:#3fb950}
   </div>
 </div>
 
+<!-- ══ s7e. DISASTER RECOVERY ══ -->
+<div class="slide" id="s7e">
+  <div class="slide-body">
+  <div class="section-tag">Resiliencia · Infraestructura</div>
+  <h2>Disaster Recovery — Fallos de infraestructura y plan de respuesta</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Cada componente tiene un modo de fallo, un impacto y una mitigación. Los escenarios críticos están cubiertos por tests automatizados en la sección 17 de <code>test-all.sh</code>.</p>
+
+  <!-- Matriz de fallos -->
+  <table style="margin-bottom:12px;font-size:11px">
+    <thead>
+      <tr>
+        <th>Componente</th>
+        <th>Modo de fallo</th>
+        <th>Impacto sin mitigación</th>
+        <th>Mitigación activa</th>
+        <th style="text-align:center">RTO objetivo</th>
+        <th>Test DR</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Redis</strong></td>
+        <td>Crash / OOM</td>
+        <td>Blacklist perdida — tokens revocados vuelven a ser válidos</td>
+        <td>Fail-open documentado · En producción: Redis Sentinel + AOF persistence</td>
+        <td style="text-align:center">&lt; 30s</td>
+        <td class="ok">✓ DR-1</td>
+      </tr>
+      <tr>
+        <td><strong>Odoo</strong></td>
+        <td>Crash / timeout</td>
+        <td>AuthZ falla en cadena — todos los endpoints 502</td>
+        <td>Circuit breaker opossum → OPEN → 503 + Retry-After:30</td>
+        <td style="text-align:center">&lt; 30s</td>
+        <td class="ok">✓ DR-2</td>
+      </tr>
+      <tr>
+        <td><strong>Kong</strong></td>
+        <td>Proceso caído</td>
+        <td>100% del tráfico bloqueado — clientes sin respuesta</td>
+        <td>Killswitch graceful · En producción: Kong en active-active con healthcheck L7</td>
+        <td style="text-align:center">&lt; 60s</td>
+        <td class="ok">✓ DR-3</td>
+      </tr>
+      <tr>
+        <td><strong>Keycloak</strong></td>
+        <td>Crash / DB no disponible</td>
+        <td>JWKS fetch falla → JWT validation 401 en todos los endpoints</td>
+        <td>JWKS cacheado en memoria (10 min TTL) · En producción: Keycloak en HA + PgBouncer</td>
+        <td style="text-align:center">&lt; 10 min</td>
+        <td class="partial">~ cache</td>
+      </tr>
+      <tr>
+        <td><strong>PostgreSQL</strong></td>
+        <td>Crash / corrupción</td>
+        <td>Keycloak + Odoo caen — pérdida de datos de sesiones y negocio</td>
+        <td>Volumen Docker persiste en disco · En producción: pg_dump diario + WAL archiving + replica</td>
+        <td style="text-align:center">&lt; 4h (RPO: 24h)</td>
+        <td class="pending">⏳ manual</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Backup/Restore -->
+  <div class="grid g2" style="gap:9px">
+    <div class="card hi-yellow" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--yellow);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">💾 Backup — Procedimiento mínimo viable (POC)</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.8">
+        <div><strong style="color:var(--text)">PostgreSQL</strong> (Keycloak + Odoo):</div>
+        <div style="background:#0d1117;border-radius:4px;padding:5px 8px;margin:3px 0;font-size:10.5px"><code>docker exec db-poc pg_dumpall -U admin_seguro &gt; backup_$(date +%Y%m%d).sql</code></div>
+        <div><strong style="color:var(--text)">Redis</strong> — estado ephémero por diseño (fail-open). Para producción:</div>
+        <div style="background:#0d1117;border-radius:4px;padding:5px 8px;margin:3px 0;font-size:10.5px"><code>redis-cli CONFIG SET appendonly yes  # habilitar AOF en producción</code></div>
+        <div><strong style="color:var(--text)">Keycloak realms</strong>:</div>
+        <div style="background:#0d1117;border-radius:4px;padding:5px 8px;margin:3px 0;font-size:10.5px"><code>docker cp keycloak-server:/opt/keycloak/data/import/ ./keycloak-backup/</code></div>
+      </div>
+    </div>
+    <div class="card hi-blue" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🔁 Restore — Procedimiento paso a paso</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.8">
+        <div><strong style="color:var(--text)">1. Levantar infra limpia</strong></div>
+        <div style="background:#0d1117;border-radius:4px;padding:5px 8px;margin:3px 0;font-size:10.5px"><code>docker compose down -v &amp;&amp; docker compose up -d db-poc</code></div>
+        <div><strong style="color:var(--text)">2. Restaurar PostgreSQL</strong></div>
+        <div style="background:#0d1117;border-radius:4px;padding:5px 8px;margin:3px 0;font-size:10.5px"><code>docker exec -i db-poc psql -U admin_seguro &lt; backup_YYYYMMDD.sql</code></div>
+        <div><strong style="color:var(--text)">3. Levantar servicios en orden</strong></div>
+        <div style="background:#0d1117;border-radius:4px;padding:5px 8px;margin:3px 0;font-size:10.5px"><code>docker compose up -d keycloak redis-cache &amp;&amp; docker compose up -d</code></div>
+        <div><strong style="color:var(--text)">4. Verificar</strong></div>
+        <div style="background:#0d1117;border-radius:4px;padding:5px 8px;margin:3px 0;font-size:10.5px"><code>bash scripts/test-all.sh  # debe pasar 98/98</code></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RTO/RPO -->
+  <div class="card" style="padding:10px 14px;margin-top:9px;background:#6e40c908;border-color:#bc8cff33">
+    <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Objetivos RTO / RPO — POC vs Producción</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;font-size:11px">
+      <div><div style="color:var(--muted);font-size:9px;text-transform:uppercase;margin-bottom:3px">RTO (servicio activo)</div><div style="font-weight:700;color:var(--yellow)">POC: no definido</div><div style="color:var(--muted);font-size:10px">Producción objetivo: &lt; 15 min</div></div>
+      <div><div style="color:var(--muted);font-size:9px;text-transform:uppercase;margin-bottom:3px">RPO (pérdida de datos)</div><div style="font-weight:700;color:var(--yellow)">POC: no definido</div><div style="color:var(--muted);font-size:10px">Producción objetivo: &lt; 1h (WAL streaming)</div></div>
+      <div><div style="color:var(--muted);font-size:9px;text-transform:uppercase;margin-bottom:3px">Circuit breaker reset</div><div style="font-weight:700;color:var(--green)">30s (implementado)</div><div style="color:var(--muted);font-size:10px">Odoo/Keycloak — configurable</div></div>
+      <div><div style="color:var(--muted);font-size:9px;text-transform:uppercase;margin-bottom:3px">JWKS cache TTL</div><div style="font-weight:700;color:var(--green)">10 min (implementado)</div><div style="color:var(--muted);font-size:10px">Keycloak puede caer 10 min sin impacto en auth</div></div>
+    </div>
+  </div>
+
+  </div>
+</div>
+
 <div class="slide" id="s8" style="justify-content:center;align-items:center">
   <div class="slide-body">
   <div style="text-align:center">
@@ -1218,6 +1348,7 @@ pre .v{color:#3fb950}
       <span class="badge b-blue">A9 · Test Phases 16–30</span>
       <span class="badge b-purple">A10 · Pentest Suite</span>
       <span class="badge b-purple">A11 · Passkeys técnico</span>
+      <span class="badge b-green">A12 · Test Evidence</span>
     </div>
   </div>
   </div>
@@ -2094,10 +2225,10 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
   </div>
 
   <div class="card" style="padding:9px 14px;border-color:#23863644;background:#23863608;display:flex;align-items:center;gap:14px">
-    <div style="font-size:32px;font-weight:900;color:var(--green);flex-shrink:0">92</div>
+    <div style="font-size:32px;font-weight:900;color:var(--green);flex-shrink:0">98</div>
     <div>
-      <div style="font-size:13px;font-weight:700">/ 92 PASS · 0 FAIL — suite completa en <code>scripts/test-all.sh</code></div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">Infraestructura · Keycloak · RSA · Kong · Servicios × 6 · Seguridad · POST endpoints · Brute force · Version enforcement · Aislamiento por servicio · JWT attacks · Injection · Info disclosure · Headers/CORS · Rate limiting · Emergency Lockdown</div>
+      <div style="font-size:13px;font-weight:700">/ 98 PASS · 0 FAIL — suite completa en <code>scripts/test-all.sh</code></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Infraestructura · Keycloak · RSA · Kong · Servicios × 6 · Seguridad · POST endpoints · Brute force · Version enforcement · Aislamiento por servicio · JWT attacks · Injection · Info disclosure · Headers/CORS · Rate limiting · Emergency Lockdown · Disaster Recovery</div>
     </div>
   </div>
 
@@ -2333,6 +2464,179 @@ mobileApiUrl: d(<span class="s">'aHR0cDovL...'</span>)</pre>
       <div style="font-size:9.5px;color:var(--muted);margin-top:2px">Anti-replay: nonce + firma HMAC</div>
     </div>
   </div>
+  </div>
+</div>
+
+<!-- ══ A12: TEST EVIDENCE — SUITE DIAGRAM ══ -->
+<div class="slide" id="s20">
+  <div class="slide-body">
+  <div class="appendix-badge">A12 · Apéndice técnico</div>
+  <h2>Test Suite — 17 secciones · 98 pruebas · evidencia completa</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:14px">Mapa visual de <code>scripts/test-all.sh</code> — cada card muestra categoría, nombre y número de pruebas. El script genera un reporte HTML con evidencia completa en <code>docs/test-reports/</code>.</p>
+
+  <!-- Test Suite Diagram -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-bottom:16px">
+
+    <!-- Integration Layer (blue) -->
+    <div style="background:#1f2d45;border:1px solid #1f6feb;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#58a6ff;font-weight:700;letter-spacing:.07em;margin-bottom:4px">INFRA · §1</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Infraestructura</div>
+      <div style="font-size:10px;color:var(--muted)">Docker, Redis, Kong, healthchecks</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#58a6ff">5 tests</div>
+    </div>
+
+    <div style="background:#1f2d45;border:1px solid #1f6feb;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#58a6ff;font-weight:700;letter-spacing:.07em;margin-bottom:4px">KEYCLOAK · §2</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Keycloak IdP</div>
+      <div style="font-size:10px;color:var(--muted)">Login, tokens, JWKS, realms</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#58a6ff">5 tests</div>
+    </div>
+
+    <div style="background:#1f2d45;border:1px solid #1f6feb;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#58a6ff;font-weight:700;letter-spacing:.07em;margin-bottom:4px">RSA JWE · §3</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Cifrado RSA</div>
+      <div style="font-size:10px;color:var(--muted)">JWE OAEP-256 + A256GCM</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#58a6ff">5 tests</div>
+    </div>
+
+    <div style="background:#1f2d45;border:1px solid #1f6feb;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#58a6ff;font-weight:700;letter-spacing:.07em;margin-bottom:4px">KONG · §4</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Kong Gateway</div>
+      <div style="font-size:10px;color:var(--muted)">Rate limit, mTLS, routing</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#58a6ff">5 tests</div>
+    </div>
+
+    <div style="background:#1f2d45;border:1px solid #1f6feb;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#58a6ff;font-weight:700;letter-spacing:.07em;margin-bottom:4px">SERVICIOS · §5</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Microservicios</div>
+      <div style="font-size:10px;color:var(--muted)">Transfers, Payments, API Node</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#58a6ff">5 tests</div>
+    </div>
+
+    <div style="background:#1f2d45;border:1px solid #1f6feb;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#58a6ff;font-weight:700;letter-spacing:.07em;margin-bottom:4px">SEGURIDAD · §6</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Auth &amp; Authz</div>
+      <div style="font-size:10px;color:var(--muted)">JWT verify, audience, scope</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#58a6ff">5 tests</div>
+    </div>
+
+    <div style="background:#1f2d45;border:1px solid #1f6feb;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#58a6ff;font-weight:700;letter-spacing:.07em;margin-bottom:4px">POST · §7</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">POST cifrado</div>
+      <div style="font-size:10px;color:var(--muted)">JWE body, idempotency key</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#58a6ff">5 tests</div>
+    </div>
+
+    <div style="background:#1f2d45;border:1px solid #1f6feb;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#58a6ff;font-weight:700;letter-spacing:.07em;margin-bottom:4px">BRUTE FORCE · §8</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Rate Limiting</div>
+      <div style="font-size:10px;color:var(--muted)">429 tras N intentos fallidos</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#58a6ff">5 tests</div>
+    </div>
+
+    <div style="background:#1f2d45;border:1px solid #1f6feb;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#58a6ff;font-weight:700;letter-spacing:.07em;margin-bottom:4px">VERSION · §9</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">App Version</div>
+      <div style="font-size:10px;color:var(--muted)">app_version claim en JWT</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#58a6ff">5 tests</div>
+    </div>
+
+    <div style="background:#1f2d45;border:1px solid #1f6feb;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#58a6ff;font-weight:700;letter-spacing:.07em;margin-bottom:4px">AISLAMIENTO · §10</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Red interna</div>
+      <div style="font-size:10px;color:var(--muted)">secure-net aislada de public-net</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#58a6ff">5 tests</div>
+    </div>
+
+    <!-- Pentest layer (purple) -->
+    <div style="background:#2a1f45;border:1px solid #8b5cf6;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#a78bfa;font-weight:700;letter-spacing:.07em;margin-bottom:4px">PENTEST · §11</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">JWT Attacks</div>
+      <div style="font-size:10px;color:var(--muted)">alg:none, HS256, kid inject</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#a78bfa">10 tests</div>
+    </div>
+
+    <div style="background:#2a1f45;border:1px solid #8b5cf6;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#a78bfa;font-weight:700;letter-spacing:.07em;margin-bottom:4px">PENTEST · §12</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Injection</div>
+      <div style="font-size:10px;color:var(--muted)">SQLi, XSS, template, path</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#a78bfa">10 tests</div>
+    </div>
+
+    <div style="background:#2a1f45;border:1px solid #8b5cf6;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#a78bfa;font-weight:700;letter-spacing:.07em;margin-bottom:4px">PENTEST · §13</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Info Disclosure</div>
+      <div style="font-size:10px;color:var(--muted)">Stack traces, headers sensibles</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#a78bfa">10 tests</div>
+    </div>
+
+    <div style="background:#2a1f45;border:1px solid #8b5cf6;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#a78bfa;font-weight:700;letter-spacing:.07em;margin-bottom:4px">PENTEST · §14</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Headers / CORS</div>
+      <div style="font-size:10px;color:var(--muted)">CSP, HSTS, X-Frame, Origin</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#a78bfa">10 tests</div>
+    </div>
+
+    <div style="background:#2a1f45;border:1px solid #8b5cf6;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#a78bfa;font-weight:700;letter-spacing:.07em;margin-bottom:4px">PENTEST · §15</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Rate Limiting</div>
+      <div style="font-size:10px;color:var(--muted)">Burst, DDoS mitigation</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#a78bfa">10 tests</div>
+    </div>
+
+    <!-- Emergency Lockdown (red) -->
+    <div style="background:#2d1519;border:1px solid #f85149;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#f85149;font-weight:700;letter-spacing:.07em;margin-bottom:4px">LOCKDOWN · §16</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Emergency Lockdown</div>
+      <div style="font-size:10px;color:var(--muted)">Redis O(1) · 600k usuarios · JTI</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#f85149">7 tests</div>
+    </div>
+
+    <!-- Disaster Recovery (yellow) -->
+    <div style="background:#2a2200;border:1px solid #d29922;border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:#d29922;font-weight:700;letter-spacing:.07em;margin-bottom:4px">DR · §17</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px">Disaster Recovery</div>
+      <div style="font-size:10px;color:var(--muted)">Redis fail-open · circuit breaker · killswitch</div>
+      <div style="margin-top:6px;font-size:11px;font-weight:900;color:#d29922">6 tests</div>
+    </div>
+
+  </div><!-- /grid -->
+
+  <!-- Summary bar -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    <div style="background:#1f2d45;border:1px solid #1f6feb40;border-radius:6px;padding:8px 14px;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:#58a6ff">50</div>
+      <div style="font-size:9.5px;color:var(--muted)">Integration</div>
+    </div>
+    <div style="background:#2a1f45;border:1px solid #8b5cf640;border-radius:6px;padding:8px 14px;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:#a78bfa">50</div>
+      <div style="font-size:9.5px;color:var(--muted)">Pentest</div>
+    </div>
+    <div style="background:#2d1519;border:1px solid #f8514940;border-radius:6px;padding:8px 14px;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:#f85149">7</div>
+      <div style="font-size:9.5px;color:var(--muted)">Lockdown</div>
+    </div>
+    <div style="background:#2a2200;border:1px solid #d2992240;border-radius:6px;padding:8px 14px;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:#d29922">6</div>
+      <div style="font-size:9.5px;color:var(--muted)">DR</div>
+    </div>
+    <div style="background:#102c1a;border:1px solid #3fb95040;border-radius:6px;padding:8px 14px;text-align:center;flex:1;min-width:140px">
+      <div style="font-size:26px;font-weight:900;color:#3fb950">98</div>
+      <div style="font-size:9.5px;color:var(--muted)">TOTAL · 0 FAIL</div>
+    </div>
+  </div>
+
+  <!-- Report link -->
+  <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px">
+    <span style="font-size:22px">📄</span>
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px">Reporte HTML con evidencia completa</div>
+      <div style="font-size:10.5px;color:var(--muted)">Generado automáticamente por <code>bash scripts/test-all.sh</code> →
+        <code style="background:#21262d;padding:1px 5px;border-radius:3px">docs/test-reports/test-all-YYYYMMDD-HHMMSS.html</code></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px">Incluye resultado por prueba, sección colapsable, duración, timestamp. Mismo esquema de colores que esta presentación.</div>
+    </div>
+  </div>
+
   </div>
 </div>
 

@@ -7,7 +7,7 @@ Implementa autenticación federada, cifrado de payload de extremo a extremo y au
 
 | Animación / Presentación | Descripción |
 |--------------------------|-------------|
-| [docs/index.html](docs/index.html) | **Presentación ejecutiva** (CTO/CSO): resumen ejecutivo, arquitectura con Keycloak, STRIDE, controles en lenguaje de negocio, resultados 92/92, roadmap · Apéndice técnico incluido |
+| [docs/index.html](docs/index.html) | **Presentación ejecutiva** (CTO/CSO): resumen ejecutivo, arquitectura con Keycloak, STRIDE, controles en lenguaje de negocio, resultados 98/98, roadmap · Apéndice técnico incluido |
 | [docs/arch.html](docs/arch.html) | **Architecture Review** (Chief Architect): diagrama C2, ADRs con rationale, cadena de middlewares y por qué el orden importa, gestión de estado y escalabilidad, patrones de seguridad, gap analysis con esfuerzo |
 | [docs/request-flow.html](docs/request-flow.html) | Flujo paso a paso: PKCE → JWT → RSA keygen → Kong → JWKS → Odoo AuthZ → JWE encrypt → decrypt (11 pasos animados) |
 | [docs/stride.html](docs/stride.html) | Modelo de amenazas STRIDE: vectores de ataque y contramedidas implementadas por categoría |
@@ -519,28 +519,29 @@ These measures make runtime tampering harder and reduce the value of DevTools-ba
 bash scripts/test-all.sh
 ```
 
-**Resultado esperado: 92/92 PASS**
+**Resultado esperado: 98/98 PASS**
 
-16 secciones — 10 de integración + 6 pentest/resiliencia:
+17 secciones — 10 de integración + 6 pentest/resiliencia + 1 disaster recovery:
 
 | Sección | Qué cubre |
 |---------|-----------|
-| 1/16 · Infraestructura | 7 contenedores corriendo y saludables |
-| 2/16 · Keycloak | OIDC discovery, tokens, audience claims por realm |
-| 3/16 · Clave RSA | Simulación WebCrypto: generación, exportación, binding |
-| 4/16 · Kong | Security headers, correlation ID, routing por canal |
-| 5/16 · Servicios | 6 flujos JWE (3 servicios × 2 canales) |
-| 6/16 · Seguridad | Rechazos cross-channel, sin token, firma inválida |
-| 7/16 · Endpoints POST | Creación de transferencias y pagos por canal |
-| 8/16 · Brute Force | Bloqueo de cuenta tras intentos fallidos, reset via admin API |
-| 9/16 · Version Enforcement | HTTP 426 en cada ruta con versión incorrecta o ausente |
-| 10/16 · Aislamiento por servicio | Rol insuficiente, audiencias cruzadas entre servicios |
-| 11/16 · JWT Algorithm Attacks | alg=none, RS256→HS256, kid/jku externo, claims elevados |
-| 12/16 · Injection Attacks | SQL, XSS, path traversal en headers y rutas |
-| 13/16 · Information Disclosure | Fingerprinting, enumeración de usuarios, error leakage |
-| 14/16 · Security Headers & CORS | CSP, HSTS, X-Frame-Options, CORS policy |
-| 15/16 · Rate Limiting & Payload Abuse | Burst 35 req (límite 30), payload 1 MB, null byte |
-| 16/16 · Emergency Lockdown | Activación O(1), bloqueo pre-lockdown, tokens post-lockdown válidos, lift |
+| 1/17 · Infraestructura | 7 contenedores corriendo y saludables |
+| 2/17 · Keycloak | OIDC discovery, tokens, audience claims por realm |
+| 3/17 · Clave RSA | Simulación WebCrypto: generación, exportación, binding |
+| 4/17 · Kong | Security headers, correlation ID, routing por canal |
+| 5/17 · Servicios | 6 flujos JWE (3 servicios × 2 canales) |
+| 6/17 · Seguridad | Rechazos cross-channel, sin token, firma inválida |
+| 7/17 · Endpoints POST | Creación de transferencias y pagos por canal |
+| 8/17 · Brute Force | Bloqueo de cuenta tras intentos fallidos, reset via admin API |
+| 9/17 · Version Enforcement | HTTP 426 en cada ruta con versión incorrecta o ausente |
+| 10/17 · Aislamiento por servicio | Rol insuficiente, audiencias cruzadas entre servicios |
+| 11/17 · JWT Algorithm Attacks | alg=none, RS256→HS256, kid/jku externo, claims elevados |
+| 12/17 · Injection Attacks | SQL, XSS, path traversal en headers y rutas |
+| 13/17 · Information Disclosure | Fingerprinting, enumeración de usuarios, error leakage |
+| 14/17 · Security Headers & CORS | CSP, HSTS, X-Frame-Options, CORS policy |
+| 15/17 · Rate Limiting & Payload Abuse | Burst 35 req (límite 30), payload 1 MB, null byte |
+| 16/17 · Emergency Lockdown | Activación O(1), bloqueo pre-lockdown, tokens post-lockdown válidos, lift |
+| 17/17 · Disaster Recovery | Redis fail-open, circuit breaker Odoo, killswitch Kong ON/OFF |
 
 ### Suite de runtime debugging (Playwright)
 
