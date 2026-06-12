@@ -867,8 +867,42 @@ pre .v{color:#3fb950}
         <p>Si Odoo o Keycloak fallan, actualmente todos los endpoints fallan con ellos. Necesitamos un mecanismo que degrade gracefully y proteja la disponibilidad del servicio.</p>
       </div>
       <div class="card hi-yellow" style="margin-bottom:8px;padding:12px 14px">
-        <h3>Transición Odoo → Keycloak</h3>
-        <p>Formalizar el plan de migración del acceso web/mobile a Keycloak, mientras Odoo conserva la autorización de negocio y la validación de cliente activo.</p>
+        <h3>Transición Odoo → Keycloak · Consolidación de realms</h3>
+        <p style="margin-bottom:8px">Formalizar el plan de migración del acceso web/mobile a Keycloak, mientras Odoo conserva la autorización de negocio y la validación de cliente activo.</p>
+
+        <div style="background:#d2992210;border:1px solid #d2992230;border-radius:6px;padding:8px 10px;margin-bottom:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--yellow);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">⚠ Problema actual — realms separados</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.7">
+            <div>El POC usa <code>web-realm</code> y <code>mobile-realm</code> como bases de datos de usuarios independientes.</div>
+            <div style="margin-top:4px;color:var(--text)">Un cambio de contraseña en mobile <strong>no se refleja en web</strong> y viceversa — el usuario existe dos veces sin vínculo entre ellos.</div>
+          </div>
+        </div>
+
+        <div style="background:#23863610;border:1px solid #23863630;border-radius:6px;padding:8px 10px;margin-bottom:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">✓ Solución recomendada — realm único con clientes por canal</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.7">
+            <div>Consolidar en un solo <code>app-realm</code>. La separación de canales se mantiene por <strong>cliente</strong> (<code>web-app-client</code> / <code>mobile-app-client</code>), no por realm.</div>
+            <div style="margin-top:4px">Cada cliente conserva su propio TTL, su propio flujo de autenticación y su audiencia de token. El usuario existe una sola vez — cambia contraseña una vez.</div>
+            <div style="margin-top:4px">Kong sigue validando la audiencia (<code>aud</code> / <code>azp</code>) por ruta para prevenir cross-channel token reuse.</div>
+          </div>
+        </div>
+
+        <div style="background:#58a6ff10;border:1px solid #58a6ff30;border-radius:6px;padding:8px 10px">
+          <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">🛡 Riesgos y mitigaciones</div>
+          <div style="font-size:11px;line-height:1.85;color:var(--muted)">
+            <div><strong style="color:var(--text)">Sesiones no aisladas por canal</strong> — un logout web no cierra la sesión mobile.<br>
+            <span style="color:var(--green)">→ Mitigación:</span> backchannel logout habilitado en ambos clientes + TTL corto en mobile (15 min) hace que la sesión expire sola.</div>
+
+            <div style="margin-top:6px"><strong style="color:var(--text)">Cross-channel token reuse</strong> — un token web podría intentar usarse en endpoints mobile.<br>
+            <span style="color:var(--green)">→ Mitigación:</span> ya resuelto — Kong valida <code>azp</code> por ruta. Token de <code>web-app-client</code> rechazado en ruta mobile con 401 (verificado en test 08).</div>
+
+            <div style="margin-top:6px"><strong style="color:var(--text)">Complejidad de migración</strong> — usuarios duplicados Odoo ↔ Keycloak durante el corte.<br>
+            <span style="color:var(--green)">→ Mitigación:</span> ejecutar autenticación vieja y nueva en paralelo durante un sprint de transición. Mapear <code>user_id</code> de Odoo como atributo <code>externalId</code> en Keycloak para mantener trazabilidad.</div>
+
+            <div style="margin-top:6px"><strong style="color:var(--text)">Passkeys vinculadas al realm</strong> — las passkeys registradas en <code>web-realm</code> no se migran automáticamente.<br>
+            <span style="color:var(--green)">→ Mitigación:</span> re-registro de passkeys post-migración vía Keycloak Account Console (flujo ya implementado con el botón "Registrar Passkey").</div>
+          </div>
+        </div>
       </div>
       <div class="card hi-yellow" style="margin-bottom:8px;padding:12px 14px">
         <h3>Revocación de tokens en tiempo real</h3>
