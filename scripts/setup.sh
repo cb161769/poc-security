@@ -53,15 +53,7 @@ date > shared-keys/last_rotation.txt
 
 success "Certificados generados"
 
-# ── 3. Crear directorio secrets ──────────────────────────
-info "Creando secrets/..."
-mkdir -p secrets
-echo "admin_secure_user"         > secrets/db_user.txt
-echo "IH6yYUQ81FpDGPcJtdzZjlV5" > secrets/db_password.txt
-echo "PLACEHOLDER_VAULT_TOKEN"   > secrets/vault_token.txt
-success "Secrets creados (reemplazar en producción)"
-
-# ── 4. Crear directorio certs para certbot ───────────────
+# ── 3. Crear directorio certs para certbot ───────────────
 mkdir -p certs
 
 # ── 5. Levantar Docker Compose ───────────────────────────
@@ -190,11 +182,20 @@ curl -s -b /tmp/c.txt -X POST 'http://localhost:8069/web/dataset/call_kw' \
 " 2>/dev/null
 success "Registros Odoo creados"
 
-# ── 9. Instalar dependencias de la Ionic App ─────────────
+# ── 9. Instalar dependencias raíz (Playwright + encrypt-body) ────────────────
+info "Instalando dependencias raíz..."
+cd "$ROOT"
+npm install --silent
+success "npm install raíz completado"
+
+# ── 10. Instalar dependencias de la Ionic App y sincronizar Capacitor ────────
 info "Instalando dependencias de la Ionic App..."
 cd "$ROOT/ionic-app/poc-security"
 npm install --silent
-success "npm install completado"
+success "npm install Ionic completado"
+
+info "Sincronizando Capacitor con Android (biometría + plugins)..."
+npx cap sync android --silent 2>/dev/null || warn "cap sync falló — Android Studio o SDK no encontrado (opcional para pruebas web)"
 
 # ── RESUMEN ──────────────────────────────────────────────
 echo ""
@@ -217,4 +218,7 @@ echo -e "    Contraseña: Test1234!"
 echo ""
 echo -e "  ${B}Para ejecutar las pruebas:${NC}"
 echo -e "    bash scripts/test-all.sh"
+echo ""
+echo -e "  ${B}Tests Android (requiere Android Studio + emulador):${NC}"
+echo -e "    pwsh ionic-app/poc-security/scripts/test-android-security.ps1"
 echo ""

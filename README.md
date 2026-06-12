@@ -94,7 +94,9 @@ Esto realiza automáticamente:
 - Crea los reinos, clientes, usuarios y audience mappers en Keycloak
 - Inicializa la base de datos de Odoo con el addon personalizado
 - Crea los registros de autorización en Odoo para el usuario de prueba
+- Instala dependencias raíz (Playwright, encrypt-body)
 - Instala dependencias de la app Ionic
+- Sincroniza Capacitor con Android (`cap sync android` — opcional si no hay Android Studio)
 
 **Tiempo estimado: 3–5 minutos** (descarga de imágenes Docker la primera vez: ~10 min)
 
