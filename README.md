@@ -66,7 +66,7 @@ pip3 install cryptography
 **Windows:** usar [Git Bash](https://git-scm.com/download/win) para ejecutar los scripts `.sh`.  
 **macOS/Linux:** bash nativo. Los scripts usan `python3` — disponible con cualquier instalación estándar de Python 3.
 
-> **macOS con Apple Silicon (M1/M2/M3):** Docker Desktop for Mac incluye soporte multi-arch; las imágenes (Keycloak, Kong, Odoo) tienen builds ARM64 nativos.
+> **macOS con Apple Silicon (M1/M2/M3/M4):** Docker Desktop for Mac incluye soporte multi-arch; las imágenes (Keycloak, Kong, Odoo) tienen builds ARM64 nativos.
 
 ---
 
@@ -295,6 +295,138 @@ npm install
 
 ---
 
+### 4. Features de seguridad avanzada
+
+#### 4.1 Keycloak — infraestructura endurecida
+
+Todo está configurado automáticamente al levantar el stack. Verifica que Keycloak haya arrancado en modo producción (`start`, no `start-dev`) y esté saludable antes de que api-node, transfers y payments inicien:
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}" | grep keycloak
+# Esperado: keycloak-server   Up X seconds (healthy)
+```
+
+Lo que está configurado en `docker-compose.yml` y los realm JSON:
+
+| Control | Valor |
+|---------|-------|
+| Modo de arranque | `start --http-enabled=true --import-realm` (producción, no dev) |
+| Schema DB Keycloak | `KC_DB_SCHEMA: keycloak` — aislado del schema `public` de Odoo |
+| Healthcheck | `GET /health/ready` — los 3 servicios backend esperan `(healthy)` |
+| Token TTL | 300 s (5 min) |
+| Sesión idle | 1800 s (30 min) |
+| Brute-force protection | Bloqueo tras 5 intentos fallidos, espera máx 15 min |
+| Pool DB Keycloak | min 5 / max 20 conexiones |
+
+Si Keycloak no llega a `(healthy)` después de 2–3 minutos:
+
+```bash
+docker logs keycloak-server --tail 40
+# Causa frecuente: KC_DB_SCHEMA "keycloak" no existe aún.
+# Solución: el archivo docker/db-init/01-keycloak-schema.sql
+# se ejecuta automáticamente en el primer arranque de db-poc.
+# Si db-poc ya tenía datos, ejecutar manualmente:
+docker exec db-poc psql -U admin_seguro -d postgres -c "CREATE SCHEMA IF NOT EXISTS keycloak;"
+docker compose restart keycloak
+```
+
+#### 4.2 Enforcement de versión de app
+
+Kong rechaza cualquier petición sin el header `X-App-Version: 1.0.0` con **HTTP 426 Upgrade Required**. No requiere configuración adicional — ya está activo en todas las rutas.
+
+Verificar que funciona:
+
+```bash
+# Sin header → 426
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/v1/mobile/api/v1/data
+# → 426
+
+# Versión incorrecta → 426
+curl -s -o /dev/null -w "%{http_code}" \
+  -H "X-App-Version: 9.9.9" \
+  http://localhost:8000/api/v1/mobile/api/v1/data
+# → 426
+
+# Versión correcta → 401 (sin token, pero pasó el filtro de versión)
+curl -s -o /dev/null -w "%{http_code}" \
+  -H "X-App-Version: 1.0.0" \
+  http://localhost:8000/api/v1/mobile/api/v1/data
+# → 401
+```
+
+La versión mínima se controla desde la variable de entorno `MIN_APP_VERSION` (default `1.0.0`) en los tres servicios backend y desde el plugin Lua de Kong en `kong.yml`. Para actualizar la versión permitida, modifica ambos.
+
+#### 4.3 Autenticación biométrica (Android)
+
+La biometría usa `@aparajita/capacitor-biometric-auth` y guarda el refresh token con `@capacitor/preferences`. Solo funciona en dispositivo o emulador Android con huella / PIN configurado.
+
+**Prerequisitos:**
+
+```bash
+cd ionic-app/poc-security
+npm install   # instala @aparajita/capacitor-biometric-auth y @capacitor/preferences
+npx cap sync android
+```
+
+Verificar que `android/app/src/main/AndroidManifest.xml` tenga el permiso:
+
+```xml
+<uses-permission android:name="android.permission.USE_BIOMETRIC" />
+```
+
+**Flujo en la app:**
+
+1. Primer login con usuario/contraseña en Tab "Identidad" → el refresh token se guarda automáticamente.
+2. En el siguiente arranque de la app (dispositivo con biometría disponible) → aparece el botón "Entrar con biometría".
+3. Al pulsar → se lanza el prompt biométrico del sistema → si se confirma, se usa el refresh token para renovar la sesión.
+4. Al cerrar sesión o si el refresh token expira → la opción desaparece hasta el próximo login con contraseña.
+
+> El refresh token se almacena en `@capacitor/preferences` (SharedPreferences en Android). Para producción, reemplazar con `EncryptedSharedPreferences` (Android Keystore).
+
+#### 4.4 Passkeys — login sin contraseña (Web)
+
+Las passkeys usan el flujo WebAuthn Passwordless de Keycloak con PKCE Authorization Code. Solo funciona en el canal web (`http://localhost:4200`), en Chrome/Safari/Edge con soporte WebAuthn.
+
+**Paso 1 — Registrar una passkey para el usuario**
+
+Las passkeys se registran desde la cuenta de Keycloak del usuario. Con el stack levantado:
+
+```
+http://localhost:8080/realms/web-realm/account
+```
+
+1. Inicia sesión con `testuser / Test1234!`
+2. Ve a **Security → Passwordless** (o **Signing in → Passkeys**)
+3. Haz clic en **Set up security key** y sigue el prompt del navegador/SO
+
+**Paso 2 — Usar la passkey desde la app**
+
+1. Abre `http://localhost:4200`
+2. En Tab "Identidad", debajo del formulario de contraseña, aparece el botón **"Iniciar sesión con Passkey"**
+3. Al pulsar se redirige a Keycloak con `acr_values=webauthn-passwordless`
+4. Keycloak muestra el prompt WebAuthn → confirma con huella/PIN del SO
+5. Keycloak redirige a `http://localhost:4200/auth/callback?code=...`
+6. La app intercambia el código por tokens (PKCE) y queda autenticada
+
+**Verificar el flujo:**
+
+```bash
+# El callback route debe estar registrado en Keycloak (realm-web.json lo incluye)
+curl -s "http://localhost:8080/admin/realms/web-realm/clients" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  | python3 -c "
+import sys,json
+clients = json.load(sys.stdin)
+web = next(c for c in clients if c['clientId']=='web-app-client')
+print('redirectUris:', web['redirectUris'])
+"
+# Debe incluir: http://localhost:4200/auth/callback
+```
+
+> En producción el `rpId` de WebAuthn debe coincidir exactamente con el dominio (no `localhost`). Ver `webAuthnPolicyPasswordlessRpId` en `keycloak-config/realm-web.json`.
+
+---
+
 ## Uso
 
 ### Iniciar la app Ionic
@@ -519,6 +651,8 @@ These measures make runtime tampering harder and reduce the value of DevTools-ba
 bash scripts/test-all.sh
 ```
 
+Al finalizar se genera automáticamente un reporte HTML en `docs/test-reports/test-all-YYYYMMDD-HHMMSS.html` con el detalle de cada test, código de color por sección y resumen de resultados.
+
 **Resultado esperado: 98/98 PASS**
 
 17 secciones — 10 de integración + 6 pentest/resiliencia + 1 disaster recovery:
@@ -542,6 +676,37 @@ bash scripts/test-all.sh
 | 15/17 · Rate Limiting & Payload Abuse | Burst 35 req (límite 30), payload 1 MB, null byte |
 | 16/17 · Emergency Lockdown | Activación O(1), bloqueo pre-lockdown, tokens post-lockdown válidos, lift |
 | 17/17 · Disaster Recovery | Redis fail-open, circuit breaker Odoo, killswitch Kong ON/OFF |
+
+### Suite de seguridad Android (APK + emulador)
+
+Analiza el APK estáticamente (ProGuard, Manifest flags, URLs hardcodeadas) y en runtime contra un emulador local (ADB backup, FLAG_SECURE, Frida detection, WebView debug, clipboard).
+
+**Prerequisitos:**
+- Android Studio instalado con al menos un emulador (API 34 recomendado) corriendo.
+- En Windows: `$env:LOCALAPPDATA\Android\Sdk` y JBR en la ruta por defecto de Android Studio.
+- En macOS M1/M2/M3/M4: `~/Library/Android/sdk` y Android Studio en `/Applications`.
+
+```powershell
+# Windows (PowerShell)
+.\ionic-app\poc-security\scripts\test-android-security.ps1
+
+# macOS (PowerShell 7 o superior requerido)
+pwsh ionic-app/poc-security/scripts/test-android-security.ps1
+```
+
+El script detecta el sistema operativo automáticamente — usa los paths correctos de SDK, JBR y comandos para cada plataforma.
+
+**Resultado esperado (emulador de desarrollo):**
+
+| Resultado | Tests | Detalle |
+|-----------|-------|---------|
+| PASS | 11 | Detección de dispositivo, install APK, launch app, ProGuard, Manifest flags, ADB backup bloqueado, clipboard limpio, URLs, network_security_config, JS bundle |
+| FAIL (esperado) | 4 | FLAG_SECURE (limitación del emulador), Log stripping (logcat demasiado verboso), Frida detection (no implementado), WebView debug (habilitado en dev build) |
+| SKIP | 2 | Tests que dependen de runtime previo fallido |
+
+> Los FAILs son hallazgos reales documentados — no bugs del script. En un build de producción se corregirían deshabilitando WebView debug y añadiendo detección de Frida en `MainActivity.java`.
+
+Los screenshots y logs de cada fase se guardan en `docs/android-test-reports/`.
 
 ### Suite de runtime debugging (Playwright)
 
@@ -679,14 +844,27 @@ poc-security/
 │           ├── tab1/     # Login + Identity + Timer de sesión + Cambio de contraseña
 │           ├── tab2/     # Transferencias
 │           └── tab3/     # Pagos
+│       └── scripts/
+│           └── test-android-security.ps1  # Suite de seguridad Android (Windows + macOS M4)
 ├── odoo-custom-addons/
 │   └── api_security_poc/  # Addon Odoo: x_api_clientes + HTTP controller
 ├── keycloak-config/       # realm-mobile.json + realm-web.json (auto-import)
 ├── shared-keys/           # Certificados TLS + claves RSA (generados, no en repo)
+├── docker/
+│   ├── android-test-runner/  # Runner Docker para CI: conecta ADB remoto + ejecuta suite
+│   └── db-init/              # Scripts SQL de inicialización de PostgreSQL
 ├── scripts/
 │   ├── setup.sh           # Script de configuración inicial
-│   ├── test-all.sh        # Suite de pruebas (33 tests)
+│   ├── test-all.sh        # Suite de integración (98 tests) → genera HTML en docs/test-reports/
 │   └── killswitch.sh      # Bloqueo de emergencia vía Kong
+├── docs/
+│   ├── index.html         # Presentación ejecutiva (slides animados)
+│   ├── arch.html          # Architecture Review
+│   ├── request-flow.html  # Flujo paso a paso PKCE → JWE
+│   ├── stride.html        # Modelo de amenazas STRIDE
+│   ├── attack-repudiation.html  # Ataques repudiados y controles
+│   ├── test-reports/      # Reportes HTML generados por test-all.sh (gitignored)
+│   └── android-test-reports/   # Logs y screenshots de test-android-security.ps1
 ├── docker-compose.yml
 └── kong.yml               # Rutas + plugins declarativos
 ```

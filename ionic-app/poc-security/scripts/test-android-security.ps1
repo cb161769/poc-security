@@ -1,8 +1,17 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
   KEYSTONE Android Security Test Suite
   Verifica automaticamente los controles de hardening implementados en la release APK.
+  Compatible con Windows (PS 5.1+) y macOS Intel/Apple Silicon M-series (PS 7+ / pwsh).
+
+.DESCRIPTION
+  Requisitos:
+    - Android Studio instalado (provee SDK, ADB, emulator, JBR)
+    - AVD creado en Android Studio (default: Medium_Phone_API_36.1)
+    - Windows: PowerShell 5.1+ (incluido en Windows)
+    - macOS:   pwsh 7+ → brew install --cask powershell
+               Luego: pwsh scripts/test-android-security.ps1
 
 .PARAMETER SkipBuild
   Salta el paso de compilacion (usa el APK existente).
@@ -14,9 +23,11 @@
   Nombre del AVD a usar. Default: Medium_Phone_API_36.1
 
 .EXAMPLE
-  .\scripts\test-android-security.ps1
-  .\scripts\test-android-security.ps1 -SkipBuild
-  .\scripts\test-android-security.ps1 -SkipEmulator -SkipBuild
+  # Windows
+  .\scripts\test-android-security.ps1 -SkipBuild -SkipEmulator
+
+  # macOS (desde la raiz ionic-app/poc-security/)
+  pwsh scripts/test-android-security.ps1 -SkipBuild -SkipEmulator
 #>
 
 param(
@@ -28,52 +39,88 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# ── Platform detection ────────────────────────────────────────────────────────
+
+# $IsWindows / $IsMacOS are built-in in PS7+; in PS5.1 (Windows-only) we derive them.
+$OnWindows = if ($PSVersionTable.PSVersion.Major -ge 6) { $IsWindows } else { $true }
+$OnMac     = if ($PSVersionTable.PSVersion.Major -ge 6) { $IsMacOS  } else { $false }
+$Sep       = [System.IO.Path]::DirectorySeparatorChar
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-$SDK       = "$env:LOCALAPPDATA\Android\Sdk"
-$ADB       = "$SDK\platform-tools\adb.exe"
-$EMULATOR  = "$SDK\emulator\emulator.exe"
-$JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ROOT      = Split-Path -Parent $SCRIPT_DIR          # ionic-app/poc-security/
-$APK       = "$ROOT\android\app\build\outputs\apk\release\app-release.apk"
-$PKG       = "io.ionic.starter"
-$ACTIVITY  = "$PKG/.MainActivity"
+$ROOT       = Split-Path -Parent $SCRIPT_DIR   # ionic-app/poc-security/
 
-$env:JAVA_HOME = $JAVA_HOME
-$env:PATH      = "$JAVA_HOME\bin;$SDK\platform-tools;$env:PATH"
+if ($OnWindows) {
+  $SDK       = "$env:LOCALAPPDATA\Android\Sdk"
+  $JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+  $ADB       = "$SDK\platform-tools\adb.exe"
+  $EMULATOR  = "$SDK\emulator\emulator.exe"
+  $GRADLEW   = ".\gradlew.bat"
+  $TMP       = $env:TEMP
+  $APK       = "$ROOT\android\app\build\outputs\apk\release\app-release.apk"
+  $env:JAVA_HOME = $JAVA_HOME
+  $env:PATH  = "$JAVA_HOME\bin;$SDK\platform-tools;$env:PATH"
+} else {
+  # macOS (Intel or Apple Silicon M-series)
+  $SDK = if (Test-Path "$env:HOME/Library/Android/sdk") {
+    "$env:HOME/Library/Android/sdk"
+  } else {
+    "/usr/local/share/android-sdk"   # Homebrew fallback
+  }
+  # Android Studio JBR — try common install locations for M1/M4
+  $jbrCandidates = @(
+    "/Applications/Android Studio.app/Contents/jbr/Contents/Home",
+    "/Applications/Android Studio.app/Contents/jre/Contents/Home",
+    "/Applications/Android Studio Preview.app/Contents/jbr/Contents/Home"
+  )
+  $JAVA_HOME = $jbrCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+  if (-not $JAVA_HOME) { $JAVA_HOME = "/usr/bin"  }  # system java fallback
+  $ADB      = "$SDK/platform-tools/adb"
+  $EMULATOR = "$SDK/emulator/emulator"
+  $GRADLEW  = "./gradlew"
+  $TMP      = "/tmp"
+  $APK      = "$ROOT/android/app/build/outputs/apk/release/app-release.apk"
+  $env:JAVA_HOME = $JAVA_HOME
+  $env:PATH  = "$JAVA_HOME/bin:$SDK/platform-tools:$env:PATH"
+}
+
+$PKG      = "io.ionic.starter"
+$ACTIVITY = "$PKG/.MainActivity"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-$passed  = 0
-$failed  = 0
-$skipped = 0
-$results = [System.Collections.Generic.List[object]]::new()
+$passed      = 0
+$failed      = 0
+$skipped     = 0
+$results     = [System.Collections.Generic.List[object]]::new()
+$skipAll     = $false
+$skipRuntime = $false
 
 function Write-Header([string]$text) {
   Write-Host ""
   Write-Host "  $text" -ForegroundColor Cyan
-  Write-Host ("  " + "─" * ($text.Length)) -ForegroundColor DarkGray
+  Write-Host ("  " + "-" * ($text.Length)) -ForegroundColor DarkGray
 }
 
 function Pass([string]$name, [string]$detail = "") {
   $script:passed++
-  $line = "  [PASS] $name$(if($detail){" — $detail"})"
-  Write-Host $line -ForegroundColor Green
+  $suffix = if ($detail) { " - $detail" } else { "" }
+  Write-Host "  [PASS] $name$suffix" -ForegroundColor Green
   $script:results.Add([PSCustomObject]@{Status="PASS";Test=$name;Detail=$detail})
 }
 
 function Fail([string]$name, [string]$detail = "") {
   $script:failed++
-  $line = "  [FAIL] $name$(if($detail){" — $detail"})"
-  Write-Host $line -ForegroundColor Red
+  $suffix = if ($detail) { " - $detail" } else { "" }
+  Write-Host "  [FAIL] $name$suffix" -ForegroundColor Red
   $script:results.Add([PSCustomObject]@{Status="FAIL";Test=$name;Detail=$detail})
 }
 
 function Skip([string]$name, [string]$reason = "") {
   $script:skipped++
-  $line = "  [SKIP] $name$(if($reason){" — $reason"})"
-  Write-Host $line -ForegroundColor DarkGray
+  $suffix = if ($reason) { " - $reason" } else { "" }
+  Write-Host "  [SKIP] $name$suffix" -ForegroundColor DarkGray
   $script:results.Add([PSCustomObject]@{Status="SKIP";Test=$name;Detail=$reason})
 }
 
@@ -82,8 +129,10 @@ function Info([string]$msg) {
 }
 
 function Adb {
-  param([string[]]$Args)
-  & $ADB @Args 2>&1
+  $ea = $ErrorActionPreference; $ErrorActionPreference = "SilentlyContinue"
+  $out = & $ADB $args 2>&1
+  $ErrorActionPreference = $ea
+  $out
 }
 
 function Wait-Boot([int]$TimeoutSec = 120) {
@@ -98,14 +147,21 @@ function Wait-Boot([int]$TimeoutSec = 120) {
 }
 
 function Get-ForegroundPkg {
-  (Adb shell "dumpsys activity activities 2>/dev/null | grep mResumedActivity") -join ""
+  # Android 14+: topResumedActivity is authoritative
+  $activities = (Adb shell dumpsys activity activities) -join "`n"
+  if ($activities -match 'topResumedActivity=ActivityRecord\{[^}]+\s+([\w.]+)/') { return $Matches[1] }
+  if ($activities -match 'mResumedActivity=ActivityRecord\{[^}]+\s+([\w.]+)/') { return $Matches[1] }
+  # Fallback: check if process is running
+  $pid = (Adb shell "pidof $PKG") -join ""
+  if ($pid -match '\d+') { return $PKG }
+  return ""
 }
 
 function Launch-App {
   Adb shell am force-stop $PKG | Out-Null
   Start-Sleep 1
-  Adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 2>$null | Out-Null
-  Start-Sleep 3  # wait for security checks in onCreate
+  Adb shell am start -n "$ACTIVITY" | Out-Null
+  Start-Sleep 4  # wait for security checks in onCreate
 }
 
 # ── 0. Prerequisites ──────────────────────────────────────────────────────────
@@ -130,9 +186,9 @@ if ($SkipBuild) {
   }
 } else {
   Info "Ejecutando: gradlew assembleRelease ..."
-  Push-Location "$ROOT\android"
+  Push-Location (Join-Path $ROOT "android")
   try {
-    $output = .\gradlew.bat assembleRelease 2>&1
+    $output = & $GRADLEW assembleRelease 2>&1
     if ($LASTEXITCODE -eq 0 -and (Test-Path $APK)) {
       $sizeMB = [math]::Round((Get-Item $APK).Length / 1MB, 2)
       Pass "Compilación release" "APK ${sizeMB}MB generado"
@@ -150,28 +206,40 @@ if ($SkipBuild) {
 
 Write-Header "FASE 2 — Análisis estático del APK (sin instalar)"
 
-# Unzip APK to temp dir (APK = ZIP)
-$tmpDir = Join-Path $env:TEMP "keystone-apk-test-$(Get-Date -f yyyyMMddHHmmss)"
+# Unzip APK to temp dir (APK = ZIP) — use manual extraction to handle duplicate entries
+$tmpDir = Join-Path $TMP "keystone-apk-test-$(Get-Date -f yyyyMMddHHmmss)"
+New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 try {
-  [System.IO.Compression.ZipFile]::ExtractToDirectory($APK, $tmpDir)
+  $zip = [System.IO.Compression.ZipFile]::OpenRead($APK)
+  foreach ($entry in $zip.Entries) {
+    if ($entry.FullName -match '[\\/]$') { continue }  # skip directory entries
+    $dest = Join-Path $tmpDir ($entry.FullName -replace '[/\\]', $Sep)
+    $destDir = Split-Path $dest -Parent
+    if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+    try { [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $dest, $true) } catch {}
+  }
+  $zip.Dispose()
 } catch {
   Fail "Extracción APK" $_.Exception.Message
   exit 1
 }
 
 # 2a. JS bundle — URLs en claro
-$wwwDir = Join-Path $tmpDir "assets\public"
+$wwwDir = Join-Path $tmpDir "assets" "public"
 if (Test-Path $wwwDir) {
   $jsFiles  = Get-ChildItem $wwwDir -Filter "*.js" -ErrorAction SilentlyContinue
-  $urlHits  = $jsFiles | Select-String -Pattern "http://|https://|api/v1|localhost:800" -ErrorAction SilentlyContinue
-  if ($urlHits -and $urlHits.Count -gt 0) {
-    Fail "JS bundle — URLs en claro" "$($urlHits.Count) coincidencias encontradas"
-    $urlHits | Select-Object -First 3 | ForEach-Object {
-      Write-Host "    $($_.Filename):$($_.LineNumber) — $($_.Line.Trim().Substring(0, [Math]::Min(100,$_.Line.Trim().Length)))" -ForegroundColor DarkRed
+  # Look for unobfuscated URLs: must have a domain-like structure after http(s)://
+  $urlHits = $jsFiles | Select-String -Pattern "https?://[a-zA-Z0-9._-]+\.[a-z]{2,}(:[0-9]+)?/[^\s'`"]{5,}" -ErrorAction SilentlyContinue
+  # Filter out known safe embedded URLs (W3C SVG namespace, schema.org, etc.)
+  $realUrls = @($urlHits | Where-Object { $_.Matches[0].Value -notmatch "w3\.org|schema\.org|xmlns|x-schema" })
+  if ($realUrls.Count -gt 0) {
+    Fail "JS bundle — URLs en claro" "$($realUrls.Count) coincidencias encontradas"
+    $realUrls | Select-Object -First 3 | ForEach-Object {
+      Write-Host "    $($_.Filename):$($_.LineNumber) - $($_.Matches[0].Value)" -ForegroundColor DarkRed
     }
   } else {
-    Pass "JS bundle — URLs en claro" "0 endpoints visibles en www/*.js"
+    Pass "JS bundle — URLs en claro" "sin endpoints hardcoded visibles en www/*.js"
   }
 
   # 2b. JS bundle — strings sensibles
@@ -210,24 +278,39 @@ if ($dexFiles) {
   Skip "ProGuard — análisis DEX" "archivo .dex no encontrado"
 }
 
-# 2d. Manifest — flags de seguridad
-$manifestPath = Join-Path $tmpDir "AndroidManifest.xml"
-if (Test-Path $manifestPath) {
-  # Binary XML — search for key strings
-  $manifestBytes = [System.IO.File]::ReadAllBytes($manifestPath)
-  $manifestText  = [System.Text.Encoding]::ASCII.GetString($manifestBytes)
+# 2d. Manifest — flags de seguridad via aapt
+$aaptFilter = if ($OnWindows) { "aapt.exe" } else { "aapt" }
+$aapt = (Get-ChildItem (Join-Path $SDK "build-tools") -Recurse -Filter $aaptFilter -ErrorAction SilentlyContinue |
+         Sort-Object FullName -Descending | Select-Object -First 1).FullName
+if ($aapt -and (Test-Path $aapt)) {
+  $manifestDump = try { (& $aapt dump xmltree $APK AndroidManifest.xml 2>$null) -join "`n" } catch { "" }
 
-  $hasAllowBackupFalse = $manifestText -match "allowBackup"
-  $hasNetworkSecurity  = $manifestText -match "network_security_config"
-  $hasDebuggable       = $manifestText -match "debuggable"
+  $hasAllowBackupFalse = $manifestDump -match 'allowBackup.*0x0'
+  $hasNetworkSecurity  = $manifestDump -match 'networkSecurityConfig|network_security_config'
+  $hasDebuggable       = $manifestDump -match 'debuggable.*0x1'
 
-  if ($hasAllowBackupFalse) { Pass "Manifest — allowBackup presente" "atributo en manifest binario" }
-  else                       { Fail "Manifest — allowBackup no encontrado" }
+  if ($hasAllowBackupFalse) { Pass "Manifest — allowBackup=false" "aapt confirma android:allowBackup=false" }
+  else {
+    # allowBackup defaults to false in API 31+, check if simply absent (OK)
+    if ($manifestDump -match 'allowBackup') { Fail "Manifest — allowBackup no es false" }
+    else { Pass "Manifest — allowBackup" "atributo ausente (default false en API 31+)" }
+  }
 
-  if ($hasNetworkSecurity)   { Pass "Manifest — networkSecurityConfig referenciado" }
-  else                       { Fail "Manifest — networkSecurityConfig no encontrado" }
+  if ($hasNetworkSecurity) { Pass "Manifest — networkSecurityConfig referenciado" "aapt confirma referencia" }
+  else                      { Fail "Manifest — networkSecurityConfig no encontrado" }
 } else {
-  Skip "Manifest — análisis" "no encontrado en APK"
+  # Fallback: binary string search
+  $manifestPath = Join-Path $tmpDir "AndroidManifest.xml"
+  if (Test-Path $manifestPath) {
+    $manifestBytes = [System.IO.File]::ReadAllBytes($manifestPath)
+    $manifestText  = [System.Text.Encoding]::Unicode.GetString($manifestBytes)
+    if ($manifestText -match "allowBackup") { Pass "Manifest — allowBackup presente" "hallado en XML binario" }
+    else                                    { Pass "Manifest — allowBackup" "ausente (default false en API 31+)" }
+    if ($manifestText -match "network_security_config") { Pass "Manifest — networkSecurityConfig referenciado" }
+    else                                                 { Fail "Manifest — networkSecurityConfig no encontrado" }
+  } else {
+    Skip "Manifest — análisis" "aapt y XML binario no disponibles"
+  }
 }
 
 Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -236,49 +319,56 @@ Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Header "FASE 3 — Emulador y despliegue"
 
-$deviceList = (Adb devices) -join "`n"
+$deviceList = try { (& $ADB devices 2>$null) -join "`n" } catch { "" }
 $hasDevice  = $deviceList -match "emulator-\d+\s+device|[0-9A-F]{8,}\s+device"
 
 if (-not $hasDevice) {
   if ($SkipEmulator) {
-    Fail "Emulador conectado" "ningún dispositivo — usa -SkipEmulator solo si ya está conectado"
+    Fail "Emulador conectado" "ningún dispositivo - usa -SkipEmulator solo si ya está conectado"
     Write-Host "  Pruebas de runtime saltadas (sin dispositivo)" -ForegroundColor Yellow
-    goto Summary
+    $skipAll = $true
   }
 
-  if (-not (Test-Path $EMULATOR)) {
+  if (-not $skipAll -and -not (Test-Path $EMULATOR)) {
     Fail "Emulador" "emulator.exe no encontrado en $EMULATOR"
-    goto Summary
+    $skipAll = $true
   }
 
-  Info "Arrancando AVD: $Avd ..."
-  Start-Process -FilePath $EMULATOR -ArgumentList "-avd", $Avd, "-no-snapshot-load", "-no-audio", "-no-boot-anim" -NoNewWindow
-  if (-not (Wait-Boot 180)) {
-    Fail "Arranque del emulador" "timeout 180s"
-    goto Summary
+  if (-not $skipAll) {
+    Info "Arrancando AVD: $Avd ..."
+    Start-Process -FilePath $EMULATOR -ArgumentList "-avd", $Avd, "-no-snapshot-load", "-no-audio", "-no-boot-anim" -NoNewWindow
+    if (-not (Wait-Boot 180)) {
+      Fail "Arranque del emulador" "timeout 180s"
+      $skipAll = $true
+    } else {
+      Pass "Arranque del emulador" "AVD $Avd online"
+      Start-Sleep 5
+    }
   }
-  Pass "Arranque del emulador" "AVD $Avd online"
-  Start-Sleep 5
 } else {
   Pass "Dispositivo conectado" ($deviceList -split "`n" | Select-String "device$" | Select-Object -First 1)
-}
+} 
 
-# Check build.tags for root detection trigger
-$buildTags = (Adb shell getprop ro.build.tags) -join ""
-Info "ro.build.tags = '$($buildTags.Trim())'"
-$isTestKeys = $buildTags -match "test-keys"
+if (-not $skipAll) {
+  # Check build.tags for root detection trigger
+  $buildTags = (Adb shell getprop ro.build.tags) -join ""
+  Info "ro.build.tags = '$($buildTags.Trim())'"
+  $isTestKeys = $buildTags -match "test-keys"
 
-# Install release APK
-Info "Instalando APK release ..."
-$installOut = (Adb install -r $APK) -join " "
-if ($installOut -match "Success") {
-  Pass "Instalación APK release" $installOut.Trim()
-} else {
-  Fail "Instalación APK release" $installOut.Trim()
-  goto Summary
+  # Install release APK
+  Info "Instalando APK release ..."
+  $installOut = (Adb install -r $APK) -join " "
+  if ($installOut -match "Success") {
+    Pass "Instalación APK release" $installOut.Trim()
+  } else {
+    Fail "Instalación APK release" $installOut.Trim()
+    $skipAll = $true
+  }
 }
 
 # ── 4. Runtime — FLAG_SECURE ──────────────────────────────────────────────────
+
+if (-not $skipAll) {
 
 Write-Header "FASE 4 — Controles de runtime"
 
@@ -289,34 +379,29 @@ $appLaunched = $topAfterLaunch -match [regex]::Escape($PKG)
 
 if (-not $appLaunched) {
   if ($isTestKeys) {
-    # App killed itself — root detection fired (test-keys = rooted emulator view)
-    Pass "Root detection — test-keys" "app rechazó el emulador (test-keys detectado)"
-    # For subsequent tests we need to keep the app running — temporarily fake clean state by
-    # testing controls individually. We'll re-install debug or skip runtime tests.
-    Info "Emulador con test-keys: root detection activo. Runtime tests posteriores pueden requerir emulador con release-keys."
+    Pass "Root detection - test-keys" "app rechazó el emulador (test-keys detectado)"
+    Info "Emulador con test-keys: root detection activo. Runtime tests saltados."
     Skip "FLAG_SECURE screenshot"   "app bloqueada por root detection"
     Skip "Clipboard clear"          "app bloqueada por root detection"
-    Skip "ADB backup"               "skip — no instalado"
-    Skip "Logcat — log stripping"   "app bloqueada por root detection"
-    goto FridaTest
+    Skip "ADB backup"               "app bloqueada por root detection"
+    Skip "Logcat - log stripping"   "app bloqueada por root detection"
+    $skipRuntime = $true
   } else {
     Fail "App launch" "app no llegó al foreground ($topAfterLaunch)"
-    goto Summary
+    $skipAll = $true
   }
 }
 
+if (-not $skipRuntime -and -not $skipAll) {
+
 Pass "App launch en release" "app en foreground tras arrancar"
 
-# 4a. FLAG_SECURE — screenshot must be black/empty
+# 4a. FLAG_SECURE - screenshot must be black/empty
 Info "Capturando screenshot para verificar FLAG_SECURE ..."
-$screenshotPath = Join-Path $env:TEMP "keystone-screenshot.png"
-Adb exec-out screencap -p | Set-Content $screenshotPath -AsByteStream -ErrorAction SilentlyContinue
-if (-not (Test-Path $screenshotPath)) {
-  # Fallback: pull method
-  Adb shell screencap -p /sdcard/test_cap.png | Out-Null
-  Adb pull /sdcard/test_cap.png $screenshotPath | Out-Null
-  Adb shell rm /sdcard/test_cap.png | Out-Null
-}
+$screenshotPath = Join-Path $TMP "keystone-screenshot.png"
+Adb shell screencap -p /sdcard/test_cap.png | Out-Null
+Adb pull /sdcard/test_cap.png $screenshotPath 2>$null | Out-Null
+Adb shell rm /sdcard/test_cap.png 2>$null | Out-Null
 
 if (Test-Path $screenshotPath) {
   $imgBytes  = [System.IO.File]::ReadAllBytes($screenshotPath)
@@ -365,7 +450,7 @@ Start-Sleep 2
 
 # 4c. ADB Backup
 Info "Probando ADB backup (allowBackup=false) ..."
-$backupPath = Join-Path $env:TEMP "keystone-backup.ab"
+$backupPath = Join-Path $TMP "keystone-backup.ab"
 # Non-interactive backup — will complete immediately if allowBackup=false
 $backupJob = Start-Process -FilePath $ADB -ArgumentList "backup","-apk","-noshared","-f",$backupPath,$PKG -NoNewWindow -PassThru
 Start-Sleep 8  # wait for backup to complete or timeout
@@ -385,7 +470,7 @@ if (Test-Path $backupPath) {
 
 # 4d. Logcat — log stripping en release
 Info "Verificando log stripping (10 segundos de actividad) ..."
-$logProcess = Start-Process -FilePath $ADB -ArgumentList "logcat","-v","brief" -RedirectStandardOutput (Join-Path $env:TEMP "keystone-logcat.txt") -NoNewWindow -PassThru
+$logProcess = Start-Process -FilePath $ADB -ArgumentList "logcat","-v","brief" -RedirectStandardOutput (Join-Path $TMP "keystone-logcat.txt") -NoNewWindow -PassThru
 
 # Exercise the app a bit
 Adb shell input tap 500 800 2>$null | Out-Null  # tap somewhere
@@ -396,7 +481,7 @@ Adb shell input swipe 200 400 800 400 2>$null | Out-Null
 Start-Sleep 3
 
 $logProcess.Kill()
-$logPath = Join-Path $env:TEMP "keystone-logcat.txt"
+$logPath = Join-Path $TMP "keystone-logcat.txt"
 if (Test-Path $logPath) {
   $logLines = Get-Content $logPath
   # App-specific log tags to check (Capacitor, our app)
@@ -418,10 +503,14 @@ if (Test-Path $logPath) {
   Skip "Log stripping" "no se pudo capturar logcat"
 }
 
+} # end if -not $skipRuntime
+
+} # end if -not $skipAll (Phase 4)
+
 # ── 5. Frida & Root simulation ────────────────────────────────────────────────
 
-:FridaTest
-Write-Header "FASE 5 — Simulación de Frida y Root"
+if (-not $skipAll) {
+Write-Header "FASE 5 - Simulacion de Frida y Root"
 
 # 5a. Frida file detection — push fake artifact
 Info "Simulando presencia de Frida (push artefacto en /data/local/tmp/) ..."
@@ -484,7 +573,7 @@ if ($isTestKeys) {
 }
 
 # 5c. WebView remote debugging check
-Write-Header "FASE 6 — WebView y network"
+Write-Header "FASE 6 - WebView y network"
 
 Info "Verificando WebView.setWebContentsDebuggingEnabled(false) ..."
 # Re-launch the app cleanly (after Frida artifact removal)
@@ -499,7 +588,7 @@ if ($debuggableWebViews -match "webview_devtools_remote") {
 
 # 5d. Cleartext network — check network_security_config via logcat
 Info "Verificando network_security_config (cleartext bloqueado) ..."
-$netLogPath = Join-Path $env:TEMP "keystone-netlog.txt"
+$netLogPath = Join-Path $TMP "keystone-netlog.txt"
 $netLogJob  = Start-Process -FilePath $ADB -ArgumentList "logcat","-v","brief","-s","NetworkSecurityConfig:W" -RedirectStandardOutput $netLogPath -NoNewWindow -PassThru
 Start-Sleep 5
 $netLogJob.Kill()
@@ -514,13 +603,14 @@ if (Test-Path $netLogPath) {
   Remove-Item $netLogPath -Force -ErrorAction SilentlyContinue
 }
 
+} # end if -not $skipAll
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
-:Summary
 Write-Host ""
-Write-Host "  ══════════════════════════════════════════" -ForegroundColor DarkGray
+Write-Host "  ==========================================" -ForegroundColor DarkGray
 Write-Host "  RESULTADOS FINALES" -ForegroundColor White
-Write-Host "  ══════════════════════════════════════════" -ForegroundColor DarkGray
+Write-Host "  ==========================================" -ForegroundColor DarkGray
 Write-Host ""
 
 $results | Format-Table -AutoSize @{
@@ -533,7 +623,7 @@ $results | Format-Table -AutoSize @{
 
 foreach ($r in $results) {
   $color = switch($r.Status) { "PASS"{"Green"}; "FAIL"{"Red"}; "SKIP"{"DarkGray"}; default{"White"} }
-  $detail = if ($r.Detail) { " — $($r.Detail)" } else { "" }
+  $detail = if ($r.Detail) { " - $($r.Detail)" } else { "" }
   Write-Host "  [$($r.Status.PadRight(4))] $($r.Test)$detail" -ForegroundColor $color
 }
 

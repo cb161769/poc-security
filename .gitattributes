@@ -1,0 +1,21 @@
+# Normalize all text files to LF in the repository.
+# This prevents CRLF issues when the repo is cloned on macOS/Linux
+# after being edited or committed from Windows.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF so they work natively on Windows
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files — never touch line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.zip binary
+*.jar binary
+*.apk binary
+*.jks binary
+*.keystore binary
+*.pem binary
+*.key binary

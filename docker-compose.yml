@@ -228,8 +228,16 @@ services:
 
   # --- ANDROID EMULATOR (Android 34, software renderer) ---
   # Requires: docker compose --profile android-tests up
+  #
+  # NOTE — macOS Apple Silicon (M1/M2/M3/M4):
+  #   This image is linux/amd64 only and requires KVM for hardware acceleration.
+  #   KVM is not available inside Docker Desktop on macOS. Running it under QEMU
+  #   x86-64 emulation without KVM is too slow to be usable.
+  #   On macOS, run the Android tests locally instead:
+  #     pwsh ionic-app/poc-security/scripts/test-android-security.ps1
   android-emulator:
     image: budtmo/docker-android:emulator_14.0
+    platform: linux/amd64      # x86-64 Android system image — no ARM64 variant available
     container_name: android-emulator
     privileged: true           # KVM passthrough on Linux hosts; falls back to swiftshader on Windows/WSL2
     environment:
@@ -251,6 +259,7 @@ services:
 
   # --- ANDROID BUILD (compiles release APK from source) ---
   # Runs once and exits; output written to android-apk volume
+  # Builds natively on linux/amd64 and linux/arm64 (M1/M2/M3/M4) — SDK tools are JVM-based.
   android-build:
     build:
       context: ./docker/android-build
