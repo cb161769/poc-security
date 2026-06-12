@@ -156,6 +156,8 @@ services:
       - WEB_REALM_JWKS=http://keycloak:8080/realms/web-realm/protocol/openid-connect/certs
       - ODOO_URL=http://odoo-server:8069
       - INTERNAL_SECRET=${INTERNAL_SECRET:-mi_clave_secreta_2026}
+      - REDIS_URL=redis://redis-cache:6379
+      - MIN_APP_VERSION=${MIN_APP_VERSION:-1.0.0}
       - NODE_ENV=production
     volumes:
       - ./shared-keys:/shared-keys:ro
@@ -166,6 +168,8 @@ services:
         condition: service_healthy
       odoo:
         condition: service_started
+      redis-cache:
+        condition: service_healthy
 
   # --- PAYMENTS SERVICE ---
   payments-service:
@@ -178,6 +182,8 @@ services:
       - WEB_REALM_JWKS=http://keycloak:8080/realms/web-realm/protocol/openid-connect/certs
       - ODOO_URL=http://odoo-server:8069
       - INTERNAL_SECRET=${INTERNAL_SECRET:-mi_clave_secreta_2026}
+      - REDIS_URL=redis://redis-cache:6379
+      - MIN_APP_VERSION=${MIN_APP_VERSION:-1.0.0}
       - NODE_ENV=production
     volumes:
       - ./shared-keys:/shared-keys:ro
@@ -188,6 +194,8 @@ services:
         condition: service_healthy
       odoo:
         condition: service_started
+      redis-cache:
+        condition: service_healthy
 
   # --- API NODE.JS (Identity Bridge) ---
   api-node:
@@ -203,6 +211,8 @@ services:
       - WEB_REALM_JWKS=http://keycloak:8080/realms/web-realm/protocol/openid-connect/certs
       - JWT_AUDIENCE=mobile-api
       - TZ=America/New_York
+      - REDIS_URL=redis://redis-cache:6379
+      - MIN_APP_VERSION=${MIN_APP_VERSION:-1.0.0}
       - NODE_ENV=production
     volumes:
       - ./shared-keys:/shared-keys:ro
@@ -213,6 +223,8 @@ services:
         condition: service_healthy
       kong:
         condition: service_started
+      redis-cache:
+        condition: service_healthy
 
   # --- ANDROID EMULATOR (Android 34, software renderer) ---
   # Requires: docker compose --profile android-tests up
@@ -276,6 +288,19 @@ services:
         condition: service_healthy
       android-build:
         condition: service_completed_successfully
+
+  # --- REDIS (token blacklist · idempotency · pubkey binding · circuit breaker state) ---
+  redis-cache:
+    image: redis:7-alpine
+    container_name: redis-cache
+    command: redis-server --save "" --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - secure-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 networks:
   public-net:

@@ -4,6 +4,8 @@ const jwt     = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 const { CompactEncrypt, importJWK, compactDecrypt, importPKCS8 } = require('jose');
 const fs = require('fs');
+const Redis = require('ioredis');
+const CircuitBreaker = require('opossum');
 
 const app = express();
 app.use(express.json());
@@ -34,17 +36,40 @@ const jwksClients = {
   mobile: jwksClient({ jwksUri: REALMS.mobile.jwksUri, ...JWKS_OPTS }),
 };
 
-/* ── PUBKEY BINDING STORE ────────────────────────────── */
-const pubKeyStore = new Map(); // Map<sub, { key: string, exp: number }>
+/* ── REDIS ───────────────────────────────────────────── */
+const redis = new Redis(process.env.REDIS_URL || 'redis://redis-cache:6379', {
+  lazyConnect: true, enableOfflineQueue: false, maxRetriesPerRequest: 1, connectTimeout: 2000,
+});
+redis.on('error', (e) => console.error('[redis] error:', e.message));
 
-function validatePubKeyBinding(req, res, next) {
+async function isTokenBlacklisted(jti, iat) {
+  try {
+    if (jti && await redis.get(`blacklist:jti:${jti}`)) return true;
+    const lockdownAt = await redis.get('emergency:lockdown');
+    if (lockdownAt && iat < parseInt(lockdownAt)) return true;
+    return false;
+  } catch {
+    console.warn('[blacklist] Redis unavailable — skipping check');
+    return false;
+  }
+}
+
+/* ── PUBKEY BINDING STORE (Redis) ────────────────────── */
+async function getPubKeyBinding(sub) {
+  try { const d = await redis.get(`pubkey:${sub}`); return d ? JSON.parse(d) : null; } catch { return null; }
+}
+async function setPubKeyBinding(sub, key, exp) {
+  try { const ttl = exp - Math.floor(Date.now() / 1000); if (ttl > 0) await redis.setex(`pubkey:${sub}`, ttl, JSON.stringify({ key, exp })); } catch {}
+}
+
+async function validatePubKeyBinding(req, res, next) {
   const pubKeyB64 = req.headers['x-client-public-key'];
   if (!pubKeyB64) return next();
   const sub = req.jwt.sub;
-  const entry = pubKeyStore.get(sub);
+  const entry = await getPubKeyBinding(sub);
   const now = Math.floor(Date.now() / 1000);
   if (!entry || now > entry.exp || entry.exp !== req.jwt.exp) {
-    pubKeyStore.set(sub, { key: pubKeyB64, exp: req.jwt.exp });
+    await setPubKeyBinding(sub, pubKeyB64, req.jwt.exp);
     return next();
   }
   if (entry.key !== pubKeyB64)
@@ -52,29 +77,30 @@ function validatePubKeyBinding(req, res, next) {
   next();
 }
 
-/* ── IDEMPOTENCY STORE ───────────────────────────────── */
-const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
-const idempotencyStore = new Map();
+/* ── IDEMPOTENCY STORE (Redis) ───────────────────────── */
+const IDEMPOTENCY_TTL_S = 5 * 60;
 
-function checkIdempotency(req, res, next) {
+async function checkIdempotency(req, res, next) {
   const key = req.headers['x-idempotency-key'];
   if (!key) return res.status(400).json({ error: 'X-Idempotency-Key requerido' });
-  const entry = idempotencyStore.get(key);
-  if (entry) {
-    return res.status(entry.statusCode)
-      .set('Content-Type', entry.contentType)
-      .set('X-Idempotency-Replayed', 'true')
-      .send(entry.body);
-  }
+  try {
+    const cached = await redis.get(`idempotency:${key}`);
+    if (cached) {
+      const entry = JSON.parse(cached);
+      return res.status(entry.statusCode)
+        .set('Content-Type', entry.contentType)
+        .set('X-Idempotency-Replayed', 'true')
+        .send(entry.body);
+    }
+  } catch {}
   const originalSend = res.send.bind(res);
   res.send = function(body) {
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      idempotencyStore.set(key, {
+      redis.setex(`idempotency:${key}`, IDEMPOTENCY_TTL_S, JSON.stringify({
         statusCode: res.statusCode,
         contentType: res.getHeader('Content-Type') || 'application/json',
         body,
-      });
-      setTimeout(() => idempotencyStore.delete(key), IDEMPOTENCY_TTL_MS);
+      })).catch(() => {});
     }
     return originalSend(body);
   };
@@ -153,26 +179,46 @@ function validateJWT(req, res, next) {
       if (!roles.some(r => allowed.includes(r)))
         return res.status(403).json({ error: 'Rol insuficiente para el servicio de pagos' });
 
-      req.channel = channel;
-      req.jwt = { sub: decoded.sub, email: decoded.email, roles, client_id: decoded.azp, exp: decoded.exp };
-      next();
+      isTokenBlacklisted(decoded.jti, decoded.iat).then(blocked => {
+        if (blocked) return res.status(401).json({ error: 'Token revocado' });
+        const MIN_VERSION = process.env.MIN_APP_VERSION || '1.0.0';
+        const tokenVersion = decoded.app_version;
+        if (tokenVersion && tokenVersion < MIN_VERSION)
+          return res.status(426).json({ error: 'Versión de aplicación no soportada', min_version: MIN_VERSION });
+        req.channel = channel;
+        req.jwt = { sub: decoded.sub, email: decoded.email, roles, client_id: decoded.azp, exp: decoded.exp, jti: decoded.jti, iat: decoded.iat, app_version: decoded.app_version };
+        next();
+      });
     }
   );
 }
 
-/* ── ODOO AUTHZ ──────────────────────────────────────── */
+/* ── ODOO AUTHZ + CIRCUIT BREAKER ────────────────────── */
+async function callOdoo(payload) {
+  const r = await axios.post(`${ODOO_URL}/api/validate-jwt-client`, payload, {
+    headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.INTERNAL_SECRET || '' },
+    timeout: 3000,
+  });
+  return r.data;
+}
+const odooBreaker = new CircuitBreaker(callOdoo, {
+  timeout: 3000, errorThresholdPercentage: 50, resetTimeout: 30000, volumeThreshold: 3, name: 'odoo-payments',
+});
+odooBreaker.on('open',  () => console.warn('[circuit:odoo-payments] OPEN'));
+odooBreaker.on('close', () => console.info('[circuit:odoo-payments] CLOSED'));
+
 async function validateClientInOdoo(req, res, next) {
   try {
-    const response = await axios.post(
-      `${ODOO_URL}/api/validate-jwt-client`,
-      { sub: req.jwt.sub, email: req.jwt.email, client_id: req.jwt.client_id, roles: req.jwt.roles },
-      { headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.INTERNAL_SECRET || '' } }
-    );
-    if (!response.data || response.data.authorized !== true)
+    const result = await odooBreaker.fire({
+      sub: req.jwt.sub, email: req.jwt.email, client_id: req.jwt.client_id, roles: req.jwt.roles,
+    });
+    if (!result || result.authorized !== true)
       return res.status(403).json({ error: 'Cliente no autorizado por Odoo' });
-    req.client = response.data.client;
+    req.client = result.client;
     next();
   } catch (error) {
+    if (odooBreaker.opened)
+      return res.status(503).set('Retry-After', '30').json({ error: 'Servicio de autorización no disponible temporalmente' });
     console.error('[payments] Error Odoo:', error.message);
     return res.status(502).json({ error: 'Error validando cliente en Odoo' });
   }

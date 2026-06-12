@@ -744,6 +744,87 @@ R=$(curl -s -o /dev/null -w "%{http_code}" \
 [[ "$R" != "200" ]] && pass "Null byte cannot bypass version block  [HTTP $R — 0.0.1\\x00.bypass not treated as 1.0.0]" \
   || fail "Null byte bypassed version check" "HTTP $R — got 200"
 
+section "16/16 · EMERGENCY LOCKDOWN — Invalidación masiva de tokens"
+
+# Tokens frescos para esta sección
+WEB_TOKEN_PRE=$(curl -s -X POST "$KC/realms/web-realm/protocol/openid-connect/token" \
+  -d "client_id=web-test-client&username=testuser&password=Test1234!&grant_type=password" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null)
+
+# 1. Verificar que el token funciona ANTES del lockdown
+R=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "$KONG/api/v1/web/api/v1/data" \
+  -H "Authorization: Bearer $WEB_TOKEN_PRE" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0")
+[[ "$R" == "200" ]] \
+  && pass "Token válido ANTES del lockdown → HTTP 200" \
+  || fail "Token debería ser válido antes del lockdown" "HTTP $R"
+
+# 2. Activar lockdown (requiere admin — usamos admin-web token desde web-realm si existe, sino skip)
+ADMIN_TOKEN=$(curl -s -X POST "$KC/realms/web-realm/protocol/openid-connect/token" \
+  -d "client_id=web-test-client&username=testuser&password=Test1234!&grant_type=password" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null)
+
+# Activar lockdown vía Redis directamente (en POC el testuser no tiene rol admin-api)
+# Simulamos el lockdown escribiendo en Redis con el epoch actual - 1 (todos los tokens emitidos antes)
+LOCKDOWN_TS=$(date +%s)
+docker exec redis-cache redis-cli SET emergency:lockdown "$LOCKDOWN_TS" > /dev/null 2>&1
+sleep 1  # dar tiempo a que Redis propague
+
+# 3. El token PRE-lockdown debe ser rechazado (iat < lockdown)
+R=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "$KONG/api/v1/web/api/v1/data" \
+  -H "Authorization: Bearer $WEB_TOKEN_PRE" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0")
+[[ "$R" == "401" ]] \
+  && pass "Token pre-lockdown rechazado tras activar lockdown → HTTP 401" \
+  || fail "Token pre-lockdown debería ser rechazado (iat < lockdown)" "HTTP $R — esperado 401"
+
+# 4. Token emitido DESPUÉS del lockdown debe funcionar
+sleep 1
+WEB_TOKEN_POST=$(curl -s -X POST "$KC/realms/web-realm/protocol/openid-connect/token" \
+  -d "client_id=web-test-client&username=testuser&password=Test1234!&grant_type=password" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null)
+
+R=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "$KONG/api/v1/web/api/v1/data" \
+  -H "Authorization: Bearer $WEB_TOKEN_POST" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0")
+[[ "$R" == "200" ]] \
+  && pass "Token post-lockdown válido → HTTP 200 (iat > lockdown)" \
+  || fail "Token emitido después del lockdown debería ser válido" "HTTP $R — esperado 200"
+
+# 5. Verificar que lockdown aplica igualmente en transfers y payments
+R_T=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "$KONG/api/v1/web/transfers" \
+  -H "Authorization: Bearer $WEB_TOKEN_PRE" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0")
+R_P=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "$KONG/api/v1/web/payments" \
+  -H "Authorization: Bearer $WEB_TOKEN_PRE" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0")
+[[ "$R_T" == "401" && "$R_P" == "401" ]] \
+  && pass "Lockdown activo en transfers ($R_T) y payments ($R_P)" \
+  || fail "Lockdown debe bloquear transfers y payments" "transfers=$R_T payments=$R_P"
+
+# 6. Levantar lockdown
+docker exec redis-cache redis-cli DEL emergency:lockdown > /dev/null 2>&1
+
+# 7. Token PRE-lockdown vuelve a funcionar tras levantar lockdown
+R=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "$KONG/api/v1/web/api/v1/data" \
+  -H "Authorization: Bearer $WEB_TOKEN_PRE" \
+  -H "X-Client-Public-Key: $PUB_KEY" \
+  -H "X-App-Version: 1.0.0")
+[[ "$R" == "200" ]] \
+  && pass "Lockdown levantado — token pre-lockdown válido nuevamente → HTTP 200" \
+  || fail "Token debe volver a funcionar tras levantar lockdown" "HTTP $R — esperado 200"
+
 # ════════════════════════════════════════════════════════
 # RESUMEN
 # ════════════════════════════════════════════════════════

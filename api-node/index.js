@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 const { CompactEncrypt, importJWK, importSPKI, exportJWK } = require('jose');
 const fs = require('fs');
+const Redis = require('ioredis');
+const CircuitBreaker = require('opossum');
 
 const app = express();
 app.use(express.json());
@@ -50,19 +52,67 @@ const jwksClients = {
 };
 
 /* ================================
-   PUBKEY BINDING STORE — first-use registration
-   Map<sub, base64JWK> — persiste en memoria por lifetime del proceso
+   REDIS — blacklist · pubkey binding · emergency lockdown
 ================================ */
-const pubKeyStore = new Map(); // Map<sub, { key: string, exp: number }>
+const redis = new Redis(process.env.REDIS_URL || 'redis://redis-cache:6379', {
+  lazyConnect: true,
+  enableOfflineQueue: false,
+  maxRetriesPerRequest: 1,
+  connectTimeout: 2000,
+});
+redis.on('error', (e) => console.error('[redis] error:', e.message));
 
-function validatePubKeyBinding(req, res, next) {
+async function isTokenBlacklisted(jti, iat) {
+  try {
+    if (jti) {
+      const blocked = await redis.get(`blacklist:jti:${jti}`);
+      if (blocked) return true;
+    }
+    // Emergency lockdown: any token issued before lockdownAt is invalid
+    const lockdownAt = await redis.get('emergency:lockdown');
+    if (lockdownAt && iat < parseInt(lockdownAt)) return true;
+    return false;
+  } catch {
+    // Redis unavailable — fail open (log and continue); for fail-closed swap to: return true
+    console.warn('[blacklist] Redis unavailable — skipping blacklist check');
+    return false;
+  }
+}
+
+async function blacklistJTI(jti, exp) {
+  try {
+    const ttl = exp - Math.floor(Date.now() / 1000);
+    if (jti && ttl > 0) await redis.setex(`blacklist:jti:${jti}`, ttl, '1');
+  } catch (e) {
+    console.error('[blacklist] Failed to write JTI:', e.message);
+  }
+}
+
+/* ================================
+   PUBKEY BINDING STORE — Redis (distributed)
+================================ */
+async function getPubKeyBinding(sub) {
+  try {
+    const data = await redis.get(`pubkey:${sub}`);
+    return data ? JSON.parse(data) : null;
+  } catch { return null; }
+}
+
+async function setPubKeyBinding(sub, key, exp) {
+  try {
+    const ttl = exp - Math.floor(Date.now() / 1000);
+    if (ttl > 0) await redis.setex(`pubkey:${sub}`, ttl, JSON.stringify({ key, exp }));
+  } catch {}
+}
+
+async function validatePubKeyBinding(req, res, next) {
   const pubKeyB64 = req.headers['x-client-public-key'];
   if (!pubKeyB64) return next();
   const sub = req.jwt.sub;
-  const entry = pubKeyStore.get(sub);
+  const entry = await getPubKeyBinding(sub);
   const now = Math.floor(Date.now() / 1000);
   if (!entry || now > entry.exp || entry.exp !== req.jwt.exp) {
-    pubKeyStore.set(sub, { key: pubKeyB64, exp: req.jwt.exp });
+    await setPubKeyBinding(sub, pubKeyB64, req.jwt.exp);
     return next();
   }
   if (entry.key !== pubKeyB64)
@@ -120,40 +170,74 @@ async function validateJWT(req, res, next) {
         return res.status(401).json({ error: 'JWT inválido' });
       }
 
-      req.channel = channel;
-      req.jwt = {
-        sub:      decoded.sub,
-        username: decoded.preferred_username,
-        email:    decoded.email,
-        roles:    decoded.realm_access?.roles || [],
-        client_id: decoded.azp,
-        exp:      decoded.exp,
-      };
+      isTokenBlacklisted(decoded.jti, decoded.iat).then(blocked => {
+        if (blocked) return res.status(401).json({ error: 'Token revocado' });
 
-      next();
+        // app_version claim es server-controlled (Keycloak hardcoded mapper) — no falsificable
+        const MIN_VERSION = process.env.MIN_APP_VERSION || '1.0.0';
+        const tokenVersion = decoded.app_version;
+        if (tokenVersion && tokenVersion < MIN_VERSION)
+          return res.status(426).json({ error: 'Versión de aplicación no soportada', min_version: MIN_VERSION });
+
+        req.channel = channel;
+        req.jwt = {
+          sub:         decoded.sub,
+          username:    decoded.preferred_username,
+          email:       decoded.email,
+          roles:       decoded.realm_access?.roles || [],
+          client_id:   decoded.azp,
+          exp:         decoded.exp,
+          jti:         decoded.jti,
+          iat:         decoded.iat,
+          app_version: decoded.app_version,
+        };
+        next();
+      });
     }
   );
 }
 
 /* ================================
-   MIDDLEWARE: VALIDAR CLIENTE EN ODOO
+   CIRCUIT BREAKER — Odoo AuthZ
+   OPEN after 3 failures in 10s window → fast-fail 503 for 30s
 ================================ */
+async function callOdoo(payload) {
+  const response = await axios.post(
+    `${ODOO_URL}/api/validate-jwt-client`,
+    payload,
+    {
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.INTERNAL_SECRET || '' },
+      timeout: 3000,
+    }
+  );
+  return response.data;
+}
+
+const odooBreaker = new CircuitBreaker(callOdoo, {
+  timeout: 3000,
+  errorThresholdPercentage: 50,
+  resetTimeout: 30000,
+  volumeThreshold: 3,
+  name: 'odoo-authz',
+});
+odooBreaker.on('open',     () => console.warn('[circuit:odoo] OPEN — failing fast'));
+odooBreaker.on('halfOpen', () => console.info('[circuit:odoo] HALF-OPEN — testing'));
+odooBreaker.on('close',    () => console.info('[circuit:odoo] CLOSED — recovered'));
+
 async function validateClientInOdoo(req, res, next) {
   try {
-    const response = await axios.post(
-      `${ODOO_URL}/api/validate-jwt-client`,
-      { sub: req.jwt.sub, email: req.jwt.email, client_id: req.jwt.client_id, roles: req.jwt.roles },
-      { headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.INTERNAL_SECRET || '' } }
-    );
-
-    const result = response.data;
-    if (!result || result.authorized !== true) {
+    const result = await odooBreaker.fire({
+      sub: req.jwt.sub, email: req.jwt.email, client_id: req.jwt.client_id, roles: req.jwt.roles,
+    });
+    if (!result || result.authorized !== true)
       return res.status(403).json({ error: 'Cliente no autorizado por Odoo' });
-    }
-
     req.client = result.client;
     next();
   } catch (error) {
+    if (odooBreaker.opened) {
+      console.error('[circuit:odoo] Circuit OPEN:', error.message);
+      return res.status(503).set('Retry-After', '30').json({ error: 'Servicio de autorización no disponible temporalmente' });
+    }
     console.error('Error Odoo:', error.message);
     return res.status(502).json({ error: 'Error validando cliente en Odoo' });
   }
@@ -243,7 +327,7 @@ const KEYCLOAK_ADMIN_PASS = process.env.KEYCLOAK_ADMIN_PASS || 'admin';
 let _adminToken = null;
 let _adminTokenExpiry = 0;
 
-async function getAdminToken() {
+async function fetchAdminToken() {
   if (_adminToken && Date.now() / 1000 < _adminTokenExpiry - 30) return _adminToken;
   const resp = await axios.post(
     `${KEYCLOAK_BASE}/realms/master/protocol/openid-connect/token`,
@@ -253,11 +337,25 @@ async function getAdminToken() {
       username:   KEYCLOAK_ADMIN_USER,
       password:   KEYCLOAK_ADMIN_PASS,
     }).toString(),
-    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 5000 }
   );
   _adminToken = resp.data.access_token;
   _adminTokenExpiry = Math.floor(Date.now() / 1000) + resp.data.expires_in;
   return _adminToken;
+}
+
+const keycloakAdminBreaker = new CircuitBreaker(fetchAdminToken, {
+  timeout: 5000,
+  errorThresholdPercentage: 50,
+  resetTimeout: 60000,
+  volumeThreshold: 2,
+  name: 'keycloak-admin',
+});
+keycloakAdminBreaker.on('open', () => console.warn('[circuit:keycloak-admin] OPEN'));
+keycloakAdminBreaker.on('close', () => console.info('[circuit:keycloak-admin] CLOSED'));
+
+async function getAdminToken() {
+  return keycloakAdminBreaker.fire();
 }
 
 app.post('/change-password', validateJWT, async (req, res) => {
@@ -308,10 +406,47 @@ app.post('/change-password', validateJWT, async (req, res) => {
       { type: 'password', value: newPassword, temporary: false },
       { headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' } }
     );
+    // Blacklist the current token — password changed, old sessions should not persist
+    await blacklistJTI(req.jwt.jti, req.jwt.exp);
     res.json({ success: true });
   } catch (err) {
     console.error('[change-password] reset-password error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Error actualizando contraseña' });
+  }
+});
+
+/* ================================
+   EMERGENCY LOCKDOWN
+   POST /admin/lockdown — invalida TODOS los tokens emitidos antes de ahora (iat check)
+   Requiere rol admin-api. En producción: restringir a IP interna + admin MFA.
+================================ */
+app.post('/admin/lockdown', validateJWT, async (req, res) => {
+  const roles = req.jwt.roles || [];
+  if (!roles.includes('admin-api') && !roles.includes('admin-web'))
+    return res.status(403).json({ error: 'Se requiere rol admin' });
+
+  const now = Math.floor(Date.now() / 1000);
+  try {
+    await redis.set('emergency:lockdown', now);
+    console.warn(`[LOCKDOWN] Triggered by ${req.jwt.sub} at ${new Date().toISOString()} — all tokens issued before epoch ${now} are revoked`);
+    res.json({ locked: true, revokedBefore: new Date(now * 1000).toISOString() });
+  } catch (err) {
+    console.error('[lockdown] Redis error:', err.message);
+    res.status(500).json({ error: 'No se pudo activar el lockdown' });
+  }
+});
+
+app.delete('/admin/lockdown', validateJWT, async (req, res) => {
+  const roles = req.jwt.roles || [];
+  if (!roles.includes('admin-api') && !roles.includes('admin-web'))
+    return res.status(403).json({ error: 'Se requiere rol admin' });
+
+  try {
+    await redis.del('emergency:lockdown');
+    console.info(`[LOCKDOWN] Lifted by ${req.jwt.sub} at ${new Date().toISOString()}`);
+    res.json({ locked: false });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al desactivar lockdown' });
   }
 });
 

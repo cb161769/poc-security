@@ -168,7 +168,7 @@ pre .v{color:#3fb950}
   <div class="accent-bar"></div>
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <span class="badge b-blue">POC · Seguridad API</span>
-    <span class="badge b-green">✓ 85/85 Tests · 0 Fail</span>
+    <span class="badge b-green">✓ 92/92 Tests · 0 Fail</span>
     <span class="badge b-green">✓ 50 Pentests API · 5 categorías</span>
     <span class="badge b-green">✓ Android 26/35 · 0 Fail</span>
     <span class="badge b-purple">✓ Passkeys WebAuthn implementados</span>
@@ -199,7 +199,7 @@ pre .v{color:#3fb950}
         <div>✓ Sin metadatos de servidor</div>
       </div>
       <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-        <span class="badge b-green" style="font-size:9px">85/85 tests · 0 fail</span>
+        <span class="badge b-green" style="font-size:9px">92/92 tests · 0 fail</span>
         <span class="badge b-green" style="font-size:9px">50 pentests · 5 categorías</span>
         <span class="badge b-purple" style="font-size:9px">Passkeys WebAuthn activos</span>
       </div>
@@ -700,7 +700,7 @@ pre .v{color:#3fb950}
 <div class="slide" id="s5">
   <div class="slide-body">
   <div class="section-tag">Evidencia</div>
-  <h2>85/85 tests — 9 ataques + 50 pentests · 0 brechas</h2>
+  <h2>92/92 tests — 9 ataques + 57 pentests · 0 brechas</h2>
   <p style="color:var(--muted);font-size:12px;margin-bottom:10px">Cada caja es un ataque real que ejecutamos contra el sistema. Mostramos qué intentamos y qué ocurrió. Script: <code style="font-size:11px">bash scripts/test-all.sh</code></p>
 
   <div style="display:flex;gap:14px;align-items:flex-start">
@@ -1018,6 +1018,147 @@ pre .v{color:#3fb950}
 </div>
 
 <!-- ══ APPENDIX DIVIDER ══ -->
+<!-- ══ X-APP-VERSION VULNERABILITY ══ -->
+<div class="slide" id="s7c">
+  <div class="slide-body">
+  <div class="section-tag">Análisis de seguridad · Consultor senior</div>
+  <h2>X-App-Version — Control de UX, no control de seguridad</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">El header <code>X-App-Version</code> es enviado por el cliente. Como cualquier consultor senior o hacker ético identificaría de inmediato: es trivialmente falsificable.</p>
+
+  <div class="grid g2" style="gap:10px;margin-bottom:10px">
+    <div class="card hi-red" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">⚠ El ataque — 1 línea</div>
+      <div style="font-size:11.5px;line-height:1.8;color:var(--muted)">
+        <div>Cualquier atacante con una versión antigua y vulnerable de la app simplemente envía:</div>
+        <pre style="background:#0d1117;border:1px solid #f8514933;border-radius:6px;padding:8px 10px;margin:8px 0;font-size:11px;color:#f85149">curl -H "X-App-Version: 1.0.0" \
+     -H "Authorization: Bearer &lt;token&gt;" \
+     https://api.example.com/...</pre>
+        <div style="color:var(--text)">Resultado: el check de versión pasa. <strong>Cero seguridad garantizada.</strong></div>
+        <div style="margin-top:6px">La versión la reporta el cliente. El servidor no puede verificar que sea verdadera.</div>
+      </div>
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">📋 Qué SÍ hace — y qué NO hace</div>
+      <div style="font-size:11.5px;line-height:1.9;color:var(--muted)">
+        <div><span style="color:var(--green)">✓ SÍ</span> Fuerza a usuarios legítimos a actualizar (UX gate)</div>
+        <div><span style="color:var(--green)">✓ SÍ</span> Útil para deprecar versiones antiguas en rollout</div>
+        <div><span style="color:var(--red)">✗ NO</span> Previene ataques con versiones vulnerables</div>
+        <div><span style="color:var(--red)">✗ NO</span> Es un control de seguridad — no pertenece al threat model</div>
+        <div><span style="color:var(--red)">✗ NO</span> Detiene herramientas automatizadas (siempre forjan el header)</div>
+        <div style="margin-top:6px;padding:6px 8px;background:#1f6feb10;border-radius:4px;color:var(--text);font-size:10.5px">
+          <strong>Clasificación correcta:</strong> Upgrade enforcement gate para usuarios honestos. La seguridad real la proveen el JWT RS256 + Odoo AuthZ — no el header de versión.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g3" style="gap:8px">
+    <div class="card" style="padding:11px 14px;border-color:#23863633;background:#23863608">
+      <div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">✓ Fix corto plazo</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.7">
+        <div>Documentar explícitamente que <code>X-App-Version</code> <strong>no es un trust boundary</strong>.</div>
+        <div style="margin-top:4px">Mover la lógica de versión al <strong>claim del JWT</strong> emitido por Keycloak al autenticarse — el cliente no puede modificar un claim firmado.</div>
+        <div style="margin-top:4px">Keycloak puede añadir <code>"app_version": "1.0.0"</code> vía script mapper solo si el <code>client_id</code> corresponde a una versión whitelisted.</div>
+      </div>
+    </div>
+    <div class="card" style="padding:11px 14px;border-color:#58a6ff33;background:#58a6ff08">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">🔒 Fix largo plazo — Mobile</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.7">
+        <div><strong style="color:var(--text)">Google Play Integrity API</strong> (Android)</div>
+        <div>Google firma una attestation que certifica:</div>
+        <div>· APK descargado de Play Store (no sideloaded)</div>
+        <div>· Dispositivo genuino (no emulado)</div>
+        <div>· APK no modificado/reempaquetado</div>
+        <div>· Hash exacto del binario instalado</div>
+        <div style="margin-top:4px"><strong style="color:var(--text)">Apple App Attest</strong> — equivalente para iOS</div>
+        <div style="margin-top:4px;color:var(--green);font-size:10.5px">→ El atacante no puede forjar esto sin comprometer Google/Apple</div>
+      </div>
+    </div>
+    <div class="card" style="padding:11px 14px;border-color:#bc8cff33;background:#6e40c908">
+      <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">🌐 Fix largo plazo — Web</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.7">
+        <div>Web no tiene TEE (trusted execution environment) — no existe equivalente a Play Integrity.</div>
+        <div style="margin-top:4px">Opciones reales:</div>
+        <div>· <strong style="color:var(--text)">Versión en JWT</strong> (Keycloak mapper) — unforgeable post-auth</div>
+        <div>· <strong style="color:var(--text)">SRI + CSP estricto</strong> — impide modificación del bundle en tránsito</div>
+        <div>· <strong style="color:var(--text)">Short-lived tokens</strong> (5 min) — limita la ventana de explotación con versión vieja</div>
+        <div style="margin-top:4px;color:var(--muted);font-size:10.5px">En web, asumir el cliente como no confiable es la postura correcta. La defensa está en el servidor.</div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- ══ EMERGENCY RESPONSE PLAN ══ -->
+<div class="slide" id="s7d">
+  <div class="slide-body">
+  <div class="section-tag">Plan de respuesta · 600k usuarios</div>
+  <h2>Vulnerabilidad masiva — Plan de respuesta en 4 fases</h2>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Si se descubre una vulnerabilidad crítica (bypass de auth, data leak, JWT forgery), este plan protege a los 600k usuarios. El mecanismo clave: <strong style="color:var(--text)">invalidación masiva O(1)</strong> vía Redis — sin tocar Keycloak ni desplegar código.</p>
+
+  <div class="grid g2" style="gap:9px;margin-bottom:9px">
+    <div class="card hi-red" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">⚡ FASE 1 · Contención inmediata (T+0 a T+5 min)</div>
+      <div style="font-size:11px;line-height:1.85;color:var(--muted)">
+        <div><strong style="color:var(--text)">1. Killswitch Kong</strong> — bloquea todo el tráfico de API excepto IPs del equipo de respuesta</div>
+        <div style="padding:4px 8px;background:#f8514910;border-radius:4px;margin:4px 0;font-size:10.5px"><code>bash scripts/killswitch.sh</code> → Kong devuelve 503 a todos los clientes</div>
+        <div><strong style="color:var(--text)">2. Lockdown de sesiones</strong> — invalida todos los tokens emitidos antes de ahora</div>
+        <div style="padding:4px 8px;background:#f8514910;border-radius:4px;margin:4px 0;font-size:10.5px">
+          <code>POST /admin/lockdown</code> → escribe <code>emergency:lockdown = epoch_now</code> en Redis<br>
+          Cualquier token con <code>iat &lt; lockdown</code> devuelve 401. <strong>O(1) para 600k usuarios.</strong>
+        </div>
+        <div><strong style="color:var(--text)">3. Snapshot de logs</strong> — capturar logs de Kong + api-node antes de que roten</div>
+      </div>
+    </div>
+    <div class="card hi-yellow" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--yellow);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🔍 FASE 2 · Evaluación (T+5 a T+30 min)</div>
+      <div style="font-size:11px;line-height:1.85;color:var(--muted)">
+        <div><strong style="color:var(--text)">Scope</strong> — ¿qué datos fueron expuestos? ¿qué endpoints afectados?</div>
+        <div><strong style="color:var(--text)">Evidencia de explotación</strong> — buscar en logs patrones de la vulnerabilidad antes del lockdown</div>
+        <div><strong style="color:var(--text)">Usuarios afectados</strong> — cruzar JTIs/subs de logs sospechosos con directorio Odoo</div>
+        <div><strong style="color:var(--text)">Decisión</strong>: ¿fix en caliente (hotfix) o despliegue limpio?</div>
+        <div style="margin-top:6px;padding:5px 8px;background:#d2992215;border-radius:4px;font-size:10.5px">
+          Con Kong en killswitch + lockdown activo, los usuarios no pueden operar pero los datos están protegidos. El sistema puede mantenerse así hasta que el fix esté listo.
+        </div>
+      </div>
+    </div>
+    <div class="card hi-blue" style="padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">🔧 FASE 3 · Remediación (T+30 min a T+2h)</div>
+      <div style="font-size:11px;line-height:1.85;color:var(--muted)">
+        <div><strong style="color:var(--text)">Deploy del fix</strong> — imagen Docker nueva, sin tocar el volumen de datos</div>
+        <div><strong style="color:var(--text)">Rotación de secretos</strong> — si la vuln expuso INTERNAL_SECRET o claves JWE, rotar en Vault y redeploy</div>
+        <div><strong style="color:var(--text)">Levantar killswitch gradualmente</strong> — primero 1% del tráfico, monitorizar, luego 100%</div>
+        <div style="padding:4px 8px;background:#1f6feb10;border-radius:4px;margin:4px 0;font-size:10.5px"><code>DELETE /admin/lockdown</code> → elimina <code>emergency:lockdown</code> de Redis → tokens nuevos válidos</div>
+        <div><strong style="color:var(--text)">Verificación</strong> — correr <code>bash scripts/test-all.sh</code> completo antes de restaurar tráfico total</div>
+      </div>
+    </div>
+    <div class="card" style="padding:12px 14px;border-color:#23863633;background:#23863608">
+      <div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px">📢 FASE 4 · Comunicación (T+1h)</div>
+      <div style="font-size:11px;line-height:1.85;color:var(--muted)">
+        <div><strong style="color:var(--text)">Usuarios afectados</strong> — notificación directa (email) con:</div>
+        <div style="padding:4px 8px;margin:4px 0;font-size:10.5px;border-left:2px solid var(--green)">
+          · Qué ocurrió (sin detalles técnicos que faciliten re-explotación)<br>
+          · Qué datos podrían haber sido expuestos<br>
+          · Qué acción deben tomar (cambiar contraseña si se requiere)<br>
+          · Cuándo se resolvió
+        </div>
+        <div><strong style="color:var(--text)">Regulatorio</strong> — si hay PII expuesta, notificación a la autoridad en el plazo legal (72h en GDPR / PDPA equivalente)</div>
+        <div><strong style="color:var(--text)">Post-mortem</strong> — análisis de causa raíz + controles adicionales</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:10px 14px;background:#1f6feb08;border-color:#1f6feb33">
+    <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Por qué el lockdown es O(1) para 600k usuarios</div>
+    <div style="font-size:11px;color:var(--muted);line-height:1.7">
+      En lugar de blacklistear 600k JTIs individuales (600k escrituras Redis), se escribe <strong>un solo valor</strong>: <code>redis SET emergency:lockdown &lt;epoch&gt;</code>.
+      Cada <code>validateJWT</code> lee ese valor y rechaza cualquier token con <code>iat &lt; lockdown</code>. Un solo atomic write invalida todas las sesiones activas instantáneamente.
+      La API de lockdown está en <code>POST /admin/lockdown</code> (requiere rol <code>admin-api</code>) y ya está implementada en este POC.
+    </div>
+  </div>
+  </div>
+</div>
+
 <div class="slide" id="s8" style="justify-content:center;align-items:center">
   <div class="slide-body">
   <div style="text-align:center">
